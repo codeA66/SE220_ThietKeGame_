@@ -1,0 +1,6 @@
+{
+    "name": "CameraSystem",
+    "rootNamespace": "DeadCells.CameraSystem",
+    "references": [],
+    "autoReferenced": true
+}
