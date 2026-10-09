@@ -2,8 +2,7 @@
     "name": "Core",
     "rootNamespace": "DeadCells.Core",
     "references": [
-        "Unity.InputSystem",
-        "Unity.Cinemachine"
+        "Unity.InputSystem"
     ],
     "autoReferenced": true
 }

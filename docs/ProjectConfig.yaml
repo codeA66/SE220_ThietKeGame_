@@ -22,7 +22,6 @@ di_framework: "none"
 # Packages (name: version)
 packages:
   com.unity.inputsystem: "1.19.0"
-  com.unity.cinemachine: "3.1.4"
   com.unity.2d.tilemap.extras: "8.0.3"
   com.unity.2d.animation: "15.1.0"
 
@@ -34,7 +33,7 @@ feel_tools:
   tweening: "none"
   feedback_system: "Custom"
   audio: "Unity"
-  camera: "Cinemachine"
+  camera: "Custom"
 
 visual_plugins:
   has_shapes: false
@@ -42,7 +41,7 @@ visual_plugins:
 
 # MCP Integrations
 mcp:
-  unity_mcp: false      # unity-mcp server seen in the session but not reachable yet
+  unity_mcp: true       # Unity AI Assistant relay (com.unity.ai.assistant)
   github_mcp: false
   linear_mcp: false
   notion_mcp: false
