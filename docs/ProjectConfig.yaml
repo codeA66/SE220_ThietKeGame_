@@ -1,0 +1,61 @@
+# ProjectConfig — SE220 Dead Cells-like
+# The AI's primary context snapshot for this project. Created via /uw-cmd-setup-project.
+
+project_name: "SE220_ThietKeGame_"
+genre: "2D roguelite action-platformer (Dead Cells-like)"
+target_platforms: [Windows, WebGL, Android]
+
+# Unity
+unity_version: "6000.5.0f1"
+render_pipeline: "URP"            # URP 2D renderer
+scripting_backend: "Mono"         # Mono for fast iteration; switch to IL2CPP for release builds
+ui_system: "UGUI"                 # UGUI (template default, simplest for a course project)
+folder_strategy: "feature-based"
+networking: "none"
+async_pattern: "Awaitable"
+use_ecs_dots: false
+
+# Architecture
+architecture_pattern: "so-first"
+di_framework: "none"
+
+# Packages (name: version)
+packages:
+  com.unity.inputsystem: "1.19.0"
+  com.unity.cinemachine: "3.1.4"
+  com.unity.2d.tilemap.extras: "8.0.3"
+  com.unity.2d.animation: "15.1.0"
+
+# Third-Party
+third_party: []
+
+# Game Feel Middleware
+feel_tools:
+  tweening: "none"
+  feedback_system: "Custom"
+  audio: "Unity"
+  camera: "Cinemachine"
+
+visual_plugins:
+  has_shapes: false
+  has_true_shadow: false
+
+# MCP Integrations
+mcp:
+  unity_mcp: false      # unity-mcp server seen in the session but not reachable yet
+  github_mcp: false
+  linear_mcp: false
+  notion_mcp: false
+
+task_management: "None"
+documentation: "Markdown"
+
+ai_mode: "guided"
+prompt_logging: false
+
+# Assets
+# Assets/_ThirdParty/DeadCells/ holds extracted Dead Cells sprites/audio (© Motion Twin).
+# It is git-ignored and used for study/prototype only.
+
+rule_overrides:
+  allow_ugui: true
