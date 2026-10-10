@@ -32,6 +32,7 @@ namespace DeadCells.VFX
             _frameDuration = 1f / Mathf.Max(definition.Fps, 0.01f);
             _renderer.sortingOrder = definition.SortingOrder;
             transform.localScale = Vector3.one * definition.Scale;
+            _renderer.color = definition.Tint;
         }
 
         public void Play(Vector3 position, bool flipX)

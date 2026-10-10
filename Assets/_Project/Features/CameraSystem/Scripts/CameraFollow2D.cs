@@ -33,8 +33,16 @@ namespace DeadCells.CameraSystem
         private float _lookAheadCurrent;
         private float _lookAheadVelocity;
         private Vector3 _velocity;
+        private Vector3 _basePosition;
+        private float _shakeAmplitude;
+        private float _shakeDuration;
+        private float _shakeUntil = -1f;
 
-        private void Awake() => _camera = GetComponent<Camera>();
+        private void Awake()
+        {
+            _camera = GetComponent<Camera>();
+            _basePosition = transform.position;
+        }
 
         private void Start()
         {
@@ -43,6 +51,7 @@ namespace DeadCells.CameraSystem
             _focus = (Vector2)_target.position + _offset;
             _lastTargetPosition = _target.position;
             transform.position = new Vector3(_focus.x, _focus.y, transform.position.z);
+            _basePosition = transform.position;
         }
 
         private void LateUpdate()
@@ -68,7 +77,32 @@ namespace DeadCells.CameraSystem
             if (_useBounds)
                 desired = ClampToBounds(desired);
 
-            transform.position = Vector3.SmoothDamp(transform.position, desired, ref _velocity, _smoothTime);
+            _basePosition = Vector3.SmoothDamp(_basePosition, desired, ref _velocity, _smoothTime);
+            transform.position = _basePosition + ShakeOffset();
+        }
+
+        /// <summary>
+        /// Random jitter that decays linearly over the duration. Uses unscaled time so it still plays
+        /// during hit-stop. A stronger request replaces a weaker one in progress.
+        /// </summary>
+        public void Shake(float amplitude, float duration)
+        {
+            float remaining = _shakeUntil - Time.unscaledTime;
+            float currentAmp = remaining > 0f && _shakeDuration > 0f ? _shakeAmplitude * remaining / _shakeDuration : 0f;
+            if (amplitude < currentAmp || duration <= 0f)
+                return;
+            _shakeAmplitude = amplitude;
+            _shakeDuration = duration;
+            _shakeUntil = Time.unscaledTime + duration;
+        }
+
+        private Vector3 ShakeOffset()
+        {
+            float remaining = _shakeUntil - Time.unscaledTime;
+            if (remaining <= 0f)
+                return Vector3.zero;
+            float amp = _shakeAmplitude * remaining / _shakeDuration;
+            return new Vector3(Random.Range(-amp, amp), Random.Range(-amp, amp), 0f);
         }
 
         private Vector3 ClampToBounds(Vector3 position)

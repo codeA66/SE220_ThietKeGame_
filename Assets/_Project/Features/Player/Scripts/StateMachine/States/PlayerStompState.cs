@@ -33,6 +33,7 @@ namespace DeadCells.Player.StateMachine.States
                 {
                     _landed = true;
                     Ctx.NotifyLanded();
+                    Ctx.Combat.PerformStomp(Ctx.Config.StompDamage, Ctx.Config.StompStun, Ctx.Config.StompArea);
                 }
                 return;
             }

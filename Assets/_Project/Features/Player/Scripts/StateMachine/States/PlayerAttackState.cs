@@ -1,33 +1,44 @@
+using DeadCells.Combat;
 using UnityEngine;
 
 namespace DeadCells.Player.StateMachine.States
 {
     /// <summary>
-    /// One class for the 3-hit sword combo, on the ground or in the air. The hit number comes from
-    /// PlayerContext.PendingComboIndex. Pressing attack during a swing queues the next hit, which starts
-    /// once the swing passes ComboChainNormalizedTime. The player keeps moving at a reduced speed.
+    /// Weapon combo, on the ground or in the air. Hit timing, damage and reach come from the equipped
+    /// WeaponData (DC: weapon@strikeChain). The hit index comes from PlayerContext.PendingComboIndex.
+    /// Pressing attack during a swing queues the next hit, which starts once the swing passes
+    /// ComboChainNormalizedTime. The player keeps moving at a reduced speed.
     /// </summary>
     public class PlayerAttackState : PlayerStateBase
     {
-        private const int MaxCombo = 3;
-        private static readonly string[] ClipNames = { "Player_AttackA", "Player_AttackB", "Player_AttackC" };
-
-        private readonly float[] _clipLengths = new float[MaxCombo];
-        private bool _clipLengthsCached;
+        private const float ClipFps = 30f;
 
         private int _comboIndex;
         private float _timer;
+        private float _duration;
+        private float _hitTime;
+        private bool _hitDone;
         private bool _nextQueued;
+        private WeaponData.Strike _strike;
 
         public PlayerAttackState(PlayerContext context, PlayerStateMachine machine) : base(context, machine) { }
 
+        private WeaponData Weapon => Ctx.Combat.Weapon;
+
         public override void Enter()
         {
-            CacheClipLengths();
-            _comboIndex = Mathf.Clamp(Ctx.PendingComboIndex, 1, MaxCombo);
+            _comboIndex = Mathf.Clamp(Ctx.PendingComboIndex, 1, Weapon.ComboLength);
+            _strike = Weapon.GetStrike(_comboIndex - 1);
+            float speed = _strike.AnimSpeed > 0f ? _strike.AnimSpeed : 1f;
+            _duration = Ctx.Animator.GetClipLength(_strike.ClipName) / speed;
+            _hitTime = _strike.HitFrame / ClipFps / speed;
             _timer = 0f;
+            _hitDone = false;
             _nextQueued = false;
+
             Ctx.FaceInput();
+            Ctx.Combat.BeginSwing();
+            Ctx.Animator.SetAttackAnimSpeed(speed);
             Ctx.Animator.SetAttack(_comboIndex);
         }
 
@@ -42,19 +53,25 @@ namespace DeadCells.Player.StateMachine.States
             // Rolling out of a swing keeps the combo: the next attack continues from the following hit.
             if (Ctx.Input.RollPressed && Ctx.CanRoll)
             {
-                Ctx.StoreComboCarry(_comboIndex < MaxCombo ? _comboIndex + 1 : 1);
+                Ctx.StoreComboCarry(_comboIndex < Weapon.ComboLength ? _comboIndex + 1 : 1);
                 Machine.ChangeState(Machine.Roll);
                 return;
             }
 
-            if (Ctx.Input.AttackPressed && _comboIndex < MaxCombo)
+            if (Ctx.Input.AttackPressed && _comboIndex < Weapon.ComboLength)
                 _nextQueued = true;
 
             _timer += Time.deltaTime;
-            float duration = _clipLengths[_comboIndex - 1];
-            float normalized = duration > 0f ? _timer / duration : 1f;
 
-            if (_nextQueued && normalized >= Ctx.Config.ComboChainNormalizedTime)
+            if (!_hitDone && _timer >= _hitTime)
+            {
+                _hitDone = true;
+                Ctx.Combat.PerformStrike(_strike, Ctx.FacingDirection);
+            }
+
+            float normalized = _duration > 0f ? _timer / _duration : 1f;
+
+            if (_nextQueued && _hitDone && normalized >= Ctx.Config.ComboChainNormalizedTime)
             {
                 Ctx.PendingComboIndex = _comboIndex + 1;
                 Machine.ChangeState(Machine.Attack);
@@ -83,15 +100,6 @@ namespace DeadCells.Player.StateMachine.States
                 ? Ctx.Config.GravityScale * Ctx.Config.FallGravityMultiplier
                 : Ctx.Config.GravityScale);
             Ctx.ClampFallSpeed();
-        }
-
-        private void CacheClipLengths()
-        {
-            if (_clipLengthsCached)
-                return;
-            for (int i = 0; i < MaxCombo; i++)
-                _clipLengths[i] = Ctx.Animator.GetClipLength(ClipNames[i]);
-            _clipLengthsCached = true;
         }
     }
 }

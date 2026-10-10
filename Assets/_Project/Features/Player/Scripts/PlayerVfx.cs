@@ -1,3 +1,4 @@
+using DeadCells.Combat;
 using DeadCells.VFX;
 using UnityEngine;
 
@@ -29,6 +30,7 @@ namespace DeadCells.Player
             _context.Jumped += OnJumped;
             _context.AirJumped += OnAirJumped;
             _context.Landed += OnLanded;
+            _context.Combat.StrikePerformed += OnStrikePerformed;
         }
 
         private void OnDestroy()
@@ -38,7 +40,12 @@ namespace DeadCells.Player
             _context.Jumped -= OnJumped;
             _context.AirJumped -= OnAirJumped;
             _context.Landed -= OnLanded;
+            _context.Combat.StrikePerformed -= OnStrikePerformed;
         }
+
+        // Swing frames are drawn facing right with the hero's feet at the canvas centre, like the hero sprites.
+        private void OnStrikePerformed(WeaponData.Strike strike, Vector2 feet, int facing) =>
+            _spawner.Play(strike.SwingVfx, feet, facing < 0);
 
         private void OnJumped(Vector2 feet)
         {
