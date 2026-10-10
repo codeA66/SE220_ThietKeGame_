@@ -14,14 +14,36 @@ MonoBehaviour:
   m_EditorClassIdentifier: Player::DeadCells.Player.PlayerMovementConfig
   _runSpeed: 7
   _airSpeed: 6.5
-  _jumpVelocity: 14
+  _jumpBaseVelocity: 7.6
+  _jumpHoldBoost: 6.4
+  _jumpHoldTime: 0.05
   _gravityScale: 3.5
   _fallGravityMultiplier: 1.5
   _maxFallSpeed: 20
-  _jumpCutMultiplier: 0.5
-  _coyoteTime: 0.1
+  _coyoteTime: 0.12
   _jumpBufferTime: 0.12
-  _rollSpeed: 12
-  _rollDuration: 0.633
+  _airJumpEnabled: 1
+  _maxAirJumps: 1
+  _airJumpVelocity: 13.8
+  _rollDuration: 0.4
+  _rollCooldown: 0.37
+  _rollStartSpeed: 14
+  _rollEndSpeed: 6
+  _rollCancelNormalizedTime: 0
+  _allowAirRoll: 1
+  _maxAirRolls: 1
+  _airRollKeepsGravity: 0
   _comboChainNormalizedTime: 0.6
+  _attackMoveSpeedMultiplier: 0.4
+  _attackLockFacing: 1
+  _allowAirAttack: 1
+  _comboCarryWindow: 0.3
+  _ledgeClimbEnabled: 1
+  _ledgeChestHeight: 0.9
+  _ledgeHeadHeight: 1.7
+  _ledgeCheckDistance: 0.25
+  _downInputThreshold: 0.5
+  _dropThroughDuration: 0.25
+  _stompSpeed: 25
+  _stompLandDuration: 0.15
   _groundCheckDistance: 0.05

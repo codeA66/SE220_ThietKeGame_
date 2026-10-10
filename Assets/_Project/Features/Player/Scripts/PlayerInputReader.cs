@@ -17,6 +17,7 @@ namespace DeadCells.Player
         private InputAction _roll;
 
         public float MoveX { get; private set; }
+        public float MoveY { get; private set; }
         public bool JumpPressed { get; private set; }
         public bool JumpHeld { get; private set; }
         public bool AttackPressed { get; private set; }
@@ -37,7 +38,9 @@ namespace DeadCells.Player
 
         public void Poll()
         {
-            MoveX = _move.ReadValue<Vector2>().x;
+            var move = _move.ReadValue<Vector2>();
+            MoveX = move.x;
+            MoveY = move.y;
             JumpPressed = _jump.WasPressedThisFrame();
             JumpHeld = _jump.IsPressed();
             AttackPressed = _attack.WasPressedThisFrame();

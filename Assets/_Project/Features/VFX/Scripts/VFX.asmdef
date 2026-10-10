@@ -1,0 +1,6 @@
+{
+    "name": "VFX",
+    "rootNamespace": "DeadCells.VFX",
+    "references": [],
+    "autoReferenced": true
+}

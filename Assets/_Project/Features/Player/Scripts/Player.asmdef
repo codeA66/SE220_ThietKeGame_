@@ -3,6 +3,7 @@
     "rootNamespace": "DeadCells.Player",
     "references": [
         "Core",
+        "VFX",
         "Unity.InputSystem"
     ],
     "autoReferenced": true

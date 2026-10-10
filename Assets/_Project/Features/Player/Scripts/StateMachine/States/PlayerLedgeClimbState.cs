@@ -33,7 +33,7 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.SetKinematic(false);
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
             Ctx.Animator.SetClimbing(false);
-            Ctx.RefillAirJumps();
+            Ctx.RefillAirMoves();
         }
 
         public override void Tick()

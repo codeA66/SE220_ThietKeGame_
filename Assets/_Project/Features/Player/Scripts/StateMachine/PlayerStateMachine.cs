@@ -22,6 +22,9 @@ namespace DeadCells.Player.StateMachine
             Attack = new PlayerAttackState(context, this);
             LedgeClimb = new PlayerLedgeClimbState(context, this);
             AirJump = new PlayerAirJumpState(context, this);
+            Stomp = new PlayerStompState(context, this);
+            Climb = new PlayerClimbState(context, this);
+            Crouch = new PlayerCrouchState(context, this);
         }
 
         public IPlayerState Current { get; private set; }
@@ -35,6 +38,9 @@ namespace DeadCells.Player.StateMachine
         public IPlayerState Attack { get; }
         public IPlayerState LedgeClimb { get; }
         public IPlayerState AirJump { get; }
+        public IPlayerState Stomp { get; }
+        public IPlayerState Climb { get; }
+        public IPlayerState Crouch { get; }
 
         /// <summary>
         /// Switches state. Only one transition is accepted per frame.

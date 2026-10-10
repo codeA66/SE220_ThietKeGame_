@@ -1,7 +1,7 @@
 namespace DeadCells.Player.StateMachine.States
 {
     /// <summary>
-    /// Shared plumbing and the common transition checks used by grounded states.
+    /// Shared plumbing and the common transition checks used by grounded and airborne states.
     /// </summary>
     public abstract class PlayerStateBase : IPlayerState
     {
@@ -20,20 +20,20 @@ namespace DeadCells.Player.StateMachine.States
         public virtual void FixedTick() { }
 
         /// <summary>
-        /// Roll, attack, jump or fall from a grounded state. Returns true if a transition started.
+        /// Roll, attack, drop through, jump or fall from a grounded state. Returns true if a transition started.
         /// </summary>
         protected bool TryGroundedActions()
         {
-            if (Ctx.Input.RollPressed)
-                return Machine.ChangeState(Machine.Roll);
+            if (TryRoll() || TryAttack())
+                return true;
 
-            if (Ctx.Input.AttackPressed)
-            {
-                Ctx.PendingComboIndex = 1;
-                return Machine.ChangeState(Machine.Attack);
-            }
+            if (Ctx.TryDropThrough())
+                return Machine.ChangeState(Machine.Fall);
 
-            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime)
+            if (TryClimb())
+                return true;
+
+            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld)
                 return Machine.ChangeState(Machine.Jump);
 
             if (!Ctx.IsGrounded)
@@ -41,6 +41,31 @@ namespace DeadCells.Player.StateMachine.States
 
             return false;
         }
+
+        /// <summary>
+        /// Stomp, attack, roll, ledge climb or air jump while airborne. Returns true if a transition started.
+        /// </summary>
+        protected bool TryAirActions()
+        {
+            if (Ctx.IsDownHeld && Ctx.Input.JumpPressed)
+                return Machine.ChangeState(Machine.Stomp);
+
+            if (Ctx.Config.AllowAirAttack && TryAttack())
+                return true;
+
+            return TryRoll() || TryClimb() || TryLedgeClimb() || TryAirJump();
+        }
+
+        /// <summary>
+        /// Grab a chain or vine the player overlaps while holding up. Returns true if a transition started.
+        /// </summary>
+        protected bool TryClimb() =>
+            Ctx.IsUpHeld && Ctx.TryFindClimbable() && Machine.ChangeState(Machine.Climb);
+
+        /// <summary>
+        /// Crouch when holding down on the ground. Returns true if a transition started.
+        /// </summary>
+        protected bool TryCrouch() => Ctx.IsDownHeld && Ctx.IsGrounded && Machine.ChangeState(Machine.Crouch);
 
         /// <summary>
         /// Idle or Run depending on input, or Fall when airborne.
@@ -53,14 +78,16 @@ namespace DeadCells.Player.StateMachine.States
                 Machine.ChangeState(Ctx.HasMoveInput ? Machine.Run : Machine.Idle);
         }
 
+        protected bool TryRoll() => Ctx.Input.RollPressed && Ctx.CanRoll && Machine.ChangeState(Machine.Roll);
+
         /// <summary>
-        /// Start the first combo hit while airborne, if allowed. Returns true if a transition started.
+        /// Starts a swing, continuing a combo that a roll interrupted if it is still within the carry window.
         /// </summary>
-        protected bool TryAirAttack()
+        protected bool TryAttack()
         {
-            if (!Ctx.Config.AllowAirAttack || !Ctx.Input.AttackPressed)
+            if (!Ctx.Input.AttackPressed)
                 return false;
-            Ctx.PendingComboIndex = 1;
+            Ctx.PendingComboIndex = Ctx.TakeComboStartIndex();
             return Machine.ChangeState(Machine.Attack);
         }
 

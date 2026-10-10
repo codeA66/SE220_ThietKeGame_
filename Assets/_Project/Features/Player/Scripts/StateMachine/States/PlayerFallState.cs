@@ -12,13 +12,13 @@ namespace DeadCells.Player.StateMachine.States
         public override void Tick()
         {
             // Coyote jump: walked off a ledge but jump pressed shortly after.
-            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime)
+            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld)
             {
                 Machine.ChangeState(Machine.Jump);
                 return;
             }
 
-            if (TryAirAttack() || TryLedgeClimb() || TryAirJump())
+            if (TryAirActions())
                 return;
 
             if (Ctx.IsGrounded && Ctx.Velocity.y <= 0f)
