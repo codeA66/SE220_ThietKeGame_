@@ -10,6 +10,7 @@ Shader "DeadCells/PaletteSwap2D"
         [NoScaleOffset] _PaletteTex ("Palette (256 x N)", 2D) = "white" {}
         _PaletteRow ("Palette Row", Float) = 1
         _PaletteRows ("Palette Row Count", Float) = 4
+        _Flash ("Flash (0-1, set per renderer)", Range(0, 1)) = 0
     }
 
     SubShader
@@ -65,6 +66,7 @@ Shader "DeadCells/PaletteSwap2D"
             CBUFFER_START(UnityPerMaterial)
                 float _PaletteRow;
                 float _PaletteRows;
+                half _Flash;
             CBUFFER_END
 
             Varyings Vert(Attributes input)
@@ -92,7 +94,9 @@ Shader "DeadCells/PaletteSwap2D"
                 half4 color = SAMPLE_TEXTURE2D(_PaletteTex, sampler_point_clamp, float2(u, v));
 
                 color.a = index.a;
-                return color * input.color;
+                color *= input.color;
+                color.rgb = lerp(color.rgb, half3(1, 1, 1), _Flash);
+                return color;
             }
             ENDHLSL
         }

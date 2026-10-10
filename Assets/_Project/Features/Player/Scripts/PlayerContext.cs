@@ -72,6 +72,7 @@ namespace DeadCells.Player
         public event Action PerfectDodged;
 
         public PlayerMovementConfig Config { get; }
+        public PlayerCombat Combat { get; set; }
         public PlayerInputReader Input { get; }
         public PlayerAnimatorBridge Animator { get; }
 

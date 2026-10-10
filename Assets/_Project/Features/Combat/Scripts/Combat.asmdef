@@ -1,0 +1,9 @@
+{
+    "name": "Combat",
+    "rootNamespace": "DeadCells.Combat",
+    "references": [
+        "Core",
+        "VFX"
+    ],
+    "autoReferenced": true
+}

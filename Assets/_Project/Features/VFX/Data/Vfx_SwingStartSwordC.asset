@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 849777d5e4a0ac44b813409b626d866a, type: 3}
+  m_Name: Vfx_SwingStartSwordC
+  m_EditorClassIdentifier: VFX::DeadCells.VFX.VfxDefinition
+  _frames:
+  - {fileID: 21300000, guid: 2a5e0ac72d8c19d47a93a0a6c5191e05, type: 3}
+  - {fileID: 21300000, guid: 7580bc6f83917b94f8ea841691ec6331, type: 3}
+  - {fileID: 21300000, guid: fbad7692ce375b64f85b673ec607f5e3, type: 3}
+  - {fileID: 21300000, guid: a5c0bd70e65bca24fa91f190f086ba27, type: 3}
+  - {fileID: 21300000, guid: 71b5ec21090de884eba88007537a6da8, type: 3}
+  - {fileID: 21300000, guid: b933c726ce0189641bbf0bcfd3946f8d, type: 3}
+  - {fileID: 21300000, guid: 212719e81d4e3004796f0babdb33d812, type: 3}
+  _fps: 30
+  _tint: {r: 0.98039216, g: 1, b: 0.28627452, a: 1}
+  _scale: 1
+  _sortingOrder: 1
+  _prewarmCount: 2

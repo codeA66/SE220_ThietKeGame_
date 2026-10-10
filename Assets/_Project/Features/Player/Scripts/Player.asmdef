@@ -4,6 +4,8 @@
     "references": [
         "Core",
         "VFX",
+        "Combat",
+        "CameraSystem",
         "Unity.InputSystem"
     ],
     "autoReferenced": true

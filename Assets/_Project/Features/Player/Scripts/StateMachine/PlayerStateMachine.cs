@@ -25,6 +25,8 @@ namespace DeadCells.Player.StateMachine
             Stomp = new PlayerStompState(context, this);
             Climb = new PlayerClimbState(context, this);
             Crouch = new PlayerCrouchState(context, this);
+            Hurt = new PlayerHurtState(context, this);
+            Dead = new PlayerDeadState(context, this);
         }
 
         public IPlayerState Current { get; private set; }
@@ -41,6 +43,8 @@ namespace DeadCells.Player.StateMachine
         public IPlayerState Stomp { get; }
         public IPlayerState Climb { get; }
         public IPlayerState Crouch { get; }
+        public IPlayerState Hurt { get; }
+        public IPlayerState Dead { get; }
 
         /// <summary>
         /// Switches state. Only one transition is accepted per frame.
@@ -52,12 +56,26 @@ namespace DeadCells.Player.StateMachine
             if (frame == _lastTransitionFrame)
                 return false;
             _lastTransitionFrame = frame;
+            Switch(next);
+            return true;
+        }
 
+        /// <summary>
+        /// Switches state even if a transition already happened this frame. Only for interrupts that
+        /// must not be lost (taking damage, dying).
+        /// </summary>
+        public void ForceChangeState(IPlayerState next)
+        {
+            _lastTransitionFrame = UnityEngine.Time.frameCount;
+            Switch(next);
+        }
+
+        private void Switch(IPlayerState next)
+        {
             Current?.Exit();
             GameDebug.Log($"{Current?.GetType().Name ?? "None"} -> {next.GetType().Name}", LogTopic.Gameplay);
             Current = next;
             Current.Enter();
-            return true;
         }
 
         public void Tick() => Current?.Tick();

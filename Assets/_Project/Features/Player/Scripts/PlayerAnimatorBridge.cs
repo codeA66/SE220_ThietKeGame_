@@ -18,6 +18,9 @@ namespace DeadCells.Player
         private static readonly int OnChainHash = Animator.StringToHash("OnChain");
         private static readonly int ClimbAnimSpeedHash = Animator.StringToHash("ClimbAnimSpeed");
         private static readonly int CrouchingHash = Animator.StringToHash("Crouching");
+        private static readonly int AttackAnimSpeedHash = Animator.StringToHash("AttackAnimSpeed");
+        private static readonly int HurtHash = Animator.StringToHash("Hurt");
+        private static readonly int DeadHash = Animator.StringToHash("Dead");
 
         [SerializeField] private Animator _animator;
 
@@ -43,6 +46,12 @@ namespace DeadCells.Player
         public void SetClimbAnimSpeed(float speed) => _animator.SetFloat(ClimbAnimSpeedHash, speed);
 
         public void SetCrouching(bool crouching) => _animator.SetBool(CrouchingHash, crouching);
+
+        public void SetAttackAnimSpeed(float speed) => _animator.SetFloat(AttackAnimSpeedHash, speed);
+
+        public void SetHurt(bool hurt) => _animator.SetBool(HurtHash, hurt);
+
+        public void SetDead(bool dead) => _animator.SetBool(DeadHash, dead);
 
         /// <summary>
         /// Length in seconds of a clip in the controller, or 0 if it is missing.

@@ -114,6 +114,22 @@ namespace DeadCells.Player
         [Tooltip("Collider height while crouching (units), used when CrouchShrinkCollider is on.")]
         [SerializeField] private float _crouchColliderHeight = 0.9f;
 
+        [Header("Hurt")]
+        [Tooltip("Seconds of lost control after a hit (longer if the hit stuns). Tuned by feel.")]
+        [SerializeField] private float _hurtLockDuration = 0.2f;
+        [Tooltip("Minimum horizontal knockback when hit (units/s). Tuned by feel.")]
+        [SerializeField] private float _hurtMinKnockback = 4f;
+        [Tooltip("Upward pop when hit (units/s). Tuned by feel.")]
+        [SerializeField] private float _hurtKnockUp = 4f;
+
+        [Header("Stomp Impact")]
+        [Tooltip("Damage of the stomp landing. Tuned by feel: no Dead Cells value found.")]
+        [SerializeField] private int _stompDamage = 30;
+        [Tooltip("Stun applied by the stomp landing (seconds). DC: DiveAttackStun 1.")]
+        [SerializeField] private float _stompStun = 1f;
+        [Tooltip("Size of the stomp impact box around the feet (units).")]
+        [SerializeField] private Vector2 _stompArea = new Vector2(2.5f, 1f);
+
         [Header("Ground Check")]
         [Tooltip("How far below the collider the ground is searched (units).")]
         [SerializeField] private float _groundCheckDistance = 0.05f;
@@ -156,6 +172,12 @@ namespace DeadCells.Player
         public float PerfectDodgeDuration => _perfectDodgeDuration;
         public bool CrouchShrinkCollider => _crouchShrinkCollider;
         public float CrouchColliderHeight => _crouchColliderHeight;
+        public float HurtLockDuration => _hurtLockDuration;
+        public float HurtMinKnockback => _hurtMinKnockback;
+        public float HurtKnockUp => _hurtKnockUp;
+        public int StompDamage => _stompDamage;
+        public float StompStun => _stompStun;
+        public Vector2 StompArea => _stompArea;
         public float GroundCheckDistance => _groundCheckDistance;
     }
 }

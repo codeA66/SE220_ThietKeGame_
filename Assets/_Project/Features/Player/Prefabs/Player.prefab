@@ -108,6 +108,9 @@ GameObject:
   - component: {fileID: 614256163941222291}
   - component: {fileID: 3196283361986700383}
   - component: {fileID: 3891670474457966963}
+  - component: {fileID: 3905777086750246925}
+  - component: {fileID: 4504736479429095215}
+  - component: {fileID: 7593926378827119951}
   m_Layer: 7
   m_Name: Player
   m_TagString: Untagged
@@ -256,6 +259,12 @@ MonoBehaviour:
   _climbableMask:
     serializedVersion: 2
     m_Bits: 1024
+  _health: {fileID: 3905777086750246925}
+  _weapon: {fileID: 11400000, guid: eccaa66cd57486a4a98e1063f80d63df, type: 2}
+  _attackTargets:
+    serializedVersion: 2
+    m_Bits: 256
+  _respawnDelay: 1.5
 --- !u!114 &3196283361986700383
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -290,6 +299,55 @@ MonoBehaviour:
   _source: {fileID: 1325374163017810342}
   _ghost: {fileID: 6306117392122238682}
   _startAlpha: 0.45
+--- !u!114 &3905777086750246925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4671979237564268328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ad30998da40b2d44b98c9432a0e0744, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Combat::DeadCells.Combat.Health
+  _maxHealth: 100
+  _invulnerabilityAfterHit: 0.5
+--- !u!114 &4504736479429095215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4671979237564268328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cba0c83319f5d54798d3d30e25ca46e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Combat::DeadCells.Combat.Hurtbox
+  _health: {fileID: 3905777086750246925}
+--- !u!114 &7593926378827119951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4671979237564268328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b25dfd31dd2ca644e8dd759aafcedc6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Player::DeadCells.Player.PlayerFeedback
+  _controller: {fileID: 614256163941222291}
+  _sprite: {fileID: 1325374163017810342}
+  _hitStop: {fileID: 0}
+  _camera: {fileID: 0}
+  _hitStopDuration: 0.05
+  _hitShakeAmplitude: 0.08
+  _hitShakeDuration: 0.1
+  _hurtShakeAmplitude: 0.2
+  _hurtShakeDuration: 0.2
+  _flashDuration: 0.1
 --- !u!1 &5026816980125781225
 GameObject:
   m_ObjectHideFlags: 0
