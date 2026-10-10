@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5484db9c1a7ef84db623f0650e84028, type: 3}
+  m_Name: Enemy_Archer
+  m_EditorClassIdentifier: Enemies::DeadCells.Enemies.EnemyData
+  _dcId: Archer
+  _fleshColor: {r: 0.29411766, g: 0.3529412, b: 0.52156866, a: 1}
+  _maxHealth: 60
+  _hitStun: 0.25
+  _knockbackResistance: 0
+  _patrolSpeed: 1
+  _chaseSpeed: 1.6
+  _idleTimeRange: {x: 0.8, y: 2}
+  _patrolTimeRange: {x: 1.5, y: 3}
+  _detectRangeCells: 14
+  _loseRangeCells: 18
+  _maxHeightDiffCells: 4
+  _keepAwayCells: 4
+  _attackKind: 3
+  _damage: 12
+  _charge: 0.9
+  _cooldown: 1.5
+  _recover: 0.2
+  _hitFrame: 0
+  _attackRangeCells: 12
+  _hitReachCells: 1.35
+  _hitHeightCells: 2
+  _knockback: 3
+  _stunDealt: 0
+  _hitCount: 1
+  _travelCells: 8
+  _travelDuration: 0.6
+  _lungeUpSpeed: 5
+  _projectilePrefab: {fileID: 5553314439592103208, guid: 7b22495186d31d64086a51616e133ca8, type: 3}
+  _projectileSpeed: 14
+  _projectileCount: 1
+  _fuseTime: 1.5
+  _blastRadiusCells: 2.9
+  _throwSpread: 1.5
+  _blastVfx: {fileID: 0}

@@ -32,6 +32,14 @@ namespace DeadCells.Combat
 
         private void Awake() => Current = _maxHealth;
 
+        /// <summary>Sets max health (e.g. from enemy data) and fills it.</summary>
+        public void Initialize(int maxHealth, float invulnerabilityAfterHit)
+        {
+            _maxHealth = Mathf.Max(1, maxHealth);
+            _invulnerabilityAfterHit = invulnerabilityAfterHit;
+            RestoreFull();
+        }
+
         public bool TakeDamage(in DamageInfo info)
         {
             if (!IsAlive || IsInvulnerable || info.Amount <= 0)
