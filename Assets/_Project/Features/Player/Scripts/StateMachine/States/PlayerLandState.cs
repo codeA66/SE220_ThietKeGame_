@@ -16,11 +16,12 @@ namespace DeadCells.Player.StateMachine.States
             _timer = 0f;
             _duration = Ctx.Animator.GetClipLength(ClipName);
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
+            Ctx.NotifyLanded();
         }
 
         public override void Tick()
         {
-            if (TryGroundedActions())
+            if (TryGroundedActions() || TryCrouch())
                 return;
 
             _timer += Time.deltaTime;

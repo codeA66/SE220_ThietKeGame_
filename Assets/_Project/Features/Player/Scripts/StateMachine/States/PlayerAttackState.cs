@@ -39,8 +39,10 @@ namespace DeadCells.Player.StateMachine.States
 
         public override void Tick()
         {
-            if (Ctx.Input.RollPressed && Ctx.IsGrounded)
+            // Rolling out of a swing keeps the combo: the next attack continues from the following hit.
+            if (Ctx.Input.RollPressed && Ctx.CanRoll)
             {
+                Ctx.StoreComboCarry(_comboIndex < MaxCombo ? _comboIndex + 1 : 1);
                 Machine.ChangeState(Machine.Roll);
                 return;
             }

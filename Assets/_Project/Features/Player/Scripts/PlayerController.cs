@@ -14,6 +14,10 @@ namespace DeadCells.Player
         [SerializeField] private PlayerAnimatorBridge _animator;
         [SerializeField] private SpriteRenderer _sprite;
         [SerializeField] private LayerMask _groundMask;
+        [Tooltip("Layers the player passes through while rolling (enemies).")]
+        [SerializeField] private LayerMask _rollPassThroughMask;
+        [Tooltip("Layers of chain / vine triggers the player can climb.")]
+        [SerializeField] private LayerMask _climbableMask;
 
         private Rigidbody2D _body;
         private PlayerContext _context;
@@ -26,7 +30,7 @@ namespace DeadCells.Player
         {
             _body = GetComponent<Rigidbody2D>();
             var collider = GetComponent<BoxCollider2D>();
-            _context = new PlayerContext(_body, collider, _sprite, _groundMask, _config, _input, _animator);
+            _context = new PlayerContext(_body, collider, _sprite, _groundMask, _rollPassThroughMask, _climbableMask, _config, _input, _animator);
             _machine = new PlayerStateMachine(_context);
         }
 

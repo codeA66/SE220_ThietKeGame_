@@ -8,7 +8,7 @@ namespace DeadCells.Player.StateMachine.States
 
         public override void Tick()
         {
-            if (TryGroundedActions())
+            if (TryGroundedActions() || TryCrouch())
                 return;
             if (!Ctx.HasMoveInput)
                 Machine.ChangeState(Machine.Idle);
