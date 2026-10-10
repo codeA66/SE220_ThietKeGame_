@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5484db9c1a7ef84db623f0650e84028, type: 3}
+  m_Name: Enemy_Shield
+  m_EditorClassIdentifier: Enemies::DeadCells.Enemies.EnemyData
+  _dcId: Shield
+  _fleshColor: {r: 0.7294118, g: 0.33333334, b: 0.19215687, a: 1}
+  _maxHealth: 100
+  _hitStun: 0.25
+  _knockbackResistance: 0.3
+  _patrolSpeed: 1.2
+  _chaseSpeed: 2
+  _idleTimeRange: {x: 0.8, y: 2}
+  _patrolTimeRange: {x: 1.5, y: 3}
+  _detectRangeCells: 10
+  _loseRangeCells: 16
+  _maxHeightDiffCells: 4
+  _keepAwayCells: 0
+  _attackKind: 2
+  _damage: 10
+  _charge: 0.8
+  _cooldown: 3.6
+  _recover: 0.3
+  _hitFrame: 0
+  _attackRangeCells: 6
+  _hitReachCells: 1.3
+  _hitHeightCells: 2.2
+  _knockback: 6
+  _stunDealt: 1
+  _hitCount: 1
+  _travelCells: 8
+  _travelDuration: 0.6
+  _lungeUpSpeed: 5
+  _projectilePrefab: {fileID: 0}
+  _projectileSpeed: 14
+  _projectileCount: 1
+  _fuseTime: 1.5
+  _blastRadiusCells: 2.9
+  _throwSpread: 1.5
+  _blastVfx: {fileID: 0}

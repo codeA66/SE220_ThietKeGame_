@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5484db9c1a7ef84db623f0650e84028, type: 3}
+  m_Name: Enemy_Grenadier
+  m_EditorClassIdentifier: Enemies::DeadCells.Enemies.EnemyData
+  _dcId: Grenader
+  _fleshColor: {r: 0.9843137, g: 0.36078432, b: 0.6627451, a: 1}
+  _maxHealth: 100
+  _hitStun: 0.25
+  _knockbackResistance: 0
+  _patrolSpeed: 1.5
+  _chaseSpeed: 3
+  _idleTimeRange: {x: 0.8, y: 2}
+  _patrolTimeRange: {x: 1.5, y: 3}
+  _detectRangeCells: 12
+  _loseRangeCells: 16
+  _maxHeightDiffCells: 4
+  _keepAwayCells: 3
+  _attackKind: 4
+  _damage: 15
+  _charge: 0.6
+  _cooldown: 2.6
+  _recover: 0.3
+  _hitFrame: 2
+  _attackRangeCells: 9
+  _hitReachCells: 1.35
+  _hitHeightCells: 2
+  _knockback: 4
+  _stunDealt: 0
+  _hitCount: 1
+  _travelCells: 8
+  _travelDuration: 0.6
+  _lungeUpSpeed: 5
+  _projectilePrefab: {fileID: 7412506887231142300, guid: fd5fe819d2f23ca4f9786d3bef15347f, type: 3}
+  _projectileSpeed: 14
+  _projectileCount: 3
+  _fuseTime: 1.5
+  _blastRadiusCells: 2.9
+  _throwSpread: 1.5
+  _blastVfx: {fileID: 11400000, guid: ed212fdb12438f1419cd26c71fb3cfa0, type: 2}
