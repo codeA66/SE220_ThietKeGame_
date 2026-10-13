@@ -15,6 +15,7 @@ namespace DeadCells.Player
         private const float MaxGroundedRiseSpeed = 0.01f;
         private const float LedgeTopProbeInset = 0.1f;
         private const float LedgeStandInset = 0.05f;
+        private const float OneWaySideProbeInset = 0.01f;
 
         private readonly Rigidbody2D _body;
         private readonly BoxCollider2D _collider;
@@ -32,6 +33,7 @@ namespace DeadCells.Player
         private int _comboCarryIndex;
         private Collider2D _groundCollider;
         private Collider2D _droppedPlatform;
+        private Collider2D _ledgeIgnoredPlatform;
         private float _dropRestoreTime;
         private float _lastAirborneVelocityY;
         private float _perfectDodgeUntil = float.NegativeInfinity;
@@ -73,6 +75,8 @@ namespace DeadCells.Player
 
         public PlayerMovementConfig Config { get; }
         public PlayerCombat Combat { get; set; }
+        public PlayerBow Bow { get; set; }
+        public PlayerWeaponLoadout Weapons { get; set; }
         public PlayerInputReader Input { get; }
         public PlayerAnimatorBridge Animator { get; }
 
@@ -117,6 +121,12 @@ namespace DeadCells.Player
             // Thin strip under the feet; only up-facing surfaces count, so touching a wall is not "ground".
             // Rising through a one-way platform is not "ground" either.
             var bounds = _collider.bounds;
+            if (_ledgeIgnoredPlatform != null)
+            {
+                var platformBounds = _ledgeIgnoredPlatform.bounds;
+                if (bounds.max.y < platformBounds.min.y || bounds.max.x < platformBounds.min.x || bounds.min.x > platformBounds.max.x)
+                    _ledgeIgnoredPlatform = null;
+            }
             var origin = new Vector2(bounds.center.x, bounds.min.y + FeetProbeHeight * 0.5f);
             var size = new Vector2(bounds.size.x * FeetProbeWidthRatio, FeetProbeHeight);
             var hit = Physics2D.BoxCast(origin, size, 0f, Vector2.down, Config.GroundCheckDistance, _groundMask);
@@ -260,6 +270,12 @@ namespace DeadCells.Player
             return index;
         }
 
+        public void ClearComboCarry()
+        {
+            _comboCarryIndex = 0;
+            _comboCarryUntil = float.NegativeInfinity;
+        }
+
         // ---------- One-way platforms ----------
 
         /// <summary>
@@ -273,6 +289,7 @@ namespace DeadCells.Player
                 return false;
 
             _droppedPlatform = _groundCollider;
+            _ledgeIgnoredPlatform = _groundCollider;
             _dropRestoreTime = Time.time + Config.DropThroughDuration;
             Physics2D.IgnoreCollision(_collider, _droppedPlatform, true);
             _lastJumpPressedTime = float.NegativeInfinity;
@@ -334,7 +351,8 @@ namespace DeadCells.Player
 
         /// <summary>
         /// Looks for a climbable ledge in the facing direction while the player holds toward it:
-        /// a wall at chest height, free space at head height, and room to stand on top.
+        /// Solid ground needs a wall at chest height and free space above it. One-way platforms
+        /// require a real side edge near the upper probe while the player is no longer rising.
         /// standPoint is where the feet (transform pivot) should end up.
         /// </summary>
         public bool TryFindLedge(out Vector2 standPoint)
@@ -348,8 +366,11 @@ namespace DeadCells.Player
             float reach = bounds.extents.x + Config.LedgeCheckDistance;
             float feetY = bounds.min.y;
 
+            if (TryFindOneWayLedge(bounds, dir, reach, out standPoint))
+                return true;
+
             var chest = Physics2D.Raycast(new Vector2(bounds.center.x, feetY + Config.LedgeChestHeight), dir, reach, _groundMask);
-            if (chest.collider == null)
+            if (chest.collider == null || IsOneWayPlatform(chest.collider))
                 return false;
 
             var head = Physics2D.Raycast(new Vector2(bounds.center.x, feetY + Config.LedgeHeadHeight), dir, reach, _groundMask);
@@ -361,10 +382,45 @@ namespace DeadCells.Player
             float probeTop = feetY + Config.LedgeHeadHeight;
             var top = Physics2D.Raycast(new Vector2(probeX, probeTop), Vector2.down,
                 Config.LedgeHeadHeight - Config.LedgeChestHeight + LedgeTopProbeInset, _groundMask);
-            if (top.collider == null || top.normal.y < MinGroundNormalY)
+            if (top.collider == null || IsOneWayPlatform(top.collider) || top.normal.y < MinGroundNormalY)
                 return false;
 
-            var stand = new Vector2(chest.point.x + FacingDirection * (bounds.extents.x + LedgeStandInset), top.point.y);
+            return TryGetLedgeStandPoint(bounds, chest.point.x, top.point.y, out standPoint);
+        }
+
+        private bool TryFindOneWayLedge(Bounds bounds, Vector2 dir, float reach, out Vector2 standPoint)
+        {
+            standPoint = default;
+            // Let upward jumps pass through naturally; Down + Jump must not grab the platform again.
+            if (Velocity.y > MaxGroundedRiseSpeed || IsDownHeld || _droppedPlatform != null)
+                return false;
+
+            float tolerance = Config.OneWayLedgeGrabTolerance;
+            float handY = bounds.min.y + Config.LedgeHeadHeight;
+            var probe = new Vector2(bounds.center.x + FacingDirection * reach, handY + tolerance);
+            var top = Physics2D.Raycast(probe, Vector2.down, tolerance * 2f, _groundMask);
+            if (top.collider == null || !IsOneWayPlatform(top.collider)
+                || top.collider == _ledgeIgnoredPlatform || top.normal.y < MinGroundNormalY)
+                return false;
+
+            // A real side hit is required: a ray starting inside the platform is not an edge.
+            var side = Physics2D.Raycast(new Vector2(bounds.center.x, top.point.y - OneWaySideProbeInset),
+                dir, reach, _groundMask);
+            if (side.collider != top.collider || side.distance <= 0f
+                || side.normal.x * FacingDirection > -MinGroundNormalY)
+                return false;
+
+            return TryGetLedgeStandPoint(bounds, side.point.x, top.point.y, out standPoint);
+        }
+
+        private static bool IsOneWayPlatform(Collider2D collider) =>
+            collider.usedByEffector && collider.TryGetComponent<PlatformEffector2D>(out var effector)
+            && effector.isActiveAndEnabled && effector.useOneWay;
+
+        private bool TryGetLedgeStandPoint(Bounds bounds, float edgeX, float topY, out Vector2 standPoint)
+        {
+            standPoint = default;
+            var stand = new Vector2(edgeX + FacingDirection * (bounds.extents.x + LedgeStandInset), topY);
             var standCenter = stand + new Vector2(0f, bounds.size.y * 0.5f + LedgeStandInset);
             if (Physics2D.OverlapBox(standCenter, bounds.size * 0.95f, 0f, _groundMask) != null)
                 return false;

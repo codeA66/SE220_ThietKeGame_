@@ -21,8 +21,43 @@ namespace DeadCells.Player
         private static readonly int AttackAnimSpeedHash = Animator.StringToHash("AttackAnimSpeed");
         private static readonly int HurtHash = Animator.StringToHash("Hurt");
         private static readonly int DeadHash = Animator.StringToHash("Dead");
+        private static readonly int BowChargeHash = Animator.StringToHash("Bow.BowCharge");
+        private static readonly int BowCrouchChargeHash = Animator.StringToHash("Bow.BowCrouchCharge");
+        private static readonly int BowReleaseHash = Animator.StringToHash("Bow.BowRelease");
+        private static readonly int BowCrouchReleaseHash = Animator.StringToHash("Bow.BowCrouchRelease");
+        private static readonly int BowReleaseSpeedHash = Animator.StringToHash("BowReleaseSpeed");
 
         [SerializeField] private Animator _animator;
+        private int _bowLayer;
+        private float _bowReleaseLength;
+        private float _bowCrouchReleaseLength;
+
+        private void Awake()
+        {
+            _bowLayer = _animator.GetLayerIndex("Bow");
+            if (_bowLayer < 0)
+                throw new System.InvalidOperationException("Player Animator requires the Bow layer.");
+            _bowReleaseLength = GetClipLength("Player_BowRelease");
+            _bowCrouchReleaseLength = GetClipLength("Player_BowCrouchRelease");
+            if (_bowReleaseLength <= 0f || _bowCrouchReleaseLength <= 0f)
+                throw new System.InvalidOperationException("Player Animator requires both bow release clips.");
+        }
+
+        public void DrawBow(bool crouching, float normalizedTime)
+        {
+            _animator.SetLayerWeight(_bowLayer, 1f);
+            _animator.Play(crouching ? BowCrouchChargeHash : BowChargeHash, _bowLayer,
+                Mathf.Min(normalizedTime, 0.999f));
+        }
+
+        public float ReleaseBow(bool crouching, float speed)
+        {
+            _animator.SetFloat(BowReleaseSpeedHash, speed);
+            _animator.Play(crouching ? BowCrouchReleaseHash : BowReleaseHash, _bowLayer, 0f);
+            return (crouching ? _bowCrouchReleaseLength : _bowReleaseLength) / speed;
+        }
+
+        public void HideBow() => _animator.SetLayerWeight(_bowLayer, 0f);
 
         public void SetLocomotion(float speed, bool grounded, float velY)
         {

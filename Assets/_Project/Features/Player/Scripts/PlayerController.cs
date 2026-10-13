@@ -24,6 +24,7 @@ namespace DeadCells.Player
         [Header("Combat")]
         [SerializeField] private Health _health;
         [SerializeField] private WeaponData _weapon;
+        [SerializeField] private PlayerBow _bow;
         [Tooltip("Layers the player's attacks can hit.")]
         [SerializeField] private LayerMask _attackTargets;
         [Tooltip("Seconds before respawning after death (temporary until the run loop exists).")]
@@ -38,6 +39,7 @@ namespace DeadCells.Player
         public PlayerContext Context => _context;
         public IPlayerState CurrentState => _machine?.Current;
         public Health Health => _health;
+        public PlayerWeaponLoadout Weapons => _context?.Weapons;
 
         private void Awake()
         {
@@ -45,6 +47,11 @@ namespace DeadCells.Player
             var collider = GetComponent<BoxCollider2D>();
             _context = new PlayerContext(_body, collider, _sprite, _groundMask, _rollPassThroughMask, _climbableMask, _config, _input, _animator);
             _context.Combat = new PlayerCombat(transform, collider, _weapon, _attackTargets);
+            if (_bow == null)
+                throw new System.InvalidOperationException("PlayerController requires its PlayerBow reference.");
+            _bow.Initialize(_attackTargets, _groundMask);
+            _context.Bow = _bow;
+            _context.Weapons = new PlayerWeaponLoadout();
             _machine = new PlayerStateMachine(_context);
             _spawnPoint = _body.position;
 
@@ -71,11 +78,36 @@ namespace DeadCells.Player
 
             _input.Poll();
             _context.RefreshFrame();
+            UpdateWeaponSelection();
             _machine.Tick();
             _animator.SetLocomotion(Mathf.Abs(_body.linearVelocity.x), _context.IsGrounded, _body.linearVelocity.y);
         }
 
         private void FixedUpdate() => _machine.FixedTick();
+
+        private void UpdateWeaponSelection()
+        {
+            if (!_health.IsAlive)
+                return;
+            PlayerWeaponSlot slot;
+            if (_input.EquipSwordPressed)
+                slot = PlayerWeaponSlot.Sword;
+            else if (_input.EquipBowPressed)
+                slot = PlayerWeaponSlot.Bow;
+            else
+                return;
+
+            if (!_context.Weapons.Equip(slot))
+                return;
+            _context.ClearComboCarry();
+            if (_machine.Current != _machine.Attack && _machine.Current != _machine.BowAttack)
+                return;
+
+            IPlayerState next = !_context.IsGrounded ? _machine.Fall
+                : _context.IsDownHeld ? _machine.Crouch
+                : _context.HasMoveInput ? _machine.Run : _machine.Idle;
+            _machine.ForceChangeState(next);
+        }
 
         /// <summary>
         /// Rolling ignores hits; a hit during the perfect-dodge window counts as a perfect dodge.
@@ -106,6 +138,8 @@ namespace DeadCells.Player
             _body.position = _spawnPoint;
             _body.linearVelocity = Vector2.zero;
             _health.RestoreFull();
+            _bow.ResetShots();
+            _context.ClearComboCarry();
             _machine.ForceChangeState(_machine.Idle);
         }
     }

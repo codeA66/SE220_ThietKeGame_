@@ -23,7 +23,7 @@ namespace DeadCells.Player.StateMachine.States
 
         public PlayerAttackState(PlayerContext context, PlayerStateMachine machine) : base(context, machine) { }
 
-        private WeaponData Weapon => Ctx.Combat.Weapon;
+        private WeaponData Weapon => Ctx.Combat.MeleeWeapon;
 
         public override void Enter()
         {

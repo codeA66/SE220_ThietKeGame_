@@ -87,6 +87,8 @@ namespace DeadCells.Player.StateMachine.States
         {
             if (!Ctx.Input.AttackPressed)
                 return false;
+            if (Ctx.Weapons.Equipped == PlayerWeaponSlot.Bow)
+                return Ctx.Bow.CanShoot && Machine.ChangeState(Machine.BowAttack);
             Ctx.PendingComboIndex = Ctx.TakeComboStartIndex();
             return Machine.ChangeState(Machine.Attack);
         }

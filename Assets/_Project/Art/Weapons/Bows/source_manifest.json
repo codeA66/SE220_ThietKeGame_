@@ -1,0 +1,173 @@
+{
+  "sourceRoot": "D:\\DeadCellsExtracted\\DeadCellsExtracted",
+  "extractionTool": "D:\\ModTools\\ModTools\\AtlasTool.exe",
+  "atlas": "atlas/beheaded.atlas",
+  "iconsAtlas": "cardIcons.png",
+  "iconsMetadata": "data.cdb / item.icon",
+  "frameCount": 800,
+  "iconCount": 16,
+  "items": [
+    {
+      "id": "StartBow",
+      "name": "Arc du fils du geolier",
+      "icon": {
+        "x": 0,
+        "y": 1,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "DualBow",
+      "name": "Arc à multiples encoches",
+      "icon": {
+        "x": 20,
+        "y": 7,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "InfiniteBow",
+      "name": "Arc et carquois sans fond",
+      "icon": {
+        "x": 10,
+        "y": 3,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "LongBow",
+      "name": "Arc de tireur d'élite",
+      "icon": {
+        "x": 10,
+        "y": 1,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "SonicCrossbow",
+      "name": "Carabine sonique",
+      "icon": {
+        "x": 19,
+        "y": 13,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "CloseCombatBow",
+      "name": "Arc de fantassin",
+      "icon": {
+        "x": 11,
+        "y": 1,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "FastBow",
+      "name": "Arc rapide",
+      "icon": {
+        "x": 9,
+        "y": 3,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "FrostBow",
+      "name": "Arc de glace",
+      "icon": {
+        "x": 12,
+        "y": 1,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "CrossBow",
+      "name": "Arbalète lourde",
+      "icon": {
+        "x": 13,
+        "y": 1,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "MultiCrossBow",
+      "name": "Arbalète à répétition",
+      "icon": {
+        "x": 18,
+        "y": 6,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "FrostCrossBow",
+      "name": "Arbalète de glace",
+      "icon": {
+        "x": 17,
+        "y": 8,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "ExplosiveCrossBow",
+      "name": "Arbalète explosive",
+      "icon": {
+        "x": 20,
+        "y": 3,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "MarkBow",
+      "name": "Arc du Hokuto ",
+      "icon": {
+        "x": 18,
+        "y": 8,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "PreciseBow",
+      "name": "Nerfs d'acier",
+      "icon": {
+        "x": 20,
+        "y": 4,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "HeavyBow",
+      "name": "Gilded Yumi",
+      "icon": {
+        "x": 34,
+        "y": 9,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    },
+    {
+      "id": "MagicBow",
+      "name": "Magic Bow",
+      "icon": {
+        "x": 23,
+        "y": 10,
+        "file": "cardIcons.png",
+        "size": 24
+      }
+    }
+  ],
+  "framesArePaletteIndexed": true,
+  "existingPlayerMaterial": "Assets/_Project/Art/Characters/Player/Player_PaletteSwap.mat"
+}

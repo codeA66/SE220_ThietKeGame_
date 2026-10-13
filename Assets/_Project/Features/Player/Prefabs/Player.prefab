@@ -111,6 +111,7 @@ GameObject:
   - component: {fileID: 3905777086750246925}
   - component: {fileID: 4504736479429095215}
   - component: {fileID: 7593926378827119951}
+  - component: {fileID: 3625282525215014192}
   m_Layer: 7
   m_Name: Player
   m_TagString: Untagged
@@ -261,6 +262,7 @@ MonoBehaviour:
     m_Bits: 1024
   _health: {fileID: 3905777086750246925}
   _weapon: {fileID: 11400000, guid: eccaa66cd57486a4a98e1063f80d63df, type: 2}
+  _bow: {fileID: 3625282525215014192}
   _attackTargets:
     serializedVersion: 2
     m_Bits: 256
@@ -348,6 +350,20 @@ MonoBehaviour:
   _hurtShakeAmplitude: 0.2
   _hurtShakeDuration: 0.2
   _flashDuration: 0.1
+--- !u!114 &3625282525215014192
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4671979237564268328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80baad2f6e14be84fb95911150cde543, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Player::DeadCells.Player.PlayerBow
+  _data: {fileID: 11400000, guid: 8a8443ea573c28445a24abb95c62fdd0, type: 2}
+  _arrowPrefab: {fileID: 2913355541369124257, guid: 3f3419675c5b5724ba3eb58135e9869f, type: 3}
 --- !u!1 &5026816980125781225
 GameObject:
   m_ObjectHideFlags: 0
