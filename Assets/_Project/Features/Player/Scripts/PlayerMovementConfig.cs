@@ -87,6 +87,9 @@ namespace DeadCells.Player
         [SerializeField] private float _ledgeHeadHeight = 1.7f;
         [Tooltip("How far beyond the collider side the wall is searched (units).")]
         [SerializeField] private float _ledgeCheckDistance = 0.25f;
+        [Tooltip("Maximum vertical difference between the upper ledge probe and a one-way platform top (units).")]
+        [Min(0.01f)]
+        [SerializeField] private float _oneWayLedgeGrabTolerance = 0.15f;
 
         [Header("Drop Through / Stomp")]
         [Tooltip("Move Y below minus this counts as holding down.")]
@@ -164,6 +167,7 @@ namespace DeadCells.Player
         public float LedgeChestHeight => _ledgeChestHeight;
         public float LedgeHeadHeight => _ledgeHeadHeight;
         public float LedgeCheckDistance => _ledgeCheckDistance;
+        public float OneWayLedgeGrabTolerance => Mathf.Max(0.01f, _oneWayLedgeGrabTolerance);
         public float DownInputThreshold => _downInputThreshold;
         public float DropThroughDuration => _dropThroughDuration;
         public float StompSpeed => _stompSpeed;

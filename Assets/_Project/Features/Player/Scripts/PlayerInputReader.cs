@@ -15,13 +15,19 @@ namespace DeadCells.Player
         private InputAction _jump;
         private InputAction _attack;
         private InputAction _roll;
+        private InputAction _equipSword;
+        private InputAction _equipBow;
 
         public float MoveX { get; private set; }
         public float MoveY { get; private set; }
         public bool JumpPressed { get; private set; }
         public bool JumpHeld { get; private set; }
         public bool AttackPressed { get; private set; }
+        public bool AttackHeld { get; private set; }
+        public bool AttackReleased { get; private set; }
         public bool RollPressed { get; private set; }
+        public bool EquipSwordPressed { get; private set; }
+        public bool EquipBowPressed { get; private set; }
 
         private void Awake()
         {
@@ -30,6 +36,8 @@ namespace DeadCells.Player
             _jump = map.FindAction("Jump", throwIfNotFound: true);
             _attack = map.FindAction("Attack", throwIfNotFound: true);
             _roll = map.FindAction("Roll", throwIfNotFound: true);
+            _equipSword = map.FindAction("EquipSword", throwIfNotFound: true);
+            _equipBow = map.FindAction("EquipBow", throwIfNotFound: true);
         }
 
         private void OnEnable() => _actions.FindActionMap("Player").Enable();
@@ -44,7 +52,11 @@ namespace DeadCells.Player
             JumpPressed = _jump.WasPressedThisFrame();
             JumpHeld = _jump.IsPressed();
             AttackPressed = _attack.WasPressedThisFrame();
+            AttackHeld = _attack.IsPressed();
+            AttackReleased = _attack.WasReleasedThisFrame();
             RollPressed = _roll.WasPressedThisFrame();
+            EquipSwordPressed = _equipSword.WasPressedThisFrame();
+            EquipBowPressed = _equipBow.WasPressedThisFrame();
         }
     }
 }

@@ -1,0 +1,178 @@
+{
+  "dataSource": "D:\\DeadCellsExtracted\\DeadCellsExtracted\\data.cdb",
+  "tracksSource": "D:\\DeadCellsExtracted\\DeadCellsExtracted\\atlas\\beheaded_tracks.json",
+  "item": {
+    "commonProps": {
+      "ammo": 6
+    },
+    "synergy": [],
+    "props": {},
+    "gameplayDesc": "Les munitions reviennent quand vous achevez les ennemis.",
+    "moneyCost": 1,
+    "group": 5,
+    "castCD": 0,
+    "ambiantDesc": "C'est le jouet du fils du geolier. On doit bien pouvoir tuer quelques trucs avec ça.",
+    "id": "StartBow",
+    "icon": {
+      "x": 0,
+      "y": 1,
+      "file": "cardIcons.png",
+      "size": 24
+    },
+    "legendAffixes": [],
+    "name": "Arc du fils du geolier",
+    "droppable": false,
+    "tags": [
+      {
+        "tag": "Ranged"
+      },
+      {
+        "tag": "NoCritical"
+      },
+      {
+        "tag": "HasBullets"
+      },
+      {
+        "tag": "LimitedAmmo"
+      },
+      {
+        "tag": "RustyItem"
+      }
+    ],
+    "tier1": "Tactic",
+    "cellCost": 0
+  },
+  "weapon": {
+    "allowCrouch": true,
+    "isACancel": false,
+    "item": "StartBow",
+    "strikeChain": [
+      {
+        "coolDown": 0.1,
+        "power": [
+          35
+        ],
+        "fxProps": {
+          "fxInnerColor": 12376805,
+          "fxOuterColor": 12376805
+        },
+        "lockCtrlAfter": 0.1,
+        "props": {},
+        "breachBonus": -0.5,
+        "dynamicCharge": 0,
+        "sfxCharge": "sfx/weapon/bow_charge1.wav",
+        "charge": 0.25,
+        "sfxProps": {},
+        "canCrit": false,
+        "area": {
+          "width": 0,
+          "offsetCaseX": 0,
+          "offsetCaseY": 0,
+          "height": 0,
+          "shape": 0
+        },
+        "sfxRelease": "sfx/weapon/bow_shot1.wav",
+        "sfxHit": "sfx/env/arrow_hit.wav",
+        "hitFrame": 0,
+        "critMul": 1.5,
+        "glowColor": 12376805,
+        "animSpd": 4
+      },
+      {
+        "coolDown": 0,
+        "power": [
+          40
+        ],
+        "fxProps": {
+          "fxInnerColor": 12376805,
+          "fxOuterColor": 12376805
+        },
+        "lockCtrlAfter": 0.1,
+        "props": {},
+        "breachBonus": -0.5,
+        "dynamicCharge": 0,
+        "sfxCharge": "sfx/weapon/bow_charge1.wav",
+        "charge": 0.25,
+        "sfxProps": {},
+        "canCrit": false,
+        "area": {
+          "width": 0,
+          "offsetCaseX": 0,
+          "offsetCaseY": 0,
+          "height": 0,
+          "shape": 0
+        },
+        "sfxRelease": "sfx/weapon/bow_shot1.wav",
+        "sfxHit": "sfx/env/arrow_hit.wav",
+        "hitFrame": 0,
+        "critMul": 1.5,
+        "glowColor": 12376805,
+        "animSpd": 3
+      },
+      {
+        "coolDown": 0,
+        "power": [
+          60
+        ],
+        "fxProps": {
+          "fxInnerColor": 12376805,
+          "fxOuterColor": 12376805
+        },
+        "lockCtrlAfter": 0.1,
+        "props": {},
+        "breachBonus": -0.5,
+        "dynamicCharge": 0,
+        "sfxCharge": "sfx/weapon/bow_charge1.wav",
+        "charge": 0.4,
+        "sfxProps": {},
+        "canCrit": false,
+        "area": {
+          "width": 0,
+          "offsetCaseX": 0,
+          "offsetCaseY": 0,
+          "height": 0,
+          "shape": 0
+        },
+        "sfxRelease": "sfx/weapon/bow_shot1.wav",
+        "sfxHit": "sfx/env/arrow_hit.wav",
+        "hitFrame": 0,
+        "critMul": 1.5,
+        "glowColor": 16209984,
+        "animSpd": 2.5
+      }
+    ],
+    "airControlAlways": true,
+    "cannotBeCanceledByWeapon": false
+  },
+  "tuning": {
+    "AmmoAutoDrop": 12,
+    "WeaponChainLoss": 1
+  },
+  "releaseProp2OffsetsAt32PPU": {
+    "startBowShoot": [
+      0.90625,
+      1.4375
+    ],
+    "startBowCrouchShoot": [
+      0.8125,
+      0.71875
+    ]
+  },
+  "projectAdaptation": {
+    "input": "hold Attack; release after minimum charge; early release cancels",
+    "aim": "horizontal facing; A/D may change facing while drawing; fired arrows keep their launch direction",
+    "equip": "1=sword,2=bow; switching cancels attack",
+    "projectileSpeed": 14,
+    "flightLifetime": 4,
+    "speedAndFlightSource": "Existing Enemy_Archer / Projectile_Arrow settings, explicitly accepted by user",
+    "muzzlePlacement": "Uses the recorded Prop2 position of the first release frame; this is the placement chosen for this Unity implementation",
+    "embeddedAmmoReturn": "on victim death or AmmoAutoDrop expiry",
+    "gameplayReference": "https://deadcells.wiki.gg/wiki/Weapons",
+    "arrowSprite": {
+      "atlas": "D:\\DeadCellsExtracted\\DeadCellsExtracted\\atlas\\gameElements.atlas",
+      "region": "tinyArrow",
+      "asset": "Assets/_Project/Art/Projectiles/Arrow_StartBow.png",
+      "selection": "Explicitly chosen by user after viewing extracted candidates"
+    }
+  }
+}

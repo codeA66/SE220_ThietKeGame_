@@ -30,14 +30,17 @@ namespace DeadCells.Player
         private MaterialPropertyBlock _block;
         private float _flashUntil = -1f;
         private PlayerCombat _combat;
+        private PlayerBow _bow;
         private Health _health;
 
         private void Start()
         {
             _block = new MaterialPropertyBlock();
             _combat = _controller.Context.Combat;
+            _bow = _controller.Context.Bow;
             _health = _controller.Health;
             _combat.StrikeHit += OnStrikeHit;
+            _bow.HitDealt += OnArrowHit;
             _health.Damaged += OnDamageTaken;
             _health.Died += OnDamageTaken;
         }
@@ -46,6 +49,8 @@ namespace DeadCells.Player
         {
             if (_combat != null)
                 _combat.StrikeHit -= OnStrikeHit;
+            if (_bow != null)
+                _bow.HitDealt -= OnArrowHit;
             if (_health != null)
             {
                 _health.Damaged -= OnDamageTaken;
@@ -69,6 +74,8 @@ namespace DeadCells.Player
             if (_camera != null)
                 _camera.Shake(_hitShakeAmplitude, _hitShakeDuration);
         }
+
+        private void OnArrowHit(DamageInfo damage) => OnStrikeHit(1, damage.IsCritical);
 
         private void OnDamageTaken(DamageInfo info)
         {

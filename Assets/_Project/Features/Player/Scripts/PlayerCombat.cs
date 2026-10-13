@@ -17,7 +17,7 @@ namespace DeadCells.Player
         {
             _owner = owner;
             _collider = collider;
-            Weapon = weapon;
+            MeleeWeapon = weapon;
             _query = new HitQuery(targets);
         }
 
@@ -26,7 +26,7 @@ namespace DeadCells.Player
         /// <summary>A combo hit lands (hit or miss). Arguments: strike, feet position, facing.</summary>
         public event Action<WeaponData.Strike, Vector2, int> StrikePerformed;
 
-        public WeaponData Weapon { get; }
+        public WeaponData MeleeWeapon { get; }
         public DamageInfo LastDamageTaken { get; set; }
 
         public void BeginSwing() => _query.ResetSwing();

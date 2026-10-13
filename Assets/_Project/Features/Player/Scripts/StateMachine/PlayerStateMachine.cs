@@ -20,6 +20,7 @@ namespace DeadCells.Player.StateMachine
             Land = new PlayerLandState(context, this);
             Roll = new PlayerRollState(context, this);
             Attack = new PlayerAttackState(context, this);
+            BowAttack = new PlayerBowAttackState(context, this);
             LedgeClimb = new PlayerLedgeClimbState(context, this);
             AirJump = new PlayerAirJumpState(context, this);
             Stomp = new PlayerStompState(context, this);
@@ -38,6 +39,7 @@ namespace DeadCells.Player.StateMachine
         public IPlayerState Land { get; }
         public IPlayerState Roll { get; }
         public IPlayerState Attack { get; }
+        public IPlayerState BowAttack { get; }
         public IPlayerState LedgeClimb { get; }
         public IPlayerState AirJump { get; }
         public IPlayerState Stomp { get; }
