@@ -14,36 +14,52 @@ MonoBehaviour:
   m_EditorClassIdentifier: Enemies::DeadCells.Enemies.EnemyData
   _dcId: Archer
   _fleshColor: {r: 0.29411766, g: 0.3529412, b: 0.52156866, a: 1}
+  _glowColor: {r: 1, g: 1, b: 1, a: 1}
   _maxHealth: 60
   _hitStun: 0.25
   _knockbackResistance: 0
+  _hasFrontShield: 0
+  _shieldStaggerDuration: 0.4
   _patrolSpeed: 1
   _chaseSpeed: 1.6
+  _turnDelay: 0
   _idleTimeRange: {x: 0.8, y: 2}
   _patrolTimeRange: {x: 1.5, y: 3}
   _detectRangeCells: 14
   _loseRangeCells: 18
   _maxHeightDiffCells: 4
-  _keepAwayCells: 4
-  _attackKind: 3
-  _damage: 12
-  _charge: 0.9
-  _cooldown: 1.5
-  _recover: 0.2
-  _hitFrame: 0
-  _attackRangeCells: 12
-  _hitReachCells: 1.35
-  _hitHeightCells: 2
-  _knockback: 3
-  _stunDealt: 0
-  _hitCount: 1
-  _travelCells: 8
-  _travelDuration: 0.6
-  _lungeUpSpeed: 5
-  _projectilePrefab: {fileID: 5553314439592103208, guid: 7b22495186d31d64086a51616e133ca8, type: 3}
-  _projectileSpeed: 14
-  _projectileCount: 1
-  _fuseTime: 1.5
-  _blastRadiusCells: 2.9
-  _throwSpread: 1.5
-  _blastVfx: {fileID: 0}
+  _seeThroughWalls: 0
+  _backstepTriggerCells: 3
+  _backstepCells: 3
+  _backstepDuration: 0.3
+  _backstepCooldown: 1
+  _canTeleport: 1
+  _teleportCooldown: 3.5
+  _teleportBehindCells: 3.3
+  _skills:
+  - DcId: shoot
+    Kind: 3
+    ChargeAnim: AtkLoad
+    ExecuteAnim: Atk
+    MinRangeCells: 0
+    MaxRangeCells: 14
+    Damage: 12
+    Charge: 0.9
+    Cooldown: 1.5
+    Recover: 0.2
+    HitFrame: 0
+    HitReachCells: 0
+    HitHeightCells: 0
+    Knockback: 3
+    StunDealt: 0
+    TravelCells: 0
+    TravelDuration: 0
+    LungeUpSpeed: 0
+    ProjectilePrefab: {fileID: 5553314439592103208, guid: 7b22495186d31d64086a51616e133ca8, type: 3}
+    ProjectileSpeed: 7
+    MuzzleHeight: 1
+    ProjectileCount: 1
+    FuseTime: 0
+    BlastRadiusCells: 0
+    LandingSpreadCells: 0
+    BlastVfx: {fileID: 0}

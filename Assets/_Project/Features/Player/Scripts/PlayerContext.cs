@@ -83,6 +83,8 @@ namespace DeadCells.Player
         public bool IsGrounded { get; private set; }
         public int FacingDirection { get; private set; } = 1;
         public bool IsInvulnerable { get; set; }
+        /// <summary>Set by PlayerSpawnHead when the crawling head reaches the body during the spawn intro.</summary>
+        public bool SpawnHeadArrived { get; set; }
         public int PendingComboIndex { get; set; }
         public Vector2 LedgeStandPoint { get; set; }
         public int AirJumpsRemaining { get; private set; }

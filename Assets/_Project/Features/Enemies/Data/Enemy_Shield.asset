@@ -14,36 +14,52 @@ MonoBehaviour:
   m_EditorClassIdentifier: Enemies::DeadCells.Enemies.EnemyData
   _dcId: Shield
   _fleshColor: {r: 0.7294118, g: 0.33333334, b: 0.19215687, a: 1}
+  _glowColor: {r: 1, g: 1, b: 1, a: 1}
   _maxHealth: 100
   _hitStun: 0.25
   _knockbackResistance: 0.3
+  _hasFrontShield: 1
+  _shieldStaggerDuration: 0.4
   _patrolSpeed: 1.2
   _chaseSpeed: 2
+  _turnDelay: 0.6
   _idleTimeRange: {x: 0.8, y: 2}
   _patrolTimeRange: {x: 1.5, y: 3}
   _detectRangeCells: 10
   _loseRangeCells: 16
   _maxHeightDiffCells: 4
-  _keepAwayCells: 0
-  _attackKind: 2
-  _damage: 10
-  _charge: 0.8
-  _cooldown: 3.6
-  _recover: 0.3
-  _hitFrame: 0
-  _attackRangeCells: 6
-  _hitReachCells: 1.3
-  _hitHeightCells: 2.2
-  _knockback: 6
-  _stunDealt: 1
-  _hitCount: 1
-  _travelCells: 8
-  _travelDuration: 0.6
-  _lungeUpSpeed: 5
-  _projectilePrefab: {fileID: 0}
-  _projectileSpeed: 14
-  _projectileCount: 1
-  _fuseTime: 1.5
-  _blastRadiusCells: 2.9
-  _throwSpread: 1.5
-  _blastVfx: {fileID: 0}
+  _seeThroughWalls: 0
+  _backstepTriggerCells: 1.5
+  _backstepCells: 2
+  _backstepDuration: 0.25
+  _backstepCooldown: 2
+  _canTeleport: 0
+  _teleportCooldown: 3.5
+  _teleportBehindCells: 2.5
+  _skills:
+  - DcId: dash
+    Kind: 2
+    ChargeAnim: AtkLoad
+    ExecuteAnim: Atk
+    MinRangeCells: 0
+    MaxRangeCells: 8
+    Damage: 10
+    Charge: 0.8
+    Cooldown: 3.6
+    Recover: 0.3
+    HitFrame: 0
+    HitReachCells: 1.3
+    HitHeightCells: 2.2
+    Knockback: 6
+    StunDealt: 1
+    TravelCells: 8
+    TravelDuration: 0.6
+    LungeUpSpeed: 0
+    ProjectilePrefab: {fileID: 0}
+    ProjectileSpeed: 0
+    MuzzleHeight: 1
+    ProjectileCount: 1
+    FuseTime: 0
+    BlastRadiusCells: 0
+    LandingSpreadCells: 0
+    BlastVfx: {fileID: 0}

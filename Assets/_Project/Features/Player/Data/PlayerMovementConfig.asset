@@ -42,8 +42,19 @@ MonoBehaviour:
   _ledgeChestHeight: 0.9
   _ledgeHeadHeight: 1.7
   _ledgeCheckDistance: 0.25
+  _oneWayLedgeGrabTolerance: 0.15
   _downInputThreshold: 0.5
   _dropThroughDuration: 0.25
   _stompSpeed: 25
   _stompLandDuration: 0.15
+  _climbSpeed: 4
+  _perfectDodgeDuration: 0.25
+  _crouchShrinkCollider: 1
+  _crouchColliderHeight: 0.9
+  _hurtLockDuration: 0.2
+  _hurtMinKnockback: 4
+  _hurtKnockUp: 4
+  _stompDamage: 30
+  _stompStun: 1
+  _stompArea: {x: 2.5, y: 1}
   _groundCheckDistance: 0.05

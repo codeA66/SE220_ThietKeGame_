@@ -9,7 +9,7 @@ namespace DeadCells.Player
     /// Routes Health events into the Hurt / Dead states.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : MonoBehaviour, IStaggerable
     {
         [SerializeField] private PlayerMovementConfig _config;
         [SerializeField] private PlayerInputReader _input;
@@ -29,6 +29,10 @@ namespace DeadCells.Player
         [SerializeField] private LayerMask _attackTargets;
         [Tooltip("Seconds before respawning after death (temporary until the run loop exists).")]
         [SerializeField] private float _respawnDelay = 1.5f;
+
+        [Header("Spawn Intro")]
+        [Tooltip("Head that drops and crawls to the body on scene start. Leave empty to skip the intro.")]
+        [SerializeField] private PlayerSpawnHead _spawnHead;
 
         private Rigidbody2D _body;
         private PlayerContext _context;
@@ -69,7 +73,16 @@ namespace DeadCells.Player
             _health.Died -= OnDied;
         }
 
-        private void Start() => _machine.ChangeState(_machine.Idle);
+        private void Start()
+        {
+            if (_config.PlaySpawnIntro && _spawnHead != null)
+            {
+                _machine.ChangeState(_machine.Spawn);
+                _spawnHead.Play(_context);
+                return;
+            }
+            _machine.ChangeState(_machine.Idle);
+        }
 
         private void Update()
         {
@@ -122,6 +135,18 @@ namespace DeadCells.Player
         private void OnDamaged(DamageInfo info)
         {
             _context.Combat.LastDamageTaken = info;
+            _machine.ForceChangeState(_machine.Hurt);
+        }
+
+        /// <summary>
+        /// Lose control briefly without damage (e.g. a melee hit on a Shieldbearer's shield).
+        /// Ignored while dead or invulnerable (rolling).
+        /// </summary>
+        public void Stagger(float duration, int direction)
+        {
+            if (!_health.IsAlive || _context.IsInvulnerable)
+                return;
+            _context.Combat.LastDamageTaken = new DamageInfo(0, direction, _config.HurtMinKnockback, duration, false, null);
             _machine.ForceChangeState(_machine.Hurt);
         }
 

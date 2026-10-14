@@ -18,6 +18,7 @@ namespace DeadCells.Enemies
         public static readonly int Fall = Animator.StringToHash("Fall");
 
         private static readonly int FlashId = Shader.PropertyToID("_Flash");
+        private static readonly int FlashColorId = Shader.PropertyToID("_FlashColor");
 
         [SerializeField] private Animator _animator;
         [SerializeField] private SpriteRenderer _renderer;
@@ -43,10 +44,14 @@ namespace DeadCells.Enemies
 
         public bool HasState(int state) => _animator.HasState(0, state);
 
-        public void SetFlash(float amount)
+        public void SetFlash(float amount) => SetFlash(amount, Color.white);
+
+        /// <summary>Blends the sprite toward a colour (white for hit flashes, the mob's glow for telegraphs).</summary>
+        public void SetFlash(float amount, Color color)
         {
             _renderer.GetPropertyBlock(_block);
             _block.SetFloat(FlashId, amount);
+            _block.SetColor(FlashColorId, color);
             _renderer.SetPropertyBlock(_block);
         }
 

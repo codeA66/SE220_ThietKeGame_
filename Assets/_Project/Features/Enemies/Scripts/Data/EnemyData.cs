@@ -1,3 +1,4 @@
+using System;
 using DeadCells.Combat;
 using DeadCells.VFX;
 using UnityEngine;
@@ -6,141 +7,170 @@ namespace DeadCells.Enemies
 {
     public enum EnemyAttackKind
     {
-        /// <summary>Stand and swing in front (Zombie "cc").</summary>
+        /// <summary>Stand and swing in front (Zombie scratch).</summary>
         Melee,
-        /// <summary>Leap at the player and bite several times (Rat "nibble").</summary>
+        /// <summary>Leap forward, damaging on contact (Zombie leap, Rat pounce).</summary>
         Lunge,
-        /// <summary>Charge forward over a distance, stunning on hit (Shield "dash").</summary>
+        /// <summary>Charge forward over a distance, stunning on contact (Shieldbearer ram).</summary>
         Dash,
-        /// <summary>Fire a straight projectile (Archer "shoot").</summary>
+        /// <summary>Fire a straight projectile (Undead Archer).</summary>
         Shoot,
-        /// <summary>Lob fused grenades in an arc (Grenader "grenade").</summary>
+        /// <summary>Lob bombs at the player's position (Grenadier).</summary>
         Grenade
     }
 
     /// <summary>
-    /// Enemy tuning. Values marked "DC:" come from Dead Cells' mob table (data.cdb, sheets "mob" / "mob@skill").
-    /// Distances are entered in Dead Cells cells (1 cell = WeaponData.CellSize units).
-    /// Movement speeds are tuned by feel: DC speeds use an internal unit that was not converted.
+    /// Enemy tuning. Values marked "DC:" come from Dead Cells' mob table (data.cdb, sheets "mob" / "mob@skill");
+    /// behaviour notes marked "Wiki:" come from deadcells.wiki.gg. Distances are in Dead Cells cells
+    /// (1 cell = WeaponData.CellSize units). Speeds and timings without a source are tuned by feel.
     /// </summary>
     [CreateAssetMenu(fileName = "Enemy_", menuName = "DeadCells/Enemies/Enemy Data")]
     public class EnemyData : ScriptableObject
     {
+        [Serializable]
+        public class Skill
+        {
+            [Tooltip("DC: skill id (reference only).")]
+            public string DcId;
+            public EnemyAttackKind Kind;
+            [Tooltip("Animator state played during the wind-up.")]
+            public string ChargeAnim = "AtkLoad";
+            [Tooltip("Animator state played during the execution.")]
+            public string ExecuteAnim = "Atk";
+            [Tooltip("Usable when the player is at least this far (cells).")]
+            public float MinRangeCells;
+            [Tooltip("Usable when the player is at most this far (cells). DC: skill.radius when set.")]
+            public float MaxRangeCells = 1.35f;
+            [Tooltip("DC: skill.power")]
+            public int Damage = 10;
+            [Tooltip("Wind-up shown as a telegraph (s). DC: skill.charge")]
+            public float Charge = 0.8f;
+            [Tooltip("Seconds before this skill can be used again. DC: skill.coolDown")]
+            public float Cooldown = 1f;
+            [Tooltip("Seconds the AI stays locked after the skill. DC: skill.lockAiAfter")]
+            public float Recover = 0.2f;
+            [Tooltip("Frame of the execution clip (30 fps) on which the hit lands. DC: skill.hitFrame")]
+            public int HitFrame;
+            [Tooltip("Hit box width in front of the enemy centre (cells).")]
+            public float HitReachCells = 1.35f;
+            [Tooltip("Hit box height (cells).")]
+            public float HitHeightCells = 2f;
+            [Tooltip("Knockback given to the player (units/s).")]
+            public float Knockback = 4f;
+            [Tooltip("Stun given to the player (s). DC: props.stunTime")]
+            public float StunDealt;
+
+            [Header("Lunge / Dash")]
+            [Tooltip("Travel distance (cells). DC: props.distance")]
+            public float TravelCells = 4f;
+            [Tooltip("Travel duration (s). DC: props.duration")]
+            public float TravelDuration = 0.4f;
+            [Tooltip("Upward speed of a lunge (units/s).")]
+            public float LungeUpSpeed = 5f;
+
+            [Header("Projectiles")]
+            public Projectile ProjectilePrefab;
+            public float ProjectileSpeed = 7f;
+            [Tooltip("Height above the feet the projectile leaves from (units).")]
+            public float MuzzleHeight = 1f;
+            [Tooltip("DC: props.count")]
+            [Min(1)] public int ProjectileCount = 1;
+            [Tooltip("Bomb fuse after landing (s). DC: props.triggerDelay")]
+            public float FuseTime = 1.5f;
+            [Tooltip("Blast radius (cells). DC: skill.radius")]
+            public float BlastRadiusCells = 2.9f;
+            [Tooltip("Spread of bomb landing points around the player (cells).")]
+            public float LandingSpreadCells = 1.5f;
+            public VfxDefinition BlastVfx;
+
+            public float MinRange => MinRangeCells * WeaponData.CellSize;
+            public float MaxRange => MaxRangeCells * WeaponData.CellSize;
+            public float HitReach => HitReachCells * WeaponData.CellSize;
+            public float HitHeight => HitHeightCells * WeaponData.CellSize;
+            public float TravelDistance => TravelCells * WeaponData.CellSize;
+            public float BlastRadius => BlastRadiusCells * WeaponData.CellSize;
+            public float LandingSpread => LandingSpreadCells * WeaponData.CellSize;
+        }
+
         [Header("Identity")]
         [Tooltip("DC: mob.id")]
         [SerializeField] private string _dcId;
         [Tooltip("Replaces magenta in the sprites. DC: mob.flesh2 (rule from a visual experiment).")]
         [SerializeField] private Color _fleshColor = Color.magenta;
+        [Tooltip("Telegraph glow during wind-ups. DC: mob.glowInnerColor (white when the mob has none).")]
+        [SerializeField] private Color _glowColor = Color.white;
 
         [Header("Health")]
         [Tooltip("DC: mob.life")]
         [SerializeField] private int _maxHealth = 100;
-        [Tooltip("Seconds of stun after each hit taken. DC: directHitStunChance 1 (stun length not found; tuned).")]
+        [Tooltip("Seconds of stun after each hit taken. DC: directHitStunChance 1 (length tuned).")]
         [SerializeField] private float _hitStun = 0.25f;
         [Tooltip("Fraction of incoming knockback ignored (0-1). DC: props.bumpResistance.")]
         [Range(0f, 1f)]
         [SerializeField] private float _knockbackResistance;
 
+        [Header("Shield (Wiki: Shieldbearer)")]
+        [Tooltip("Blocks hits coming from the front unless they stun.")]
+        [SerializeField] private bool _hasFrontShield;
+        [Tooltip("Stagger given to a player whose melee hit lands on the shield (s).")]
+        [SerializeField] private float _shieldStaggerDuration = 0.4f;
+
         [Header("Movement (tuned by feel)")]
         [SerializeField] private float _patrolSpeed = 1.5f;
         [SerializeField] private float _chaseSpeed = 2.5f;
-        [Tooltip("Seconds standing still between patrol walks.")]
+        [Tooltip("Seconds needed to turn around (Wiki: Shieldbearer is slow to turn around).")]
+        [SerializeField] private float _turnDelay;
         [SerializeField] private Vector2 _idleTimeRange = new Vector2(0.8f, 2f);
-        [Tooltip("Seconds of one patrol walk.")]
         [SerializeField] private Vector2 _patrolTimeRange = new Vector2(1.5f, 3f);
 
         [Header("Sensing (cells)")]
-        [Tooltip("Start chasing when the player is this close and visible.")]
         [SerializeField] private float _detectRangeCells = 10f;
-        [Tooltip("Give up when the player is farther than this.")]
         [SerializeField] private float _loseRangeCells = 16f;
-        [Tooltip("Ignore the player if the height difference is larger (cells).")]
         [SerializeField] private float _maxHeightDiffCells = 4f;
-        [Tooltip("Ranged enemies back away when the player is closer than this (cells). 0 = never.")]
-        [SerializeField] private float _keepAwayCells;
+        [Tooltip("Detect the player through walls (Wiki: Grenadier).")]
+        [SerializeField] private bool _seeThroughWalls;
 
-        [Header("Attack")]
-        [SerializeField] private EnemyAttackKind _attackKind;
-        [Tooltip("DC: skill.power")]
-        [SerializeField] private int _damage = 10;
-        [Tooltip("Wind-up before the attack, shown as a telegraph. DC: skill.charge")]
-        [SerializeField] private float _charge = 0.8f;
-        [Tooltip("Seconds before the next attack. DC: skill.coolDown")]
-        [SerializeField] private float _cooldown = 1f;
-        [Tooltip("Seconds the AI stays locked after the attack. DC: skill.lockAiAfter")]
-        [SerializeField] private float _recover = 0.3f;
-        [Tooltip("Frame of the execution clip (30 fps) on which the hit lands. DC: skill.hitFrame")]
-        [SerializeField] private int _hitFrame = 3;
-        [Tooltip("Start the attack when the player is within this distance (cells). DC: skill.radius when set.")]
-        [SerializeField] private float _attackRangeCells = 1.35f;
-        [Tooltip("Hit box width in front of the enemy centre (cells).")]
-        [SerializeField] private float _hitReachCells = 1.35f;
-        [Tooltip("Hit box height (cells).")]
-        [SerializeField] private float _hitHeightCells = 2f;
-        [Tooltip("Knockback given to the player (units/s).")]
-        [SerializeField] private float _knockback = 4f;
-        [Tooltip("Stun given to the player (s). DC: dash props.stunTime")]
-        [SerializeField] private float _stunDealt;
-        [Tooltip("Number of hits per attack. DC: props.count (Rat 2)")]
-        [Min(1)]
-        [SerializeField] private int _hitCount = 1;
+        [Header("Backstep (Wiki: Shieldbearer, Archer, Grenadier)")]
+        [Tooltip("Back off when the player is closer than this (cells). 0 = never.")]
+        [SerializeField] private float _backstepTriggerCells;
+        [SerializeField] private float _backstepCells = 2.5f;
+        [SerializeField] private float _backstepDuration = 0.3f;
+        [SerializeField] private float _backstepCooldown = 1f;
 
-        [Header("Lunge / Dash")]
-        [Tooltip("Dash / lunge travel distance (cells). DC: props.distance")]
-        [SerializeField] private float _travelCells = 8f;
-        [Tooltip("Dash / lunge duration (s). DC: props.duration")]
-        [SerializeField] private float _travelDuration = 0.6f;
-        [Tooltip("Upward speed of a lunge (units/s).")]
-        [SerializeField] private float _lungeUpSpeed = 5f;
+        [Header("Teleport (Wiki: Archer teleports behind you when cornered)")]
+        [SerializeField] private bool _canTeleport;
+        [Tooltip("DC: swap coolDown 3.5")]
+        [SerializeField] private float _teleportCooldown = 3.5f;
+        [Tooltip("Lands this far behind the player (cells).")]
+        [SerializeField] private float _teleportBehindCells = 2.5f;
 
-        [Header("Projectiles")]
-        [SerializeField] private Projectile _projectilePrefab;
-        [SerializeField] private float _projectileSpeed = 14f;
-        [Tooltip("Projectiles per attack. DC: props.count")]
-        [Min(1)]
-        [SerializeField] private int _projectileCount = 1;
-        [Tooltip("Grenade fuse (s). DC: props.triggerDelay")]
-        [SerializeField] private float _fuseTime = 1.5f;
-        [Tooltip("Grenade blast radius (cells). DC: skill.radius")]
-        [SerializeField] private float _blastRadiusCells = 2.9f;
-        [Tooltip("Horizontal spread between grenades (units/s of throw speed).")]
-        [SerializeField] private float _throwSpread = 1.5f;
-        [SerializeField] private VfxDefinition _blastVfx;
+        [Header("Skills (checked in order; the first usable one is used)")]
+        [SerializeField] private Skill[] _skills = Array.Empty<Skill>();
 
         public string DcId => _dcId;
         public Color FleshColor => _fleshColor;
+        public Color GlowColor => _glowColor;
         public int MaxHealth => _maxHealth;
         public float HitStun => _hitStun;
         public float KnockbackResistance => _knockbackResistance;
+        public bool HasFrontShield => _hasFrontShield;
+        public float ShieldStaggerDuration => _shieldStaggerDuration;
         public float PatrolSpeed => _patrolSpeed;
         public float ChaseSpeed => _chaseSpeed;
+        public float TurnDelay => _turnDelay;
         public Vector2 IdleTimeRange => _idleTimeRange;
         public Vector2 PatrolTimeRange => _patrolTimeRange;
         public float DetectRange => _detectRangeCells * WeaponData.CellSize;
         public float LoseRange => _loseRangeCells * WeaponData.CellSize;
         public float MaxHeightDiff => _maxHeightDiffCells * WeaponData.CellSize;
-        public float KeepAway => _keepAwayCells * WeaponData.CellSize;
-        public EnemyAttackKind AttackKind => _attackKind;
-        public int Damage => _damage;
-        public float Charge => _charge;
-        public float Cooldown => _cooldown;
-        public float Recover => _recover;
-        public int HitFrame => _hitFrame;
-        public float AttackRange => _attackRangeCells * WeaponData.CellSize;
-        public float HitReach => _hitReachCells * WeaponData.CellSize;
-        public float HitHeight => _hitHeightCells * WeaponData.CellSize;
-        public float Knockback => _knockback;
-        public float StunDealt => _stunDealt;
-        public int HitCount => _hitCount;
-        public float TravelDistance => _travelCells * WeaponData.CellSize;
-        public float TravelDuration => _travelDuration;
-        public float LungeUpSpeed => _lungeUpSpeed;
-        public Projectile ProjectilePrefab => _projectilePrefab;
-        public float ProjectileSpeed => _projectileSpeed;
-        public int ProjectileCount => _projectileCount;
-        public float FuseTime => _fuseTime;
-        public float BlastRadius => _blastRadiusCells * WeaponData.CellSize;
-        public float ThrowSpread => _throwSpread;
-        public VfxDefinition BlastVfx => _blastVfx;
+        public bool SeeThroughWalls => _seeThroughWalls;
+        public float BackstepTrigger => _backstepTriggerCells * WeaponData.CellSize;
+        public float BackstepDistance => _backstepCells * WeaponData.CellSize;
+        public float BackstepDuration => _backstepDuration;
+        public float BackstepCooldown => _backstepCooldown;
+        public bool CanTeleport => _canTeleport;
+        public float TeleportCooldown => _teleportCooldown;
+        public float TeleportBehind => _teleportBehindCells * WeaponData.CellSize;
+        public Skill[] Skills => _skills;
     }
 }
