@@ -74,7 +74,16 @@ namespace DeadCells.Player
             if (_pool == null)
                 return;
             while (_activeArrows.Count > 0)
-                _activeArrows[_activeArrows.Count - 1].Recall();
+            {
+                int last = _activeArrows.Count - 1;
+                // Flying arrows live at the scene root, so on scene unload they can be destroyed before this runs.
+                if (_activeArrows[last] == null)
+                {
+                    _activeArrows.RemoveAt(last);
+                    continue;
+                }
+                _activeArrows[last].Recall();
+            }
             _nextShot = 0;
             _comboExpiresAt = float.NegativeInfinity;
             _readyAt = float.NegativeInfinity;
@@ -109,7 +118,10 @@ namespace DeadCells.Player
         private void ReleaseArrow(RecoverableArrow arrow)
         {
             arrow.gameObject.SetActive(false);
-            arrow.transform.SetParent(transform, false);
+            // Unity forbids re-parenting while this object is being deactivated (OnDisable -> ResetShots).
+            // The arrow stays hidden at the root; Launch detaches it from any parent anyway.
+            if (gameObject.activeInHierarchy)
+                arrow.transform.SetParent(transform, false);
         }
 
         private void DestroyArrow(RecoverableArrow arrow) => Destroy(arrow.gameObject);
