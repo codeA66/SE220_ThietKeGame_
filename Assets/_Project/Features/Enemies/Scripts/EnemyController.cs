@@ -1,5 +1,6 @@
 using System;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.VFX;
 using UnityEngine;
 
@@ -79,6 +80,7 @@ namespace DeadCells.Enemies
         {
             _context.LastDamage = info;
             _machine.ForceChangeState(_machine.Dead);
+            KillCounter.AddKill();
             Died?.Invoke(this);
         }
     }

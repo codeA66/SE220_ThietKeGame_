@@ -1,0 +1,9 @@
+{
+    "name": "UI",
+    "rootNamespace": "DeadCells.UI",
+    "references": [
+        "Core",
+        "UnityEngine.UI"
+    ],
+    "autoReferenced": true
+}
