@@ -16144,6 +16144,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1983591633421215913, guid: 7f246d2a78d87f24cb35f882f7e147ef, type: 3}
+      propertyPath: _bow
+      value:
+      objectReference: {fileID: 2048854849}
+    - target: {fileID: 1983591633421215913, guid: 7f246d2a78d87f24cb35f882f7e147ef, type: 3}
+      propertyPath: _player
+      value:
+      objectReference: {fileID: 2048854850}
     - target: {fileID: 3198321886071426053, guid: 7f246d2a78d87f24cb35f882f7e147ef, type: 3}
       propertyPath: _health
       value:
@@ -16237,6 +16245,28 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7f246d2a78d87f24cb35f882f7e147ef, type: 3}
+--- !u!114 &2048854849 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3625282525215014192, guid: b437f0295c953a94691551e1a94d48d3, type: 3}
+  m_PrefabInstance: {fileID: 2048854846}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80baad2f6e14be84fb95911150cde543, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Player::DeadCells.Player.PlayerBow
+--- !u!114 &2048854850 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 614256163941222291, guid: b437f0295c953a94691551e1a94d48d3, type: 3}
+  m_PrefabInstance: {fileID: 2048854846}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec5eb920fd35fc44297ad9c8f9f07047, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Player::DeadCells.Player.PlayerController
 --- !u!114 &2048854848 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3905777086750246925, guid: b437f0295c953a94691551e1a94d48d3, type: 3}

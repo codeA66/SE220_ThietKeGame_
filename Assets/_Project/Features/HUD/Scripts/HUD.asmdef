@@ -3,6 +3,7 @@
     "rootNamespace": "DeadCells.HUD",
     "references": [
         "Combat",
+        "Player",
         "UnityEngine.UI"
     ],
     "autoReferenced": true

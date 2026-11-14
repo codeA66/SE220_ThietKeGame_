@@ -11,6 +11,7 @@ namespace DeadCells.Player
         private bool _hasBow;
 
         public PlayerWeaponSlot Equipped { get; private set; }
+        public event Action<PlayerWeaponSlot> Acquired;
         public event Action<PlayerWeaponSlot> Changed;
 
         public PlayerWeaponLoadout(bool startWithWeapons)
@@ -39,6 +40,7 @@ namespace DeadCells.Player
 
             if (Equipped == PlayerWeaponSlot.None)
                 Equip(slot);
+            Acquired?.Invoke(slot);
             return true;
         }
 
