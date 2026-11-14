@@ -107,6 +107,11 @@ namespace DeadCells.Enemies
         [SerializeField] private float _throwSpread = 1.5f;
         [SerializeField] private VfxDefinition _blastVfx;
 
+        [Header("Loot")]
+        [Tooltip("Scales gold and gem drops on top of max health (gold ~ health / 10, gem chance ~ health / 200).")]
+        [Min(0f)]
+        [SerializeField] private float _lootMultiplier = 1f;
+
         public string DcId => _dcId;
         public Color FleshColor => _fleshColor;
         public int MaxHealth => _maxHealth;
@@ -142,5 +147,6 @@ namespace DeadCells.Enemies
         public float BlastRadius => _blastRadiusCells * WeaponData.CellSize;
         public float ThrowSpread => _throwSpread;
         public VfxDefinition BlastVfx => _blastVfx;
+        public float LootMultiplier => _lootMultiplier;
     }
 }
