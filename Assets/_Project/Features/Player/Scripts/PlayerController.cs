@@ -25,6 +25,7 @@ namespace DeadCells.Player
         [SerializeField] private Health _health;
         [SerializeField] private WeaponData _weapon;
         [SerializeField] private PlayerBow _bow;
+        [SerializeField] private StarterWeaponPickup[] _starterWeaponPickups = System.Array.Empty<StarterWeaponPickup>();
         [Tooltip("Layers the player's attacks can hit.")]
         [SerializeField] private LayerMask _attackTargets;
         [Tooltip("Seconds before respawning after death (temporary until the run loop exists).")]
@@ -39,6 +40,7 @@ namespace DeadCells.Player
         private PlayerStateMachine _machine;
         private Vector2 _spawnPoint;
         private float _respawnAt = -1f;
+        private StarterWeaponPickup _focusedPickup;
 
         public PlayerContext Context => _context;
         public IPlayerState CurrentState => _machine?.Current;
@@ -55,7 +57,7 @@ namespace DeadCells.Player
                 throw new System.InvalidOperationException("PlayerController requires its PlayerBow reference.");
             _bow.Initialize(_attackTargets, _groundMask);
             _context.Bow = _bow;
-            _context.Weapons = new PlayerWeaponLoadout();
+            _context.Weapons = new PlayerWeaponLoadout(_starterWeaponPickups.Length == 0);
             _machine = new PlayerStateMachine(_context);
             _spawnPoint = _body.position;
 
@@ -91,12 +93,42 @@ namespace DeadCells.Player
 
             _input.Poll();
             _context.RefreshFrame();
+            UpdateStarterPickup();
             UpdateWeaponSelection();
             _machine.Tick();
             _animator.SetLocomotion(Mathf.Abs(_body.linearVelocity.x), _context.IsGrounded, _body.linearVelocity.y);
         }
 
         private void FixedUpdate() => _machine.FixedTick();
+
+        private void UpdateStarterPickup()
+        {
+            StarterWeaponPickup nearest = null;
+            float bestDistance = float.PositiveInfinity;
+            if (_health.IsAlive && _machine.Current != _machine.Spawn && _machine.Current != _machine.Hurt)
+            {
+                Vector2 position = _body.position;
+                foreach (var pickup in _starterWeaponPickups)
+                {
+                    if (pickup == null || !pickup.TryGetDistance(position, out float distance) || distance >= bestDistance)
+                        continue;
+                    nearest = pickup;
+                    bestDistance = distance;
+                }
+            }
+
+            if (nearest != _focusedPickup)
+            {
+                if (_focusedPickup != null)
+                    _focusedPickup.SetFocused(false);
+                _focusedPickup = nearest;
+                if (_focusedPickup != null)
+                    _focusedPickup.SetFocused(true);
+            }
+
+            if (_input.InteractPressed && _focusedPickup != null && _focusedPickup.TryCollect(Weapons))
+                _focusedPickup = null;
+        }
 
         private void UpdateWeaponSelection()
         {

@@ -2,17 +2,49 @@ using System;
 
 namespace DeadCells.Player
 {
-    public enum PlayerWeaponSlot { Sword, Bow }
+    public enum PlayerWeaponSlot { Sword, Bow, None }
 
-    /// <summary>Owns slot selection; attack states and animation do not read keyboard keys.</summary>
+    /// <summary>Owns the two starter slots and their current selection.</summary>
     public sealed class PlayerWeaponLoadout
     {
-        public PlayerWeaponSlot Equipped { get; private set; } = PlayerWeaponSlot.Sword;
+        private bool _hasSword;
+        private bool _hasBow;
+
+        public PlayerWeaponSlot Equipped { get; private set; }
         public event Action<PlayerWeaponSlot> Changed;
+
+        public PlayerWeaponLoadout(bool startWithWeapons)
+        {
+            _hasSword = _hasBow = startWithWeapons;
+            Equipped = startWithWeapons ? PlayerWeaponSlot.Sword : PlayerWeaponSlot.None;
+        }
+
+        public bool Owns(PlayerWeaponSlot slot) => slot switch
+        {
+            PlayerWeaponSlot.Sword => _hasSword,
+            PlayerWeaponSlot.Bow => _hasBow,
+            _ => false
+        };
+
+        public bool TryAcquire(PlayerWeaponSlot slot)
+        {
+            if (Owns(slot))
+                return false;
+            switch (slot)
+            {
+                case PlayerWeaponSlot.Sword: _hasSword = true; break;
+                case PlayerWeaponSlot.Bow: _hasBow = true; break;
+                default: return false;
+            }
+
+            if (Equipped == PlayerWeaponSlot.None)
+                Equip(slot);
+            return true;
+        }
 
         public bool Equip(PlayerWeaponSlot slot)
         {
-            if (Equipped == slot)
+            if (Equipped == slot || !Owns(slot))
                 return false;
             Equipped = slot;
             Changed?.Invoke(slot);

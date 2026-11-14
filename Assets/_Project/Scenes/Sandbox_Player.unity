@@ -167,6 +167,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 614256163941222291, guid: b437f0295c953a94691551e1a94d48d3, type: 3}
+      propertyPath: _climbableMask.m_Bits
+      value: 1024
+      objectReference: {fileID: 0}
     - target: {fileID: 3196283361986700383, guid: b437f0295c953a94691551e1a94d48d3, type: 3}
       propertyPath: _spawner
       value: 
