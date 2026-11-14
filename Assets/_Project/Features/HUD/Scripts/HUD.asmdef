@@ -1,0 +1,9 @@
+{
+    "name": "HUD",
+    "rootNamespace": "DeadCells.HUD",
+    "references": [
+        "Combat",
+        "UnityEngine.UI"
+    ],
+    "autoReferenced": true
+}
