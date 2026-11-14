@@ -15,6 +15,7 @@ namespace DeadCells.Player
         private InputAction _jump;
         private InputAction _attack;
         private InputAction _roll;
+        private InputAction _interact;
         private InputAction _equipSword;
         private InputAction _equipBow;
 
@@ -26,6 +27,7 @@ namespace DeadCells.Player
         public bool AttackHeld { get; private set; }
         public bool AttackReleased { get; private set; }
         public bool RollPressed { get; private set; }
+        public bool InteractPressed { get; private set; }
         public bool EquipSwordPressed { get; private set; }
         public bool EquipBowPressed { get; private set; }
 
@@ -36,6 +38,7 @@ namespace DeadCells.Player
             _jump = map.FindAction("Jump", throwIfNotFound: true);
             _attack = map.FindAction("Attack", throwIfNotFound: true);
             _roll = map.FindAction("Roll", throwIfNotFound: true);
+            _interact = map.FindAction("Interact", throwIfNotFound: true);
             _equipSword = map.FindAction("EquipSword", throwIfNotFound: true);
             _equipBow = map.FindAction("EquipBow", throwIfNotFound: true);
         }
@@ -55,6 +58,7 @@ namespace DeadCells.Player
             AttackHeld = _attack.IsPressed();
             AttackReleased = _attack.WasReleasedThisFrame();
             RollPressed = _roll.WasPressedThisFrame();
+            InteractPressed = _interact.WasPressedThisFrame();
             EquipSwordPressed = _equipSword.WasPressedThisFrame();
             EquipBowPressed = _equipBow.WasPressedThisFrame();
         }

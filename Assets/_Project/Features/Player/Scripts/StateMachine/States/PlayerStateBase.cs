@@ -85,7 +85,7 @@ namespace DeadCells.Player.StateMachine.States
         /// </summary>
         protected bool TryAttack()
         {
-            if (!Ctx.Input.AttackPressed)
+            if (!Ctx.Input.AttackPressed || Ctx.Weapons.Equipped == PlayerWeaponSlot.None)
                 return false;
             if (Ctx.Weapons.Equipped == PlayerWeaponSlot.Bow)
                 return Ctx.Bow.CanShoot && Machine.ChangeState(Machine.BowAttack);
