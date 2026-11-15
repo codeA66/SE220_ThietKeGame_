@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
@@ -20,6 +21,8 @@ namespace DeadCells.Player
         private float _lightIntensity;
         private float _collectedAt;
         private bool _collected;
+
+        public event Action<Vector3> Collected;
 
         private void Awake()
         {
@@ -46,6 +49,7 @@ namespace DeadCells.Player
             _collected = true;
             _collectedAt = Time.time;
             SetFocused(false);
+            Collected?.Invoke(_icon.transform.position);
             return true;
         }
 

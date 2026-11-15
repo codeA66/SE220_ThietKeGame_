@@ -19,9 +19,9 @@ namespace DeadCells.HUD
 
         public void RenderPreview(PlayerRunStats stats, int currentMaxHealth)
         {
-            int gain = stats.PreviewMaxHealth(_stat) - currentMaxHealth;
+            float gain = (float)(stats.PreviewMaxHealth(_stat) - currentMaxHealth) / currentMaxHealth;
             _preview.text = $"Cấp {stats.Level(_stat)} → {stats.Level(_stat) + 1}\n" +
-                $"+{PlayerRunStats.DamageGainPerLevel:P0} sát thương cùng hệ\n+{gain} máu tối đa";
+                $"+{PlayerRunStats.DamageGainPerLevel:P0} sát thương cùng hệ\n+{gain:P0} máu tối đa";
         }
     }
 }
