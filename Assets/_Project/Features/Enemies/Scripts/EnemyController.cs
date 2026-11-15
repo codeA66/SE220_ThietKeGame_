@@ -61,6 +61,12 @@ namespace DeadCells.Enemies
 
         public void Initialize(Transform player, ProjectileSpawner projectiles, VfxSpawner vfx)
         {
+            _player = player;
+            _projectiles = projectiles;
+            _vfx = vfx;
+            if (_context == null)
+                return;
+
             _context.Player = player;
             _context.Projectiles = projectiles;
             _context.Vfx = vfx;
