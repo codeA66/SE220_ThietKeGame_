@@ -28,7 +28,9 @@ namespace DeadCells.Player
         [SerializeField] private StarterWeaponPickup[] _starterWeaponPickups = System.Array.Empty<StarterWeaponPickup>();
         [Tooltip("Layers the player's attacks can hit.")]
         [SerializeField] private LayerMask _attackTargets;
-        [Tooltip("Seconds before respawning after death (temporary until the run loop exists).")]
+        [Tooltip("Respawn at the start position without resetting the scene.")]
+        [SerializeField] private bool _autoRespawn = true;
+        [Tooltip("Seconds before an automatic respawn.")]
         [SerializeField] private float _respawnDelay = 1.5f;
 
         [Header("Spawn Intro")]
@@ -186,7 +188,8 @@ namespace DeadCells.Player
         {
             _context.Combat.LastDamageTaken = info;
             _machine.ForceChangeState(_machine.Dead);
-            _respawnAt = Time.time + _respawnDelay;
+            if (_autoRespawn)
+                _respawnAt = Time.time + _respawnDelay;
         }
 
         private void Respawn()
