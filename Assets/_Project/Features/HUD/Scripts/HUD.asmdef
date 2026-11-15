@@ -3,6 +3,7 @@
     "rootNamespace": "DeadCells.HUD",
     "references": [
         "Combat",
+        "Currency",
         "Player",
         "UnityEngine.UI"
     ],

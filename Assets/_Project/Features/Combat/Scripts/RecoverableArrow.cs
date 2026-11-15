@@ -27,7 +27,7 @@ namespace DeadCells.Combat
 
         public void Initialize(Action<RecoverableArrow> release) => _release = release;
 
-        public void Launch(Vector2 origin, int direction, BowWeaponData data, BowWeaponData.Shot shot,
+        public void Launch(Vector2 origin, int direction, BowWeaponData data, int damage,
             LayerMask targets, LayerMask ground, GameObject owner)
         {
             DetachVictim();
@@ -37,7 +37,7 @@ namespace DeadCells.Combat
             _targets = targets;
             _filter = new ContactFilter2D { useTriggers = true };
             _filter.SetLayerMask(targets.value | ground.value);
-            _damage = new DamageInfo(shot.Damage, direction, 0f, 0f, false, owner, isProjectile: true);
+            _damage = new DamageInfo(damage, direction, 0f, 0f, false, owner, isProjectile: true);
             _velocity = Vector2.right * (direction * data.ProjectileSpeed);
             _remainingLifetime = data.FlightLifetime;
             _embeddedLifetime = data.EmbeddedLifetime;

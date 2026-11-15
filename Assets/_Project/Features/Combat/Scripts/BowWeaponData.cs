@@ -17,6 +17,7 @@ namespace DeadCells.Combat
             [Min(0.01f)] public float AnimationSpeed;
         }
 
+        [SerializeField] private CombatStat _scalingStat;
         [SerializeField, Min(1)] private int _ammoCapacity;
         [SerializeField, Min(0.01f)] private float _projectileSpeed;
         [SerializeField, Min(0.01f)] private float _flightLifetime;
@@ -26,6 +27,7 @@ namespace DeadCells.Combat
         [SerializeField] private Vector2 _crouchingMuzzleOffset;
         [SerializeField] private Shot[] _shots;
 
+        public CombatStat ScalingStat => _scalingStat;
         public int AmmoCapacity => _ammoCapacity;
         public float ProjectileSpeed => _projectileSpeed;
         public float FlightLifetime => _flightLifetime;

@@ -1,0 +1,9 @@
+{
+    "name": "RunFlow",
+    "rootNamespace": "DeadCells.RunFlow",
+    "references": [
+        "Combat",
+        "UnityEngine.UI"
+    ],
+    "autoReferenced": true
+}
