@@ -20,7 +20,7 @@ namespace DeadCells.Player
             _baseHealth = health.Max;
         }
 
-        public event Action ChoiceOpened;
+        public event Action<PowerScrollPickup> ChoiceOpened;
         public event Action Changed;
 
         public bool IsChoosing => _pendingScroll != null;
@@ -42,7 +42,7 @@ namespace DeadCells.Player
                 return false;
 
             _pendingScroll = scroll;
-            ChoiceOpened.Invoke();
+            ChoiceOpened.Invoke(scroll);
             return true;
         }
 

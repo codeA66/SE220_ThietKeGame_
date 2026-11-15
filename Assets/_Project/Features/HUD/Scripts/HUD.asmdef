@@ -5,7 +5,9 @@
         "Combat",
         "Currency",
         "Player",
-        "UnityEngine.UI"
+        "Unity.RenderPipelines.Universal.2D.Runtime",
+        "UnityEngine.UI",
+        "VFX"
     ],
     "autoReferenced": true
 }

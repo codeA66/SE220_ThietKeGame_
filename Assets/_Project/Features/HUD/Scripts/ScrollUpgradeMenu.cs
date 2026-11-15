@@ -1,3 +1,4 @@
+using System.Collections;
 using DeadCells.Combat;
 using DeadCells.Player;
 using UnityEngine;
@@ -10,8 +11,11 @@ namespace DeadCells.HUD
         [SerializeField] private HitStop _gameplayTime;
         [SerializeField] private GameObject _panel;
         [SerializeField] private StatUpgradeOption[] _options;
+        [SerializeField] private ScrollPickupPresentation _presentation;
 
         private PlayerRunStats _stats;
+        private Coroutine _reveal;
+        private bool _hasPause;
 
         private void Start() => Bind();
 
@@ -30,7 +34,7 @@ namespace DeadCells.HUD
             _stats.Changed -= RefreshLevels;
             _stats.CancelChoice();
             _stats = null;
-            Close();
+            Close(false);
         }
 
         public void ChooseBrutality() => Choose(CombatStat.Brutality);
@@ -48,29 +52,47 @@ namespace DeadCells.HUD
             RefreshLevels();
         }
 
-        private void Open()
+        private void Open(PowerScrollPickup pickup)
         {
             foreach (var option in _options)
                 option.RenderPreview(_stats, _player.Health.Max);
             _gameplayTime.SetMenuPaused(true);
-            _panel.SetActive(true);
-            _options[0].Button.Select();
+            _hasPause = true;
+            _reveal = StartCoroutine(Reveal(pickup));
         }
 
-        private void Close()
+        private IEnumerator Reveal(PowerScrollPickup pickup)
         {
-            if (_panel != null && _panel.activeSelf)
-            {
+            if (_presentation != null)
+                yield return _presentation.Play(pickup);
+
+            _panel.SetActive(true);
+            _options[0].Button.Select();
+            _reveal = null;
+        }
+
+        private void Close(bool completed)
+        {
+            if (_reveal != null)
+                StopCoroutine(_reveal);
+            _reveal = null;
+            if (_panel != null)
                 _panel.SetActive(false);
-                if (_gameplayTime != null)
-                    _gameplayTime.SetMenuPaused(false);
-            }
+            if (_presentation != null)
+                _presentation.Finish(completed);
+            if (_hasPause && _gameplayTime != null)
+                _gameplayTime.SetMenuPaused(false);
+            _hasPause = false;
         }
 
         private void Choose(CombatStat stat)
         {
-            if (_stats != null && _stats.TryChoose(stat))
-                Close();
+            if (_stats == null || !_stats.TryChoose(stat))
+                return;
+
+            Close(true);
+            if (_presentation != null)
+                _presentation.Confirm(stat);
         }
 
         private void RefreshLevels()
