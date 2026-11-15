@@ -32,6 +32,7 @@ namespace DeadCells.Player
         [SerializeField] private bool _autoRespawn = true;
         [Tooltip("Seconds before an automatic respawn.")]
         [SerializeField] private float _respawnDelay = 1.5f;
+        [SerializeField] private PowerScrollInteraction _powerScrolls;
 
         [Header("Spawn Intro")]
         [Tooltip("Head that drops and crawls to the body on scene start. Leave empty to skip the intro.")]
@@ -48,16 +49,18 @@ namespace DeadCells.Player
         public IPlayerState CurrentState => _machine?.Current;
         public Health Health => _health;
         public PlayerWeaponLoadout Weapons => _context?.Weapons;
+        public PlayerRunStats RunStats { get; private set; }
 
         private void Awake()
         {
             _body = GetComponent<Rigidbody2D>();
             var collider = GetComponent<BoxCollider2D>();
             _context = new PlayerContext(_body, collider, _sprite, _groundMask, _rollPassThroughMask, _climbableMask, _config, _input, _animator);
-            _context.Combat = new PlayerCombat(transform, collider, _weapon, _attackTargets);
+            RunStats = new PlayerRunStats(_health);
+            _context.Combat = new PlayerCombat(transform, collider, _weapon, _attackTargets, RunStats);
             if (_bow == null)
                 throw new System.InvalidOperationException("PlayerController requires its PlayerBow reference.");
-            _bow.Initialize(_attackTargets, _groundMask);
+            _bow.Initialize(_attackTargets, _groundMask, RunStats);
             _context.Bow = _bow;
             _context.Weapons = new PlayerWeaponLoadout(_starterWeaponPickups.Length == 0);
             _machine = new PlayerStateMachine(_context);
@@ -94,7 +97,13 @@ namespace DeadCells.Player
                 Respawn();
 
             _input.Poll();
+            if (RunStats.BlocksGameplayInput)
+                return;
+
             _context.RefreshFrame();
+            if (_powerScrolls != null && _powerScrolls.Tick(_body.position, CanReadScroll(), _input.InteractPressed, RunStats))
+                return;
+
             UpdateStarterPickup();
             UpdateWeaponSelection();
             _machine.Tick();
@@ -102,6 +111,9 @@ namespace DeadCells.Player
         }
 
         private void FixedUpdate() => _machine.FixedTick();
+
+        private bool CanReadScroll() => _health.IsAlive && _context.IsGrounded &&
+            (_machine.Current == _machine.Idle || _machine.Current == _machine.Run || _machine.Current == _machine.Crouch);
 
         private void UpdateStarterPickup()
         {
@@ -161,6 +173,9 @@ namespace DeadCells.Player
         /// </summary>
         private bool FilterDamage(DamageInfo info)
         {
+            if (RunStats.IsChoosing)
+                return false;
+
             if (_context.IsPerfectDodgeWindowOpen && _context.TryRegisterPerfectDodge())
                 return false;
             return !_context.IsInvulnerable;

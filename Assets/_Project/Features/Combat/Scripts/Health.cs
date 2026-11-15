@@ -58,6 +58,17 @@ namespace DeadCells.Combat
             return true;
         }
 
+        public void SetMaxPreservingHealthRatio(int max)
+        {
+            if (max == _maxHealth)
+                return;
+
+            float ratio = (float)Current / _maxHealth;
+            _maxHealth = Mathf.Max(1, max);
+            Current = IsAlive ? Mathf.Clamp(Mathf.RoundToInt(ratio * _maxHealth), 1, _maxHealth) : 0;
+            Changed?.Invoke(Current, _maxHealth);
+        }
+
         public void RestoreFull()
         {
             Current = _maxHealth;

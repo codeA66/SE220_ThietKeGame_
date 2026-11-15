@@ -50,8 +50,10 @@ namespace DeadCells.Combat
             public Vector2 RangeOffset => RangeOffsetCells * CellSize;
         }
 
+        [SerializeField] private CombatStat _scalingStat;
         [SerializeField] private Strike[] _combo;
 
+        public CombatStat ScalingStat => _scalingStat;
         public int ComboLength => _combo.Length;
 
         public Strike GetStrike(int index) => _combo[Mathf.Clamp(index, 0, _combo.Length - 1)];

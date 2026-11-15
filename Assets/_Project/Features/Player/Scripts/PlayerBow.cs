@@ -14,6 +14,7 @@ namespace DeadCells.Player
 
         private readonly List<RecoverableArrow> _activeArrows = new();
         private ObjectPool<RecoverableArrow> _pool;
+        private PlayerRunStats _stats;
         private LayerMask _targets;
         private LayerMask _ground;
         private int _nextShot;
@@ -26,7 +27,7 @@ namespace DeadCells.Player
         public event Action<int, int> AmmoChanged;
         public event Action<DamageInfo> HitDealt;
 
-        public void Initialize(LayerMask targets, LayerMask ground)
+        public void Initialize(LayerMask targets, LayerMask ground, PlayerRunStats stats)
         {
             if (_pool != null)
                 throw new InvalidOperationException("PlayerBow is already initialized.");
@@ -34,6 +35,7 @@ namespace DeadCells.Player
                 throw new InvalidOperationException("PlayerBow requires valid bow data and an arrow prefab.");
             _targets = targets;
             _ground = ground;
+            _stats = stats;
             _pool = new ObjectPool<RecoverableArrow>(CreateArrow, null, ReleaseArrow, DestroyArrow,
                 collectionCheck: true, defaultCapacity: _data.AmmoCapacity, maxSize: _data.AmmoCapacity);
             Ammo = _data.AmmoCapacity;
@@ -64,7 +66,8 @@ namespace DeadCells.Player
             _nextShot = (_nextShot + 1) % _data.ShotCount;
             _comboExpiresAt = Time.time + _data.ComboResetTime;
             _readyAt = Time.time + shot.Cooldown;
-            arrow.Launch(feet + offset, facing, _data, shot, _targets, _ground, gameObject);
+            int damage = _stats.ScaleDamage(shot.Damage, _data.ScalingStat);
+            arrow.Launch(feet + offset, facing, _data, damage, _targets, _ground, gameObject);
             AmmoChanged?.Invoke(Ammo, _data.AmmoCapacity);
             return true;
         }
