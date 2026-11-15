@@ -1,0 +1,9 @@
+{
+    "name": "Currency",
+    "rootNamespace": "DeadCells.Currency",
+    "references": [
+        "Combat",
+        "Enemies"
+    ],
+    "autoReferenced": true
+}
