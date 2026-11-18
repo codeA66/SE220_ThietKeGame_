@@ -244,8 +244,6 @@ namespace DeadCells.Player
             _renderer.enabled = false;
             SetTrail(false);
             Burst(_mergeBurstCount);
-            if (_camera != null)
-                _camera.Shake(_mergeShakeAmplitude, _mergeShakeDuration);
             _flashTimer = _mergeFlashDuration;
             SetBodyFlash(1f);
             _context.SpawnHeadArrived = true;

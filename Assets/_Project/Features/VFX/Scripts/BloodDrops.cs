@@ -29,6 +29,8 @@ namespace DeadCells.VFX
         public static readonly BloodBurst Light = new BloodBurst(8, 3.5f, 8f, -25f, 55f, 1.1f, 2.1f);
         public static readonly BloodBurst Heavy = new BloodBurst(15, 4.5f, 10.5f, -25f, 55f, 1.1f, 2.3f);
         public static readonly BloodBurst Gore = new BloodBurst(60, 6f, 17f, -35f, 75f, 1.1f, 3.6f);
+        /// <summary>Blood thrown every which way: fired once to each side, hard along the floor and up and over.</summary>
+        public static readonly BloodBurst Splatter = new BloodBurst(90, 3.5f, 17f, -20f, 125f, 1.1f, 3.8f);
     }
 
     // World-space blood drops that collide with the level. Each drop flies with gravity and air drag,
@@ -54,11 +56,11 @@ namespace DeadCells.VFX
         private const int Sliding = 1;
         private const int Stained = 2;
 
-        // Crimson palette.
-        private static readonly Color32 BloodBrightSrgb = new Color32(220, 20, 60, 255);
-        private static readonly Color32 BloodSrgb = new Color32(165, 12, 45, 255);
-        private static readonly Color32 BloodDarkSrgb = new Color32(95, 5, 28, 255);
-        private static readonly Color32 BloodShineSrgb = new Color32(255, 110, 135, 255);
+        // A pure red palette: almost no blue in it, so it reads as blood and not pink.
+        private static readonly Color32 BloodBrightSrgb = new Color32(190, 10, 14, 255);
+        private static readonly Color32 BloodSrgb = new Color32(138, 6, 12, 255);
+        private static readonly Color32 BloodDarkSrgb = new Color32(80, 3, 8, 255);
+        private static readonly Color32 BloodShineSrgb = new Color32(230, 84, 72, 255);
 
         private static BloodDrops s_instance;
 

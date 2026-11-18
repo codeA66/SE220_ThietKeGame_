@@ -24,7 +24,11 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.NotifyStompStarted();
         }
 
-        public override void Exit() => Ctx.SetGravityScale(Ctx.Config.GravityScale);
+        public override void Exit()
+        {
+            Ctx.SetGravityScale(Ctx.Config.GravityScale);
+            Ctx.NotifyStompEnded();
+        }
 
         public override void Tick()
         {

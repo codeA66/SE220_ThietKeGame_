@@ -4,7 +4,7 @@ namespace DeadCells.Player
 {
     // Dead Cells-style motion trail: while a roll or a stomp dive lasts, copies of the player's current sprite are
     // dropped behind at a fixed interval and fade out. Pooled; ghosts share the player's material so
-    // the palette swap still applies, and a cool tint keeps them apart from the real sprite.
+    // the palette swap still applies, and a purple tint keeps them apart from the real sprite.
     public class PlayerAfterimages : MonoBehaviour
     {
         private const int PoolSize = 10;
@@ -12,7 +12,8 @@ namespace DeadCells.Player
         private const float Lifetime = 0.22f;
         private const float MaxStompTrail = 1.5f;
 
-        private static readonly Color GhostColor = new Color(0.6f, 0.8f, 1f, 0.55f);
+        // A lavender tint, in the family of the scarf's mauve, multiplied over the player's own colours.
+        private static readonly Color GhostColor = new Color(0.78f, 0.6f, 1f, 0.55f);
 
         private PlayerContext _context;
         private SpriteRenderer _source;
@@ -42,6 +43,7 @@ namespace DeadCells.Player
             _context.RollStarted += OnRollStarted;
             _context.StompStarted += OnStompStarted;
             _context.Stomped += OnStomped;
+            _context.StompEnded += OnStompEnded;
         }
 
         private void OnDestroy()
@@ -51,6 +53,7 @@ namespace DeadCells.Player
                 _context.RollStarted -= OnRollStarted;
                 _context.StompStarted -= OnStompStarted;
                 _context.Stomped -= OnStomped;
+                _context.StompEnded -= OnStompEnded;
             }
             if (_ghosts == null)
                 return;
@@ -106,6 +109,9 @@ namespace DeadCells.Player
         }
 
         private void OnStomped(Vector2 feet) => _emitUntil = -1f;
+
+        // A stomp cut short never lands, so this is what stops the trail.
+        private void OnStompEnded() => _emitUntil = -1f;
 
         private void Emit()
         {

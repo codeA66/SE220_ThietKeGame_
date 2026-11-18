@@ -64,7 +64,7 @@ namespace DeadCells.Player
             _query.ResetSwing();
             var bounds = _collider.bounds;
             var center = new Vector2(bounds.center.x, bounds.min.y + area.y * 0.5f);
-            var info = new DamageInfo(damage, 0, 0f, stun, false, _owner.gameObject);
+            var info = new DamageInfo(damage, 0, 0f, stun, false, _owner.gameObject, isStomp: true);
             int hits = _query.Strike(center, area, info);
             if (hits > 0)
                 StrikeHit?.Invoke(hits, false);

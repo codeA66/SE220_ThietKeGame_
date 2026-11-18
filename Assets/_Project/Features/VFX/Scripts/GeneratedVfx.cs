@@ -14,8 +14,8 @@ namespace DeadCells.VFX
         private static readonly Color32 White = new Color32(255, 255, 255, 255);
         private static readonly Color32 Cream = new Color32(255, 240, 205, 255);
         private static readonly Color32 Ember = new Color32(255, 160, 60, 255);
-        // Crimson, matching the blood drops.
-        private static readonly Color32 Blood = new Color32(165, 12, 45, 255);
+        // Blood red, matching the blood drops.
+        private static readonly Color32 Blood = new Color32(138, 6, 12, 255);
         // Dust clouds use the scheme sampled from the imported Dead Cells landing cloud (fx_land): mostly
         // pure white with bright sky-blue accents and ice-blue tints in between.
         private static readonly Color32 DustLight = new Color32(255, 255, 255, 255);
@@ -28,7 +28,7 @@ namespace DeadCells.VFX
         private static readonly Color32 SmokeShade = new Color32(150, 144, 150, 255);
         private static readonly Color32 SmokeLight = new Color32(244, 242, 238, 255);
         private static readonly Color32 Gold = new Color32(255, 214, 90, 255);
-        private static readonly Color32 BloodDark = new Color32(95, 5, 28, 255);
+        private static readonly Color32 BloodDark = new Color32(80, 3, 8, 255);
         private static readonly Color32 Rubble = new Color32(96, 86, 80, 255);
 
         // The big centred effects are flattened below their centre so they sit on the floor instead of
@@ -56,12 +56,12 @@ namespace DeadCells.VFX
         private static readonly VfxDefinition[] s_ledgeDust = new VfxDefinition[DustVariants];
         private static VfxDefinition s_critSpark;
         private static VfxDefinition s_bloodMist;
+        private static VfxDefinition s_ascendBeam;
         private static VfxDefinition s_shieldClang;
         private static VfxDefinition s_muzzleFlash;
         private static VfxDefinition s_muzzleFlashHeavy;
         private static VfxDefinition s_arrowImpact;
         private static VfxDefinition s_arrowImpactHeavy;
-        private static VfxDefinition s_stompWave;
 
         // With domain reload turned off for Play Mode, statics survive between sessions, so cached
         // sprites could be stale or destroyed. Start each session from scratch.
@@ -81,12 +81,12 @@ namespace DeadCells.VFX
             System.Array.Clear(s_ledgeDust, 0, DustVariants);
             s_critSpark = null;
             s_bloodMist = null;
+            s_ascendBeam = null;
             s_shieldClang = null;
             s_muzzleFlash = null;
             s_muzzleFlashHeavy = null;
             s_arrowImpact = null;
             s_arrowImpactHeavy = null;
-            s_stompWave = null;
         }
 
         private static bool IsUsable(VfxDefinition definition) =>
@@ -129,6 +129,17 @@ namespace DeadCells.VFX
                 if (!IsUsable(s_bloodMist))
                     s_bloodMist = Register(VfxDefinition.Create("Vfx_BloodMist", BuildBloodMist(), Fps, 1f, 7, 1));
                 return s_bloodMist;
+            }
+        }
+
+        // The ascension beam played when the player finishes standing up. It draws behind the character.
+        public static VfxDefinition AscendBeam
+        {
+            get
+            {
+                if (!IsUsable(s_ascendBeam))
+                    s_ascendBeam = Register(VfxDefinition.Create("Vfx_AscendBeam", BuildAscendBeam(), Fps, 1f, -1, 1).AsUnlit());
+                return s_ascendBeam;
             }
         }
 
@@ -183,17 +194,6 @@ namespace DeadCells.VFX
                 if (!IsUsable(s_shieldClang))
                     s_shieldClang = Register(VfxDefinition.Create("Vfx_ShieldClang", BuildShieldClang(), Fps, 1f, 11, 2));
                 return s_shieldClang;
-            }
-        }
-
-        // Ground-slam shockwave: dust walls racing out both ways with rubble kicked up. Pivot at the feet.
-        public static VfxDefinition StompWave
-        {
-            get
-            {
-                if (!IsUsable(s_stompWave))
-                    s_stompWave = Register(VfxDefinition.Create("Vfx_StompWave", BuildStompWave(), Fps, 1f, 2, 1));
-                return s_stompWave;
             }
         }
 
@@ -534,135 +534,6 @@ namespace DeadCells.VFX
             return frames;
         }
 
-        // Ground pound: a fan of light bursts up from the impact while the floor flashes, a shockwave arc
-        // races out along the ground, dust walls roll out both ways, rubble tumbles up and falls, embers
-        // fly, and it all breaks up in dithered pixels. Pivot at the feet; the canvas floor is the ground.
-        private static Sprite[] BuildStompWave()
-        {
-            const int width = 176;
-            const int height = 64;
-            const int frameCount = 14;
-            const int burstCount = 9;
-            const int puffsPerSide = 7;
-            const int rubbleCount = 16;
-            const int emberCount = 8;
-            var random = new Random(63);
-
-            float[] burstAngle = new float[burstCount];
-            float[] burstLength = new float[burstCount];
-            for (int i = 0; i < burstCount; i++)
-            {
-                burstAngle[i] = Mathf.Lerp(35f, 145f, i / (float)(burstCount - 1)) * Mathf.Deg2Rad;
-                burstLength[i] = 18f + (float)random.NextDouble() * 16f;
-            }
-            float[,] puffBack = new float[2, puffsPerSide];
-            float[,] puffBulk = new float[2, puffsPerSide];
-            float[,] puffLift = new float[2, puffsPerSide];
-            for (int s = 0; s < 2; s++)
-            {
-                for (int k = 0; k < puffsPerSide; k++)
-                {
-                    puffBack[s, k] = k * 6f + (float)random.NextDouble() * 5f;
-                    puffBulk[s, k] = 7f - k * 0.7f + (float)random.NextDouble() * 1.5f;
-                    puffLift[s, k] = (float)random.NextDouble() * 5f;
-                }
-            }
-            float[] rubbleVx = new float[rubbleCount];
-            float[] rubbleVy = new float[rubbleCount];
-            for (int i = 0; i < rubbleCount; i++)
-            {
-                rubbleVx[i] = ((float)random.NextDouble() * 2f - 1f) * 70f;
-                rubbleVy[i] = 55f + (float)random.NextDouble() * 55f;
-            }
-            float[] emberVx = new float[emberCount];
-            float[] emberVy = new float[emberCount];
-            for (int i = 0; i < emberCount; i++)
-            {
-                emberVx[i] = ((float)random.NextDouble() * 2f - 1f) * 45f;
-                emberVy[i] = 45f + (float)random.NextDouble() * 35f;
-            }
-
-            var frames = new Sprite[frameCount];
-            float c = (width - 1) * 0.5f;
-            for (int f = 0; f < frameCount; f++)
-            {
-                float t = f / (float)(frameCount - 1);
-                float eased = 1f - (1f - t) * (1f - t);
-                float late = Mathf.Clamp01((t - 0.6f) / 0.4f);
-                var pixels = new Pixels(width, height, DustBleed);
-
-                // Dust walls, drawn first so the light sits on top of them.
-                for (int s = 0; s < 2; s++)
-                {
-                    int side = s == 0 ? -1 : 1;
-                    float front = 10f + eased * 70f;
-                    for (int k = 0; k < puffsPerSide; k++)
-                    {
-                        float x = c + side * (front - puffBack[s, k] * (0.3f + eased));
-                        float radius = puffBulk[s, k] * (0.55f + 0.6f * eased);
-                        float y = radius * 0.45f + puffLift[s, k] * eased + t * 3f;
-                        DustWisp(pixels, x, y, radius, -side * (0.12f + eased * 0.25f));
-                    }
-                }
-
-                // Shockwave: the top half of a flat ellipse sweeping out along the floor.
-                if (t < 0.7f)
-                {
-                    float rx = 12f + eased * 74f;
-                    float ry = rx * 0.32f;
-                    float thickness = Mathf.Lerp(2.2f, 0.9f, t / 0.7f);
-                    Color32 ring = f < 3 ? White : Cream;
-                    int steps = Mathf.CeilToInt(rx * 4f);
-                    for (int i = 0; i <= steps; i++)
-                    {
-                        float a = i / (float)steps * Mathf.PI;
-                        pixels.Disc(c + Mathf.Cos(a) * rx, 1f + Mathf.Sin(a) * ry, thickness * 0.5f, ring);
-                    }
-                }
-
-                // Impact: a fan of light bursting up and a flash on the floor.
-                if (f < 4)
-                {
-                    float shrink = 1f - f * 0.28f;
-                    Color32 burst = f < 2 ? White : Cream;
-                    for (int i = 0; i < burstCount; i++)
-                    {
-                        float inner = 4f + f * 5f;
-                        float outer = inner + burstLength[i] * shrink;
-                        pixels.Line(c + Mathf.Cos(burstAngle[i]) * inner, 1f + Mathf.Sin(burstAngle[i]) * inner,
-                            c + Mathf.Cos(burstAngle[i]) * outer, 1f + Mathf.Sin(burstAngle[i]) * outer,
-                            burst, f < 2 ? 1.1f : 0.6f);
-                    }
-                    pixels.Disc(c, 0f, 14f - f * 3.5f, burst);
-                    float crack = 26f + f * 18f;
-                    pixels.Line(c - crack, 0.5f, c + crack, 0.5f, f < 2 ? White : Ember, 0.8f);
-                }
-
-                // Rubble chunks thrown up on arcs; they vanish once they fall back below the floor.
-                for (int i = 0; i < rubbleCount; i++)
-                {
-                    float x = c + rubbleVx[i] * t;
-                    float y = 2f + rubbleVy[i] * t - 100f * t * t;
-                    if (y < 0f)
-                        continue;
-                    pixels.Disc(x, y, i % 3 == 0 ? 1.6f : 1f, Rubble);
-                }
-
-                for (int i = 0; i < emberCount; i++)
-                {
-                    float x = c + emberVx[i] * t;
-                    float y = 2f + emberVy[i] * t - 70f * t * t;
-                    if (y < 0f)
-                        continue;
-                    pixels.Disc(x, y, 0.8f, i % 2 == 0 ? Ember : Cream);
-                }
-
-                pixels.Dissolve(Mathf.Clamp01((t - 0.5f) / 0.5f), DustLightBias);
-                frames[f] = pixels.ToSprite(new Vector2(0.5f, 0f));
-            }
-            return frames;
-        }
-
         // A white-hot flash that blows out into a dense, shaded smoke cloud, then dissolves away in
         // dithered pixels while embers and blood fly off. Irregular on purpose: no rings, no outline.
         private static Sprite[] BuildDeathPuff()
@@ -735,99 +606,284 @@ namespace DeadCells.VFX
             return frames;
         }
 
-        // Roll dust, drawn for a roll going right so the cloud trails to the left (flip it for the left).
-        // A fat burst of dust billows up at the feet, a ragged band of puffs peels off behind along the
-        // floor from the feet backward (as if the roll were laying it down), and grit sprays back and
-        // down. Shaded like the other clouds, then it breaks up in dithered pixels. The canvas floor is
-        // the ground, so puffs sit flat on it.
+        // The ascension beam when the player finishes standing up: a solid column of white straight down from the sky
+        // to the feet. It slams in thin, swells to full width with a ragged flickering edge, holds, then narrows away,
+        // with a flat flash along the floor where it lands. Plain white only. Drawn behind the character. Pivot at the feet.
+        private static Sprite[] BuildAscendBeam()
+        {
+            const int width = 112;
+            const int height = 300;
+            const int frameCount = 9;
+            const int baseY = 6;
+            // Half width of the column per frame (px): slam in, full, hold, narrow.
+            float[] half = { 4f, 16f, 16f, 16f, 16f, 16f, 16f, 10f, 3f };
+            int cx = width / 2;
+            var white = DustLight;
+
+            var frames = new Sprite[frameCount];
+            var random = new System.Random(77);
+            for (int f = 0; f < frameCount; f++)
+            {
+                var pixels = new Pixels(width, height);
+                for (int y = baseY; y < height; y++)
+                {
+                    // Ragged edge: each row wobbles a pixel or two so the column shimmers from frame to frame.
+                    int wobble = 0;
+                    int h = Mathf.Max(1, Mathf.RoundToInt(half[f]) + wobble);
+                    // Slight bloom: one thin translucent white halo hugging the solid rectangular core.
+                    // Slightly brighter near the floor where the light is most intense.
+                    float intensity = 0.75f + 0.25f * (1f - (y - baseY) / (float)(height - baseY));
+                    int[] reach = { 5 };
+                    byte[] alpha = { 90 };
+                    for (int layer = 0; layer < reach.Length; layer++)
+                    {
+                        int hh = h + reach[layer];
+                        var halo = new Color32(255, 255, 255, (byte)(alpha[layer] * intensity));
+                        for (int x = cx - hh; x < cx + hh; x++)
+                            pixels.Plot(x, y, halo);
+                    }
+                    for (int x = cx - h; x < cx + h; x++)
+                        pixels.Plot(x, y, white);
+                }
+                // The flash along the floor at the foot of the column.
+                if (f <= 4)
+                {
+                    float reach = (f == 0 ? 12f : 24f) - f * 2f;
+                    pixels.Lens(cx, baseY, 0f, reach * 2f, Mathf.Max(1f, 3.2f - f * 0.5f), white);
+                }
+                frames[f] = pixels.ToSprite(new Vector2(0.5f, baseY / (float)height));
+            }
+            return frames;
+        }
+
+        // Roll dust, drawn for a roll going right so the cloud trails to the left (flip it for the left): a few
+        // big blades sweep up and back out of the feet, and a row of smaller ones peels off along the floor
+        // behind, each one starting a little later than the one before it. Flat white with a blue underside.
         private static Sprite[] BuildRollDust(int seed)
         {
-            const int width = 96;
-            const int height = 40;
-            const float feetX = 76f;
+            const int width = 112;
+            const int height = 60;
+            const float feetX = 92f;
             const int frameCount = 12;
-            const int trailCount = 22;
-            const int burstCount = 6;
-            const int speckCount = 12;
+            const int trailCount = 6;
+            const int burstCount = 3;
             var random = new Random(seed);
 
-            float[] trailBack = new float[trailCount];
-            float[] trailBulk = new float[trailCount];
-            float[] trailLift = new float[trailCount];
-            float[] trailDelay = new float[trailCount];
+            var trail = new float[trailCount, 8];
             for (int i = 0; i < trailCount; i++)
             {
                 float along = i / (float)(trailCount - 1);
-                trailBack[i] = Mathf.Lerp(4f, 66f, along) + ((float)random.NextDouble() - 0.5f) * 5f;
-                // Bigger and denser near the feet, smaller and thinner the further back.
-                trailBulk[i] = (2.4f + (float)random.NextDouble() * 2.6f) * Mathf.Lerp(1.25f, 0.7f, along);
-                trailLift[i] = (float)random.NextDouble() * 4f;
-                trailDelay[i] = along * 0.4f;
+                trail[i, 0] = feetX - (6f + along * 52f);                        // base x
+                trail[i, 1] = 1.5f;                                               // base y
+                trail[i, 2] = 0.05f + (float)random.NextDouble() * 0.22f;         // elevation
+                trail[i, 3] = (16f + (float)random.NextDouble() * 14f);           // length
+                trail[i, 4] = (3f + (float)random.NextDouble() * 1.6f) * Mathf.Lerp(1f, 0.65f, along); // thickness
+                trail[i, 5] = 0.35f + (float)random.NextDouble() * 0.35f;          // curl
+                trail[i, 6] = along * 0.35f;                                      // delay
+                trail[i, 7] = 6f + (float)random.NextDouble() * 8f;               // reach
             }
-            float[] burstShift = new float[burstCount];
-            float[] burstBulk = new float[burstCount];
-            float[] burstLift = new float[burstCount];
-            float[] burstDrift = new float[burstCount];
+            var burst = new float[burstCount, 8];
             for (int i = 0; i < burstCount; i++)
             {
-                burstShift[i] = (float)random.NextDouble() * 10f;
-                burstBulk[i] = 5.5f + (float)random.NextDouble() * 3.5f;
-                burstLift[i] = 3f + (float)random.NextDouble() * 9f;
-                burstDrift[i] = 6f + (float)random.NextDouble() * 12f;
-            }
-            float[] speckAngle = new float[speckCount];
-            float[] speckSpeed = new float[speckCount];
-            for (int i = 0; i < speckCount; i++)
-            {
-                // Thrown back (left) and a little up.
-                speckAngle[i] = Mathf.PI - (float)random.NextDouble() * 0.9f;
-                speckSpeed[i] = 14f + (float)random.NextDouble() * 22f;
+                burst[i, 0] = feetX - (float)random.NextDouble() * 6f;
+                burst[i, 1] = 2f + (float)random.NextDouble() * 3f;
+                burst[i, 2] = 0.06f + i * 0.1f + (float)random.NextDouble() * 0.05f;
+                burst[i, 3] = 24f + (float)random.NextDouble() * 10f;
+                burst[i, 4] = 4f + (float)random.NextDouble() * 2.5f;
+                burst[i, 5] = 0.5f + (float)random.NextDouble() * 0.25f;
+                burst[i, 6] = (float)random.NextDouble() * 0.06f;
+                burst[i, 7] = 10f + (float)random.NextDouble() * 8f;
             }
 
             var frames = new Sprite[frameCount];
             for (int f = 0; f < frameCount; f++)
             {
                 float t = f / (float)(frameCount - 1);
-                float late = Mathf.Clamp01((t - 0.55f) / 0.45f);
-                var pixels = new Pixels(width, height, DustBleed);
-
+                var pixels = new Pixels(width, height);
                 for (int i = 0; i < trailCount; i++)
-                {
-                    float p = Mathf.Clamp01((t - trailDelay[i]) / (1f - trailDelay[i]));
-                    if (t < trailDelay[i])
-                        continue;
-                    float eased = 1f - (1f - p) * (1f - p);
-                    float x = feetX - trailBack[i] - eased * 6f;
-                    float radius = trailBulk[i] * (0.5f + 0.75f * eased);
-                    float y = radius * 0.45f + trailLift[i] * eased + t * 2f;
-                    DustWisp(pixels, x, y, radius, -(0.06f + eased * 0.3f));
-                }
-
-                float burstEase = 1f - (1f - t) * (1f - t);
+                    AgedBlade(pixels, t, trail[i, 6], trail[i, 0], trail[i, 1], -1, trail[i, 2], trail[i, 3], trail[i, 4], trail[i, 5], trail[i, 7], 2f, seed * 31 + i, 0.45f);
                 for (int i = 0; i < burstCount; i++)
-                {
-                    float x = feetX - burstShift[i] - burstDrift[i] * burstEase;
-                    float radius = burstBulk[i] * (0.6f + 0.8f * burstEase);
-                    float y = radius * 0.4f + burstLift[i] * burstEase;
-                    DustWisp(pixels, x, y, radius, -(0.25f + burstEase * 0.55f));
-                }
-
-                if (f < 8)
-                {
-                    for (int i = 0; i < speckCount; i++)
-                    {
-                        float x = feetX + Mathf.Cos(speckAngle[i]) * speckSpeed[i] * burstEase;
-                        float y = 2f + Mathf.Sin(speckAngle[i]) * speckSpeed[i] * burstEase - t * t * 16f;
-                        if (y < 0f)
-                            continue;
-                        pixels.Disc(x, y, i % 3 == 0 ? 1.2f : 0.8f, i % 2 == 0 ? DustShade : Dust);
-                    }
-                }
-
-                pixels.Dissolve(Mathf.Clamp01((t - 0.4f) / 0.6f), DustLightBias);
+                    AgedBlade(pixels, t, burst[i, 6], burst[i, 0], burst[i, 1], -1, burst[i, 2], burst[i, 3], burst[i, 4], burst[i, 5], burst[i, 7], 3f, seed * 17 + 100 + i, 0.45f);
+                DustSpecks(pixels, t, feetX - 4f, 4f, -1, 8, seed);
                 frames[f] = pixels.ToSprite(new Vector2(feetX / width, 0f));
             }
             return frames;
+        }
+
+        // A small puff for the run and the ledge: three or four little blades trailing left, same style.
+        private static Sprite[] BuildDust(int seed)
+        {
+            const int width = 72;
+            const int height = 38;
+            const float feetX = 62f;
+            const int frameCount = 9;
+            const int bladeCount = 4;
+            var random = new Random(seed);
+            var frames = new Sprite[frameCount];
+
+            var blades = new float[bladeCount, 8];
+            for (int i = 0; i < bladeCount; i++)
+            {
+                blades[i, 0] = feetX - (float)random.NextDouble() * 10f;
+                blades[i, 1] = 1.5f + (float)random.NextDouble() * 2.5f;
+                blades[i, 2] = 0.1f + (float)random.NextDouble() * 0.45f;
+                blades[i, 3] = 12f + (float)random.NextDouble() * 14f;
+                blades[i, 4] = 2.2f + (float)random.NextDouble() * 1.8f;
+                blades[i, 5] = 0.6f + (float)random.NextDouble() * 0.5f;
+                blades[i, 6] = (float)random.NextDouble() * 0.18f;
+                blades[i, 7] = 5f + (float)random.NextDouble() * 8f;
+            }
+
+            for (int f = 0; f < frameCount; f++)
+            {
+                float t = f / (float)(frameCount - 1);
+                var pixels = new Pixels(width, height);
+                for (int i = 0; i < bladeCount; i++)
+                    AgedBlade(pixels, t, blades[i, 6], blades[i, 0], blades[i, 1], -1, blades[i, 2], blades[i, 3], blades[i, 4], blades[i, 5], blades[i, 7], 4f, seed * 13 + i);
+                DustSpecks(pixels, t, feetX - 3f, 3f, -1, 4, seed);
+                frames[f] = pixels.ToSprite(new Vector2(feetX / width, 0f));
+            }
+            return frames;
+        }
+
+        // Dead Cells-style dust is drawn flat: a few big solid shapes, no gradients, no dithering. A blade is a
+        // swooping crescent of pure white with one thin flat sky-blue sliver along its underside, tapering to a
+        // point at both ends and curling upward toward its tip (this is what the landing cloud is made of).
+        // facing is the way it points (-1 left, 1 right); elevation is how far above horizontal it starts
+        // (radians); curl is how far it bends upward over its length (radians). pieces splits it into that many
+        // separate fragments, which is how a blade breaks up as it fades. The fragments are uneven on purpose:
+        // each gets its own share of the length and its own thickness, the gaps differ, and now and then a
+        // fragment drops out completely. seed keeps that the same on every frame of one blade. scatterUp scales
+        // how far the fragments of a breaking blade drift upward and tiltScale how far they tilt (1 = the default).
+        private static void DrawBlade(Pixels pixels, float x, float y, int facing, float elevation, float length,
+            float thickness, float curl, int pieces, float gap, int seed, float scatterUp = 1f, float tiltScale = 1f)
+        {
+            if (thickness < 0.6f || length < 2f)
+                return;
+            const float step = 0.5f;
+            var random = new Random(seed);
+            var share = new float[pieces];
+            var fatness = new float[pieces];
+            var dropped = new bool[pieces];
+            var gapShare = new float[pieces];
+            var scatter = new Vector2[pieces];
+            var tilt = new float[pieces];
+            float shareTotal = 0f;
+            float gapTotal = 0f;
+            for (int i = 0; i < pieces; i++)
+            {
+                share[i] = 0.5f + (float)random.NextDouble() * 1.2f;
+                fatness[i] = pieces == 1 ? 1f : 0.4f + (float)random.NextDouble() * 0.7f;
+                dropped[i] = pieces >= 3 && i > 0 && random.NextDouble() < 0.28;
+                gapShare[i] = 0.5f + (float)random.NextDouble() * 1.1f;
+                // Fragments drift off the original curve: mostly up, some sideways, each tilted its own way.
+                // The first one stays put as the anchor, so the break-up reads as pieces flying off it.
+                scatter[i] = i == 0 ? Vector2.zero : new Vector2(((float)random.NextDouble() - 0.5f) * 1.2f, (0.2f + (float)random.NextDouble() * 0.9f) * scatterUp);
+                tilt[i] = i == 0 ? 0f : ((float)random.NextDouble() - 0.5f) * 1.6f * tiltScale;
+                shareTotal += share[i];
+                if (i < pieces - 1)
+                    gapTotal += gapShare[i];
+            }
+
+            float gapUnit = gap * length / Mathf.Max(1f, gapTotal + pieces);
+            float usable = length - gapUnit * gapTotal;
+            float travelled = 0f;
+            var position = new Vector2(x, y);
+            for (int piece = 0; piece < pieces; piece++)
+            {
+                float pieceLength = usable * share[piece] / shareTotal;
+                Vector2 start = position;
+                Vector2 drift = scatter[piece] * (gap * length * 0.45f);
+                float cosTilt = Mathf.Cos(tilt[piece] * gap);
+                float sinTilt = Mathf.Sin(tilt[piece] * gap);
+                for (float s = 0f; s <= pieceLength; s += step)
+                {
+                    float u = s / pieceLength;
+                    float phi = elevation + curl * ((travelled + s) / length);
+                    var direction = new Vector2(facing * Mathf.Cos(phi), Mathf.Sin(phi));
+                    // Always the upper side, whichever way the blade points.
+                    var normal = new Vector2(-direction.y, direction.x) * facing;
+                    float width = thickness * fatness[piece] * Mathf.Sin(Mathf.PI * Mathf.Pow(u, 0.75f));
+                    if (width >= 0.3f && !dropped[piece])
+                    {
+                        for (float v = -width; v <= width; v += 0.5f)
+                        {
+                            bool underside = v < -width * 0.55f && u > 0.15f && u < 0.8f;
+                            Vector2 point = position + normal * v;
+                            Vector2 local = point - start;
+                            point = start + new Vector2(local.x * cosTilt - local.y * sinTilt, local.x * sinTilt + local.y * cosTilt) + drift;
+                            pixels.Plot(Mathf.RoundToInt(point.x), Mathf.RoundToInt(point.y), underside ? DustShade : DustLight);
+                        }
+                    }
+                    position += direction * step;
+                }
+
+                float gapLength = piece < pieces - 1 ? gapUnit * gapShare[piece] : 0f;
+                float gapPhi = elevation + curl * ((travelled + pieceLength + gapLength * 0.5f) / length);
+                position += new Vector2(facing * Mathf.Cos(gapPhi), Mathf.Sin(gapPhi)) * gapLength;
+                travelled += pieceLength + gapLength;
+            }
+        }
+
+        // The fade schedule of one blade, different for every seed so no two fade alike: some vanish early and
+        // some linger, they start thinning at different times and at different speeds, and they break into
+        // fragments at different moments (up to three) that scatter at different rates. progress is the
+        // blade's own 0-1 time. Returns false once the blade is gone.
+        private static bool BladeFade(float progress, int seed, out float thin, out int pieces, out float gap)
+        {
+            var random = new Random(seed * 7 + 3);
+            float span = 0.65f + (float)random.NextDouble() * 0.35f;
+            float thinFrom = 0.1f + (float)random.NextDouble() * 0.35f;
+            float thinPower = 0.7f + (float)random.NextDouble() * 1.3f;
+            float breakOne = 0.25f + (float)random.NextDouble() * 0.3f;
+            float breakTwo = breakOne + 0.08f + (float)random.NextDouble() * 0.2f;
+            float gapRate = 0.3f + (float)random.NextDouble() * 0.7f;
+
+            thin = 0f;
+            pieces = 1;
+            gap = 0f;
+            float life = progress / span;
+            if (life >= 1f)
+                return false;
+            thin = 1f - Mathf.Pow(Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((life - thinFrom) / (1f - thinFrom))), thinPower);
+            pieces = life < breakOne ? 1 : life < breakTwo ? 2 : 3;
+            gap = life < breakOne ? 0f : 0.2f + (life - breakOne) * gapRate;
+            return true;
+        }
+
+        // A blade over its life: it sweeps out and up as it grows, then fades by its own schedule. t is the
+        // cloud's time (0-1); delay holds the blade back until its turn.
+        private static void AgedBlade(Pixels pixels, float t, float delay, float baseX, float baseY, int facing,
+            float elevation, float length, float thickness, float curl, float reach, float rise, int seed, float scatterUp = 1f)
+        {
+            if (t < delay)
+                return;
+            float life = Mathf.Clamp01((t - delay) / (1f - delay));
+            if (!BladeFade(life, seed, out float thin, out int pieces, out float gap))
+                return;
+            float grow = 1f - Mathf.Pow(1f - Mathf.Clamp01(life / 0.4f), 2f);
+            float travel = 1f - Mathf.Pow(1f - life, 2f);
+            DrawBlade(pixels, baseX + facing * reach * travel, baseY + rise * travel, facing, elevation,
+                length * (0.2f + 0.8f * grow), thickness * thin, curl * (0.6f + 0.8f * life), pieces, gap, seed, scatterUp);
+        }
+
+        // A few single-pixel flecks thrown out of a cloud, white with the odd blue one, like the reference.
+        // Each one lives for its own time, so they wink out one by one instead of all together.
+        private static void DustSpecks(Pixels pixels, float t, float originX, float originY, int facing, int count, int seed)
+        {
+            var random = new Random(seed);
+            float ease = 1f - (1f - t) * (1f - t);
+            for (int i = 0; i < count; i++)
+            {
+                float angle = 0.1f + (float)random.NextDouble() * 1.1f;
+                float speed = 12f + (float)random.NextDouble() * 22f;
+                float lifetime = 0.3f + (float)random.NextDouble() * 0.65f;
+                float x = originX + facing * Mathf.Cos(angle) * speed * ease;
+                float y = originY + Mathf.Sin(angle) * speed * ease - t * t * 8f;
+                if (y < 0f || t > lifetime)
+                    continue;
+                pixels.Plot(Mathf.RoundToInt(x), Mathf.RoundToInt(y), i % 3 == 0 ? DustShade : DustLight);
+            }
         }
 
         // One wisp of dust: a long, flat, tapered streak with pointed tips instead of a round blob, shaded
@@ -843,51 +899,6 @@ namespace DeadCells.VFX
             pixels.Lens(x - length * 0.08f, y + half * 0.4f, angle, length * 0.55f, half * 0.3f, DustLight);
         }
 
-        // A low, ragged cloud of dust kicked up behind the feet: overlapping puffs of different sizes
-        // that billow, drift back and rise a little, then break up in dithered pixels. The canvas floor
-        // is the ground, so puffs sit flat on it instead of floating as separate balls.
-        private static Sprite[] BuildDust(int seed)
-        {
-            const int width = 56;
-            const int height = 28;
-            const int frameCount = 9;
-            const int puffCount = 11;
-            const float feetX = 46f;
-            var random = new Random(seed);
-            float[] back = new float[puffCount];
-            float[] lift = new float[puffCount];
-            float[] bulk = new float[puffCount];
-            float[] delay = new float[puffCount];
-            float[] drift = new float[puffCount];
-            for (int i = 0; i < puffCount; i++)
-            {
-                // Bunched near the feet, thinning out further back.
-                back[i] = Mathf.Pow((float)random.NextDouble(), 0.8f) * 26f;
-                lift[i] = (float)random.NextDouble() * 4f;
-                bulk[i] = 2.2f + (float)random.NextDouble() * 2.8f;
-                delay[i] = (float)random.NextDouble() * 0.2f;
-                drift[i] = 3f + (float)random.NextDouble() * 7f;
-            }
-
-            var frames = new Sprite[frameCount];
-            for (int f = 0; f < frameCount; f++)
-            {
-                float t = f / (float)(frameCount - 1);
-                var pixels = new Pixels(width, height, DustBleed);
-                for (int i = 0; i < puffCount; i++)
-                {
-                    float p = Mathf.Clamp01((t - delay[i]) / (1f - delay[i]));
-                    float eased = 1f - (1f - p) * (1f - p);
-                    float x = feetX - back[i] * (0.4f + 0.6f * eased) - drift[i] * eased;
-                    float y = bulk[i] * 0.3f + (bulk[i] * 0.5f + lift[i]) * eased + t * 3f;
-                    float radius = bulk[i] * (0.5f + 0.7f * eased);
-                    DustWisp(pixels, x, y, radius, -(0.1f + eased * 0.3f));
-                }
-                pixels.Dissolve(Mathf.Clamp01((t - 0.35f) / 0.65f), DustLightBias);
-                frames[f] = pixels.ToSprite(new Vector2(feetX / width, 0f));
-            }
-            return frames;
-        }
 
         private static Color32 WithAlpha(Color32 color, float alpha) =>
             new Color32(color.r, color.g, color.b, (byte)Mathf.RoundToInt(255f * Mathf.Clamp01(alpha)));

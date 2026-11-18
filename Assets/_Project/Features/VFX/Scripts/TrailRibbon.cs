@@ -27,8 +27,8 @@ namespace DeadCells.VFX
 
         public bool Emitting { get; set; }
 
-        /// <summary>Colours in sRGB; width in units at the head; duration is how long the tail lags.</summary>
-        public void Setup(Color32 head, Color32 tail, float width, float duration, SpriteRenderer drawnBehind)
+        /// <summary>Colours in sRGB; width in units at the head; duration is how long the tail lags; unlit ignores scene lights.</summary>
+        public void Setup(Color32 head, Color32 tail, float width, float duration, SpriteRenderer drawnBehind, bool unlit = false)
         {
             _head = RuntimeSprites.ToRenderSpace(head);
             _tail = RuntimeSprites.ToRenderSpace(tail);
@@ -39,7 +39,7 @@ namespace DeadCells.VFX
             _mesh.MarkDynamic();
             _view = new GameObject($"{name} Trail");
             _view.AddComponent<MeshFilter>().sharedMesh = _mesh;
-            RuntimeSprites.Prepare(_view.AddComponent<MeshRenderer>(), drawnBehind.sortingLayerID, drawnBehind.sortingOrder - 1);
+            RuntimeSprites.Prepare(_view.AddComponent<MeshRenderer>(), drawnBehind.sortingLayerID, drawnBehind.sortingOrder - 1, null, unlit);
         }
 
         /// <summary>Changes colours (sRGB) and head width, e.g. per shot.</summary>

@@ -19,9 +19,14 @@ namespace DeadCells.VFX
         public readonly float SizeMax;
         public readonly float Bounce;
         public readonly float FlashRadius;
+        /// <summary>Scales gravity: 1 is normal, 0 floats, below 0 drifts upward.</summary>
+        public readonly float GravityScale;
+        /// <summary>Draws the sparks in plain white and grey instead of the warm pale palette.</summary>
+        public readonly bool Monotone;
 
         public SparkBurst(int count, float speedMin, float speedMax, float coneMin, float coneMax, float lifeMin,
-            float lifeMax, float sizeMin, float sizeMax, float bounce, float flashRadius)
+            float lifeMax, float sizeMin, float sizeMax, float bounce, float flashRadius, float gravityScale = 1f,
+            bool monotone = false)
         {
             Count = count;
             SpeedMin = speedMin;
@@ -34,10 +39,15 @@ namespace DeadCells.VFX
             SizeMax = sizeMax;
             Bounce = bounce;
             FlashRadius = flashRadius;
+            GravityScale = gravityScale;
+            Monotone = monotone;
         }
 
         /// <summary>A blade or arrow ringing off a shield: a spray of hot sparks and a bright flash.</summary>
         public static readonly SparkBurst Shield = new SparkBurst(10, 4f, 10f, -20f, 70f, 0.28f, 0.55f, 0.8f, 1.4f, 0.5f, 0.5f);
+
+        /// <summary>White motes that float up off the body, no flash and no bounce. Plain white and grey.</summary>
+        public static readonly SparkBurst Ascend = new SparkBurst(1, 9f, 14f, 87f, 93f, 0.55f, 0.85f, 1.5f, 2.3f, 0f, 0f, 0f, true);
     }
 
     // World-space sparks that collide with the level. Each spark flies with gravity and air drag, bounces off
@@ -64,6 +74,11 @@ namespace DeadCells.VFX
         private static readonly Color32 HeadEmber = new Color32(255, 200, 150, 255);
         private static readonly Color32 GlowPale = new Color32(255, 238, 180, 255);
         private static readonly Color32 FlashWarm = new Color32(255, 246, 205, 255);
+        // The monotone palette: plain white cooling to light grey, for effects that must stay one colour.
+        private static readonly Color32 MonoHead = new Color32(255, 255, 255, 255);
+        private static readonly Color32 MonoMid = new Color32(238, 238, 238, 255);
+        private static readonly Color32 MonoDim = new Color32(196, 196, 196, 255);
+        private static readonly Color32 MonoGlow = new Color32(255, 255, 255, 255);
 
         private static Sparks s_instance;
 
@@ -85,6 +100,10 @@ namespace DeadCells.VFX
         private Color32 _ember;
         private Color32 _glow;
         private Color32 _flash;
+        private Color32 _monoHead;
+        private Color32 _monoMid;
+        private Color32 _monoDim;
+        private Color32 _monoGlow;
 
         private sealed class Spark
         {
@@ -98,6 +117,8 @@ namespace DeadCells.VFX
             public int Bounces;
             public int TrailCount;
             public bool IsResting;
+            public float GravityScale;
+            public bool Monotone;
             public LayerMask Collision;
         }
 
@@ -130,6 +151,10 @@ namespace DeadCells.VFX
             _ember = RuntimeSprites.ToRenderSpace(HeadEmber);
             _glow = RuntimeSprites.ToRenderSpace(GlowPale);
             _flash = RuntimeSprites.ToRenderSpace(FlashWarm);
+            _monoHead = RuntimeSprites.ToRenderSpace(MonoHead);
+            _monoMid = RuntimeSprites.ToRenderSpace(MonoMid);
+            _monoDim = RuntimeSprites.ToRenderSpace(MonoDim);
+            _monoGlow = RuntimeSprites.ToRenderSpace(MonoGlow);
 
             _glowMesh = NewLayer("Glow", GlowSortingOrder, RuntimeSprites.GlowTexture);
             _coreMesh = NewLayer("Cores", CoreSortingOrder, null);
@@ -173,6 +198,8 @@ namespace DeadCells.VFX
                 spark.Bounces = 0;
                 spark.TrailCount = 0;
                 spark.IsResting = false;
+                spark.GravityScale = burst.GravityScale;
+                spark.Monotone = burst.Monotone;
                 spark.Collision = collision;
                 _active.Add(spark);
             }
@@ -215,7 +242,7 @@ namespace DeadCells.VFX
         {
             if (dt <= 0f)
                 return;
-            spark.Velocity.y -= Gravity * dt;
+            spark.Velocity.y -= Gravity * spark.GravityScale * dt;
             spark.Velocity /= 1f + Drag * dt;
             Vector2 next = spark.Position + spark.Velocity * dt;
 
@@ -272,17 +299,21 @@ namespace DeadCells.VFX
             {
                 float t = spark.Age / spark.Life;
                 float fade = 1f - t * t;
-                Color32 head = HeadColor(t);
+                Color32 head = spark.Monotone ? MonoHeadColor(t) : HeadColor(t);
                 float size = spark.Size * Px * (1f - 0.35f * t);
 
-                AddTrail(spark, size, head, fade);
+                AddTrail(spark, size, head, fade, spark.Monotone ? _monoDim : _ember);
                 AddSquare(spark.Position, Mathf.Max(Px, size * 1.1f), WithAlpha(head, 1f));
-                AddGlow(spark.Position, size * 4f * (0.5f + 0.5f * fade), WithAlpha(_glow, 0.3f * fade));
+                AddGlow(spark.Position, size * 4f * (0.5f + 0.5f * fade), WithAlpha(spark.Monotone ? _monoGlow : _glow, 0.3f * fade));
             }
 
             Apply(_glowMesh, _glowVertices, _glowColors, _glowUvs, _glowTriangles);
             Apply(_coreMesh, _coreVertices, _coreColors, null, _coreTriangles);
         }
+
+        // Plain white at birth, dimming to light grey: no hue at all.
+        private Color32 MonoHeadColor(float t) =>
+            t < 0.5f ? Color32.Lerp(_monoHead, _monoMid, t / 0.5f) : Color32.Lerp(_monoMid, _monoDim, (t - 0.5f) / 0.5f);
 
         // White-hot at birth, cooling through pale yellow to a soft amber.
         private Color32 HeadColor(float t)
@@ -295,7 +326,7 @@ namespace DeadCells.VFX
         }
 
         // A ribbon from the head back through the recorded trail, tapering to a point and cooling.
-        private void AddTrail(Spark spark, float size, Color32 head, float fade)
+        private void AddTrail(Spark spark, float size, Color32 head, float fade, Color32 tail)
         {
             if (spark.TrailCount < 1)
                 return;
@@ -307,7 +338,7 @@ namespace DeadCells.VFX
                 Vector2 current = spark.Trail[k];
                 float along = (k + 1) / (float)(spark.TrailCount + 1);
                 float width = size * (1f - along);
-                Color32 color = WithAlpha(Color32.Lerp(head, _ember, along), fade * (1f - along));
+                Color32 color = WithAlpha(Color32.Lerp(head, tail, along), fade * (1f - along));
                 Vector2 segment = current - previous;
                 if (segment.sqrMagnitude > 1e-8f)
                 {

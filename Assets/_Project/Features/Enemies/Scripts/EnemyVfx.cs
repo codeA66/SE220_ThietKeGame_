@@ -98,6 +98,11 @@ namespace DeadCells.Enemies
             // The flare and the blood both go the way the enemy is pushed. Blood drops are real
             // particles that land on floors and run down walls.
             LayerMask ground = _context.GroundMask;
+            if (info.IsStomp)
+            {
+                PlayStompBlood(position, killingBlow, ground);
+                return;
+            }
             if (info.IsCritical && killingBlow)
             {
                 // Crit kill: a gore burst plus four heavy bursts fanned across the cone, and a blood mist.
@@ -113,6 +118,20 @@ namespace DeadCells.Enemies
             }
             bool heavy = info.IsCritical || killingBlow;
             BloodDrops.Emit(position, info.Direction, heavy ? BloodBurst.Heavy : BloodBurst.Light, ground);
+        }
+
+        // A stomp crushes the enemy from above, so the blood has no single direction. A kill splatters blood
+        // everywhere: two big bursts, one thrown to each side, hard along the floor and up and over, with a
+        // mist cloud on both sides. A stomp that doesn't kill just sprays a light burst to each side.
+        private void PlayStompBlood(Vector3 position, bool killingBlow, LayerMask ground)
+        {
+            BloodBurst burst = killingBlow ? BloodBurst.Splatter : BloodBurst.Light;
+            BloodDrops.Emit(position, -1, burst, ground);
+            BloodDrops.Emit(position, 1, burst, ground);
+            if (!killingBlow)
+                return;
+            _context.Vfx.Play(_bloodMist, position, true);
+            _context.Vfx.Play(_bloodMist, position, false);
         }
 
         private Vector3 Center() => transform.TransformPoint(_collider.offset);

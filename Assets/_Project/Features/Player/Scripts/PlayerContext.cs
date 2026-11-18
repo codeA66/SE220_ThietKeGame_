@@ -76,14 +76,24 @@ namespace DeadCells.Player
         public event Action StompStarted;
         /// <summary>An air stomp hit the ground. Argument: feet position.</summary>
         public event Action<Vector2> Stomped;
+        /// <summary>The stomp state ended, whether it landed or was cut short (a hit, death, anything else).</summary>
+        public event Action StompEnded;
         /// <summary>A ledge climb finished and the player is standing on the ledge. Argument: feet position.</summary>
         public event Action<Vector2> LedgeClimbFinished;
 
+        /// <summary>The spawn intro finished and the player is standing up, about to take control.</summary>
+        public event Action Awakened;
+
         public SpriteRenderer Sprite => _sprite;
+        public LayerMask GroundMask => _groundMask;
+
+        public void NotifyAwakened() => Awakened?.Invoke();
 
         public void NotifyStompStarted() => StompStarted?.Invoke();
 
         public void NotifyStomped() => Stomped?.Invoke(Position);
+
+        public void NotifyStompEnded() => StompEnded?.Invoke();
 
         public void NotifyLedgeClimbFinished() => LedgeClimbFinished?.Invoke(Position);
 

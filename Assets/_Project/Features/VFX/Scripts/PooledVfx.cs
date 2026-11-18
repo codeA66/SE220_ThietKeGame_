@@ -33,6 +33,8 @@ namespace DeadCells.VFX
             _renderer.sortingOrder = definition.SortingOrder;
             transform.localScale = Vector3.one * definition.Scale;
             _renderer.color = definition.Tint;
+            if (definition.Unlit && RuntimeSprites.UnlitMaterial != null)
+                _renderer.sharedMaterial = RuntimeSprites.UnlitMaterial;
         }
 
         public void Play(Vector3 position, bool flipX, float angle = 0f, float scale = 1f)
