@@ -107,25 +107,16 @@ namespace DeadCells.VFX
 
         private void Awake()
         {
-            _bright = ToRenderSpace(BloodBrightSrgb);
-            _mid = ToRenderSpace(BloodSrgb);
-            _dark = ToRenderSpace(BloodDarkSrgb);
-            _shine = ToRenderSpace(BloodShineSrgb);
+            _bright = RuntimeSprites.ToRenderSpace(BloodBrightSrgb);
+            _mid = RuntimeSprites.ToRenderSpace(BloodSrgb);
+            _dark = RuntimeSprites.ToRenderSpace(BloodDarkSrgb);
+            _shine = RuntimeSprites.ToRenderSpace(BloodShineSrgb);
 
             _mesh = new Mesh { name = "BloodDrops" };
             _mesh.MarkDynamic();
             gameObject.AddComponent<MeshFilter>().sharedMesh = _mesh;
-            var meshRenderer = gameObject.AddComponent<MeshRenderer>();
-
-            // Borrow the default sprite material, so the drops are lit like every other sprite effect.
-            var probe = new GameObject("MaterialProbe");
-            meshRenderer.sharedMaterial = probe.AddComponent<SpriteRenderer>().sharedMaterial;
-            Destroy(probe);
-
-            var block = new MaterialPropertyBlock();
-            block.SetTexture("_MainTex", Texture2D.whiteTexture);
-            meshRenderer.SetPropertyBlock(block);
-            meshRenderer.sortingOrder = SortingOrder;
+            // The default sprite material, so the drops are lit like every other sprite effect.
+            RuntimeSprites.Prepare(gameObject.AddComponent<MeshRenderer>(), 0, SortingOrder);
         }
 
         private void OnDestroy()
@@ -357,11 +348,6 @@ namespace DeadCells.VFX
 
         private static Vector2 Snap(Vector2 position) =>
             new Vector2(Mathf.Round(position.x / Px) * Px, Mathf.Round(position.y / Px) * Px);
-
-        // In a Linear colour space project Unity converts texture and SpriteRenderer colours, but mesh
-        // vertex colours are used as they are, so sRGB values would show up washed out (pink, not crimson).
-        private static Color32 ToRenderSpace(Color32 srgb) =>
-            QualitySettings.activeColorSpace == ColorSpace.Linear ? (Color32)((Color)srgb).linear : srgb;
 
         private static Color32 WithAlpha(Color32 color, float alpha) =>
             new Color32(color.r, color.g, color.b, (byte)Mathf.RoundToInt(255f * Mathf.Clamp01(alpha)));

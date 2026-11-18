@@ -35,6 +35,7 @@ namespace DeadCells.Enemies
         private float _fuse;
         private bool _live;
         private Color _baseColor;
+        private TrailRibbon _trail;
 
         public Mode Kind => _mode;
 
@@ -47,6 +48,12 @@ namespace DeadCells.Enemies
             _ground = ground;
             _query = new HitQuery(targets);
             _baseColor = _renderer.color;
+            if (_mode == Mode.Straight)
+            {
+                // Hostile arrows streak ember-to-red so they read apart from the player's cream ones.
+                _trail = gameObject.AddComponent<TrailRibbon>();
+                _trail.Setup(new Color32(255, 150, 70, 255), new Color32(190, 30, 30, 255), 2f / 32f, 0.1f, _renderer);
+            }
         }
 
         public void LaunchStraight(Vector2 position, Vector2 velocity, int damage, float knockback, GameObject owner)
@@ -79,6 +86,11 @@ namespace DeadCells.Enemies
             gameObject.SetActive(true);
             _body.linearVelocity = velocity;
             _body.angularVelocity = 0f;
+            if (_trail != null)
+            {
+                _trail.Clear();
+                _trail.Emitting = true;
+            }
         }
 
         private void Update()
@@ -121,6 +133,9 @@ namespace DeadCells.Enemies
             }
             else if ((_ground.value & layerBit) != 0)
             {
+                // Debris bursts back off the wall, against the arrow's flight.
+                if (_vfx != null)
+                    _vfx.Play(GeneratedVfx.ArrowImpact, transform.position, _body.linearVelocity.x > 0f);
                 Finish();
             }
         }

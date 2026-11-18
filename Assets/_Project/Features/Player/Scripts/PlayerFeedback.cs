@@ -31,6 +31,10 @@ namespace DeadCells.Player
         [SerializeField] private float _critShakeAmplitude = 0.16f;
         [SerializeField] private float _critShakeDuration = 0.15f;
 
+        [Header("On Bow Finisher Release")]
+        [SerializeField] private float _finisherShakeAmplitude = 0.07f;
+        [SerializeField] private float _finisherShakeDuration = 0.08f;
+
         [Header("On Kill")]
         [SerializeField] private float _killHitStop = 0.09f;
         [SerializeField] private float _killShakeAmplitude = 0.14f;
@@ -64,6 +68,7 @@ namespace DeadCells.Player
             _health = _controller.Health;
             _combat.StrikeHit += OnStrikeHit;
             _bow.HitDealt += OnArrowHit;
+            _bow.Fired += OnBowFired;
             _health.Damaged += OnDamageTaken;
             _health.Died += OnDamageTaken;
         }
@@ -76,7 +81,10 @@ namespace DeadCells.Player
             if (_combat != null)
                 _combat.StrikeHit -= OnStrikeHit;
             if (_bow != null)
+            {
                 _bow.HitDealt -= OnArrowHit;
+                _bow.Fired -= OnBowFired;
+            }
             if (_health != null)
             {
                 _health.Damaged -= OnDamageTaken;
@@ -128,6 +136,13 @@ namespace DeadCells.Player
         }
 
         private void OnArrowHit(DamageInfo damage) => OnStrikeHit(1, damage.IsCritical);
+
+        // A small kick when the heavy third shot of the bow combo leaves the string.
+        private void OnBowFired(Vector2 muzzle, int facing, bool heavy)
+        {
+            if (heavy && _camera != null)
+                _camera.Shake(_finisherShakeAmplitude, _finisherShakeDuration);
+        }
 
         private void OnDamageTaken(DamageInfo info)
         {

@@ -47,6 +47,10 @@ namespace DeadCells.VFX
         private static VfxDefinition s_rollDust;
         private static VfxDefinition s_critSpark;
         private static VfxDefinition s_bloodMist;
+        private static VfxDefinition s_muzzleFlash;
+        private static VfxDefinition s_muzzleFlashHeavy;
+        private static VfxDefinition s_arrowImpact;
+        private static VfxDefinition s_arrowImpactHeavy;
         private static VfxDefinition s_stompWave;
 
         // With domain reload turned off for Play Mode, statics survive between sessions, so cached
@@ -66,6 +70,10 @@ namespace DeadCells.VFX
             s_rollDust = null;
             s_critSpark = null;
             s_bloodMist = null;
+            s_muzzleFlash = null;
+            s_muzzleFlashHeavy = null;
+            s_arrowImpact = null;
+            s_arrowImpactHeavy = null;
             s_stompWave = null;
         }
 
@@ -109,6 +117,49 @@ namespace DeadCells.VFX
                 if (!IsUsable(s_bloodMist))
                     s_bloodMist = Register(VfxDefinition.Create("Vfx_BloodMist", BuildBloodMist(), Fps, 1f, 7, 1));
                 return s_bloodMist;
+            }
+        }
+
+        // Bow release flash, drawn firing right. The heavy one is for the combo finishing shot.
+        public static VfxDefinition MuzzleFlash
+        {
+            get
+            {
+                if (!IsUsable(s_muzzleFlash))
+                    s_muzzleFlash = Register(VfxDefinition.Create("Vfx_MuzzleFlash", BuildMuzzleFlash(1f, Cream), Fps, 1f, 6, 2));
+                return s_muzzleFlash;
+            }
+        }
+
+        public static VfxDefinition MuzzleFlashHeavy
+        {
+            get
+            {
+                if (!IsUsable(s_muzzleFlashHeavy))
+                    s_muzzleFlashHeavy = Register(VfxDefinition.Create("Vfx_MuzzleFlashHeavy", BuildMuzzleFlash(1.5f, Gold), Fps, 1f, 6, 1));
+                return s_muzzleFlashHeavy;
+            }
+        }
+
+        // Arrow hitting a wall or floor: debris bursts away from the surface. Drawn bursting right, so
+        // flip it when the arrow was flying right.
+        public static VfxDefinition ArrowImpact
+        {
+            get
+            {
+                if (!IsUsable(s_arrowImpact))
+                    s_arrowImpact = Register(VfxDefinition.Create("Vfx_ArrowImpact", BuildArrowImpact(1f, 13), Fps, 1f, 6, 3));
+                return s_arrowImpact;
+            }
+        }
+
+        public static VfxDefinition ArrowImpactHeavy
+        {
+            get
+            {
+                if (!IsUsable(s_arrowImpactHeavy))
+                    s_arrowImpactHeavy = Register(VfxDefinition.Create("Vfx_ArrowImpactHeavy", BuildArrowImpact(1.6f, 29), Fps, 1f, 6, 1));
+                return s_arrowImpactHeavy;
             }
         }
 
@@ -256,6 +307,147 @@ namespace DeadCells.VFX
                     pixels.Disc(x - radius * 0.2f, y + radius * 0.25f, radius * 0.55f, Blood);
                 }
                 pixels.Dissolve(Mathf.Clamp01((t - 0.45f) / 0.55f));
+                frames[f] = pixels.ToSprite(new Vector2(originX / width, originY / height));
+            }
+            return frames;
+        }
+
+        // Bow release, drawn firing right (flip it for the left): a lens of light shooting out of the bow
+        // with a cross glint, rays of light fanning out ahead in a wide cone, and a puff of dust kicked
+        // back. scale grows the whole thing for the combo finisher, which also burns gold, not cream.
+        private static Sprite[] BuildMuzzleFlash(float scale, Color32 warm)
+        {
+            const int frameCount = 6;
+            const int rayCount = 5;
+            const float coneHalfAngle = 60f;
+            int width = Mathf.CeilToInt(8 + 46 * scale);
+            int height = Mathf.CeilToInt(88 * scale);
+            float originX = 8f;
+            float originY = (height - 1) * 0.5f;
+            var random = new Random(53);
+            float[] rayAngle = new float[rayCount];
+            float[] rayLength = new float[rayCount];
+            for (int i = 0; i < rayCount; i++)
+            {
+                // Spread evenly across the cone with a little jitter; the middle rays run longest.
+                float spread = Mathf.Lerp(-coneHalfAngle, coneHalfAngle, i / (float)(rayCount - 1));
+                rayAngle[i] = (spread + ((float)random.NextDouble() - 0.5f) * 8f) * Mathf.Deg2Rad;
+                rayLength[i] = (7f + 6f * (1f - Mathf.Abs(spread) / coneHalfAngle) + (float)random.NextDouble() * 3f) * scale;
+            }
+
+            var frames = new Sprite[frameCount];
+            for (int f = 0; f < frameCount; f++)
+            {
+                float t = f / (float)(frameCount - 1);
+                float travel = 1f - (1f - t) * (1f - t);
+                var pixels = new Pixels(width, height);
+
+                for (int k = 0; k < 3; k++)
+                {
+                    float x = originX - t * 8f * scale - k * 2f;
+                    float y = originY + (k - 1) * 3f * scale + t * 3f;
+                    float radius = (1.5f + t * 1.8f) * scale;
+                    pixels.Disc(x, y, radius, DustShade);
+                    pixels.Disc(x + radius * 0.15f, y + radius * 0.2f, radius * 0.7f, Dust);
+                }
+
+                if (f < 5)
+                {
+                    Color32 rayColor = f < 2 ? White : warm;
+                    for (int i = 0; i < rayCount; i++)
+                    {
+                        float inner = (5f + travel * 24f) * scale;
+                        float outer = inner + rayLength[i] * (1f - t * 0.7f);
+                        pixels.Line(originX + Mathf.Cos(rayAngle[i]) * inner, originY + Mathf.Sin(rayAngle[i]) * inner,
+                            originX + Mathf.Cos(rayAngle[i]) * outer, originY + Mathf.Sin(rayAngle[i]) * outer,
+                            rayColor, f < 1 ? 0.6f : 0f);
+                    }
+                }
+
+                if (f < 3)
+                {
+                    float length = (16f + f * 8f) * scale;
+                    float halfWidth = Mathf.Max(0.6f, (3f - f) * scale);
+                    pixels.Lens(originX + length * 0.5f, originY, 0f, length, halfWidth, f == 0 ? White : warm);
+                }
+                if (f < 2)
+                {
+                    pixels.Lens(originX, originY, Mathf.PI * 0.5f, 10f * scale, 1.5f * scale, White);
+                    pixels.Disc(originX, originY, (3.5f - f * 1.5f) * scale, White);
+                }
+
+                pixels.Dissolve(Mathf.Clamp01((t - 0.5f) / 0.5f));
+                frames[f] = pixels.ToSprite(new Vector2(originX / width, originY / height));
+            }
+            return frames;
+        }
+
+        // An arrow striking stone, drawn with the surface on the left and debris bursting right (flip it
+        // when the arrow was flying right): a flash, sparks cooling from white to ember, stone chips
+        // falling under gravity and a little dust. scale grows it for the combo finisher.
+        private static Sprite[] BuildArrowImpact(float scale, int seed)
+        {
+            int width = Mathf.CeilToInt(48 * scale);
+            int height = Mathf.CeilToInt(40 * scale);
+            float originX = 6f;
+            float originY = (height - 1) * 0.5f;
+            const int frameCount = 7;
+            int sparkCount = Mathf.RoundToInt(7 * scale);
+            int chipCount = Mathf.RoundToInt(4 * scale);
+            var random = new Random(seed);
+            float[] sparkAngle = new float[sparkCount];
+            float[] sparkSpeed = new float[sparkCount];
+            for (int i = 0; i < sparkCount; i++)
+            {
+                sparkAngle[i] = Mathf.Lerp(-70f, 70f, (float)random.NextDouble()) * Mathf.Deg2Rad;
+                sparkSpeed[i] = (10f + (float)random.NextDouble() * 12f) * scale;
+            }
+            float[] chipAngle = new float[chipCount];
+            float[] chipSpeed = new float[chipCount];
+            for (int i = 0; i < chipCount; i++)
+            {
+                chipAngle[i] = Mathf.Lerp(-30f, 60f, (float)random.NextDouble()) * Mathf.Deg2Rad;
+                chipSpeed[i] = (8f + (float)random.NextDouble() * 10f) * scale;
+            }
+
+            var frames = new Sprite[frameCount];
+            for (int f = 0; f < frameCount; f++)
+            {
+                float t = f / (float)(frameCount - 1);
+                float travel = 1f - (1f - t) * (1f - t);
+                var pixels = new Pixels(width, height);
+
+                for (int k = 0; k < 2; k++)
+                {
+                    float radius = (2f + t * 2.5f) * scale;
+                    float x = originX + 2f + k * 3f * scale + t * 3f;
+                    float y = originY + (k == 0 ? -2f : 2f) * scale + t * 3f;
+                    pixels.Disc(x, y, radius, DustShade);
+                    pixels.Disc(x + radius * 0.15f, y + radius * 0.2f, radius * 0.7f, Dust);
+                }
+
+                for (int i = 0; i < chipCount; i++)
+                {
+                    float x = originX + Mathf.Cos(chipAngle[i]) * chipSpeed[i] * travel;
+                    float y = originY + Mathf.Sin(chipAngle[i]) * chipSpeed[i] * travel - t * t * 14f;
+                    pixels.Disc(x, y, i % 2 == 0 ? 1.3f : 0.8f, Rubble);
+                }
+
+                Color32 sparkColor = f < 2 ? White : f < 4 ? Cream : Ember;
+                for (int i = 0; i < sparkCount; i++)
+                {
+                    float head = 2f + travel * sparkSpeed[i];
+                    float tail = Mathf.Max(0f, head - Mathf.Lerp(7f, 1.5f, t) * scale);
+                    float drop = t * t * 6f;
+                    pixels.Line(originX + Mathf.Cos(sparkAngle[i]) * tail, originY + Mathf.Sin(sparkAngle[i]) * tail - drop,
+                        originX + Mathf.Cos(sparkAngle[i]) * head, originY + Mathf.Sin(sparkAngle[i]) * head - drop,
+                        sparkColor, f < 2 ? 0.6f : 0f);
+                }
+
+                if (f < 3)
+                    pixels.Disc(originX, originY, (5f - f * 2f) * scale, White);
+
+                pixels.Dissolve(Mathf.Clamp01((t - 0.5f) / 0.5f));
                 frames[f] = pixels.ToSprite(new Vector2(originX / width, originY / height));
             }
             return frames;

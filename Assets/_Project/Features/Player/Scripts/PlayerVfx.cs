@@ -34,6 +34,7 @@ namespace DeadCells.Player
         [SerializeField] private float _minSkidSpeed = 4f;
 
         private PlayerContext _context;
+        private PlayerBow _bow;
         private float _lastVelocityX;
 
         private void Start()
@@ -54,6 +55,13 @@ namespace DeadCells.Player
             _context.LedgeClimbStarted += OnLedgeClimbStarted;
             _context.Combat.StrikePerformed += OnStrikePerformed;
 
+            _bow = _context.Bow;
+            if (_bow != null)
+            {
+                _bow.Fired += OnBowFired;
+                _bow.ArrowWorldHit += OnArrowWorldHit;
+            }
+
             if (_rollAfterimages)
                 gameObject.AddComponent<PlayerAfterimages>().Setup(_context);
         }
@@ -69,6 +77,11 @@ namespace DeadCells.Player
             _context.Stomped -= OnStomped;
             _context.LedgeClimbStarted -= OnLedgeClimbStarted;
             _context.Combat.StrikePerformed -= OnStrikePerformed;
+            if (_bow != null)
+            {
+                _bow.Fired -= OnBowFired;
+                _bow.ArrowWorldHit -= OnArrowWorldHit;
+            }
         }
 
         private void Update()
@@ -107,6 +120,14 @@ namespace DeadCells.Player
         }
 
         private void OnStomped(Vector2 feet) => _spawner.Play(_stompVfx, feet);
+
+        // Release flash at the bow; the combo finisher gets the bigger gold one.
+        private void OnBowFired(Vector2 muzzle, int facing, bool heavy) =>
+            _spawner.Play(heavy ? GeneratedVfx.MuzzleFlashHeavy : GeneratedVfx.MuzzleFlash, muzzle, facing < 0);
+
+        // Debris bursts back off the surface, against the arrow's flight.
+        private void OnArrowWorldHit(Vector2 point, int direction, bool heavy) =>
+            _spawner.Play(heavy ? GeneratedVfx.ArrowImpactHeavy : GeneratedVfx.ArrowImpact, point, direction > 0);
 
         // A puff each way on the ledge top as the player hauls up onto it.
         private void OnLedgeClimbStarted(Vector2 standPoint)
