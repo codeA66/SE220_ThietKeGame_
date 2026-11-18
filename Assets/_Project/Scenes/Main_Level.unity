@@ -16545,7 +16545,7 @@ MonoBehaviour:
   _run: {fileID: 843408121}
   _panel: {fileID: 31415264}
   _retry: {fileID: 1975046104}
-  _revealDelay: 0.4
+  _revealDelay: 1.7
 --- !u!114 &1288933960
 MonoBehaviour:
   m_ObjectHideFlags: 0

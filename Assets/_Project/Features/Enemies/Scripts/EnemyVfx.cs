@@ -106,18 +106,18 @@ namespace DeadCells.Enemies
             if (info.IsCritical && killingBlow)
             {
                 // Crit kill: a gore burst plus four heavy bursts fanned across the cone, and a blood mist.
-                BloodDrops.Emit(position, info.Direction, BloodBurst.Gore, ground, Random.Range(-10f, 10f));
+                BloodDrops.Emit(position, info.Direction, BloodBurst.Gore, ground, Random.Range(-10f, 10f), true);
                 for (int i = 0; i < 4; i++)
                 {
                     float from = Mathf.Lerp(-GoreScatter, GoreScatter, i / 4f);
                     float to = Mathf.Lerp(-GoreScatter, GoreScatter, (i + 1) / 4f);
-                    BloodDrops.Emit(position, info.Direction, BloodBurst.Heavy, ground, Random.Range(from, to));
+                    BloodDrops.Emit(position, info.Direction, BloodBurst.Heavy, ground, Random.Range(from, to), true);
                 }
                 _context.Vfx.Play(_bloodMist, position, info.Direction < 0, Random.Range(-10f, 10f));
                 return;
             }
             bool heavy = info.IsCritical || killingBlow;
-            BloodDrops.Emit(position, info.Direction, heavy ? BloodBurst.Heavy : BloodBurst.Light, ground);
+            BloodDrops.Emit(position, info.Direction, heavy ? BloodBurst.Heavy : BloodBurst.Light, ground, 0f, true);
         }
 
         // A stomp crushes the enemy from above, so the blood has no single direction. A kill splatters blood
@@ -126,8 +126,8 @@ namespace DeadCells.Enemies
         private void PlayStompBlood(Vector3 position, bool killingBlow, LayerMask ground)
         {
             BloodBurst burst = killingBlow ? BloodBurst.Splatter : BloodBurst.Light;
-            BloodDrops.Emit(position, -1, burst, ground);
-            BloodDrops.Emit(position, 1, burst, ground);
+            BloodDrops.Emit(position, -1, burst, ground, 0f, true);
+            BloodDrops.Emit(position, 1, burst, ground, 0f, true);
             if (!killingBlow)
                 return;
             _context.Vfx.Play(_bloodMist, position, true);

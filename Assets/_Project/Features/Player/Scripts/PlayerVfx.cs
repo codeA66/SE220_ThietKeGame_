@@ -41,6 +41,7 @@ namespace DeadCells.Player
         private PlayerContext _context;
         private PlayerBow _bow;
         private CameraFollow2D _camera;
+        private PlayerSpawnHead _spawnHead;
         private float _rollTrailUntil = -1f;
         private float _nextRollTrailAt;
         private bool _isStomping;
@@ -53,6 +54,18 @@ namespace DeadCells.Player
         // The scarf streaks start at the neck, and wave this fast (radians per second).
         private const float ScarfStreakHeight = 1.25f;
         private const float ScarfFlutterSpeed = 38f;
+
+        // Where the stun stars circle (units above the feet) and how fast they orbit (radians per second).
+        private const float StunHeadHeight = 1.75f;
+        private const float StunOrbitSpeed = 7f;
+
+        // On death the scarf lifts off for this long, floats for this long, then is carried off by the beam over this long (seconds).
+        private const float ScarfLiftTime = 0.35f;
+        private const float ScarfFloatTime = 0.7f;
+        private const float ScarfLeaveTime = 0.85f;
+        // How long the scarf convulses under the beam before it bursts, and how hard the shards fall (units per second squared).
+        private const float ScarfConvulseTime = 0.18f;
+        private const float ShardGravity = 14f;
 
         // The camera shakes for as long as the beam lasts.
         private const float AwakenShakeAmplitude = 0.15f;
@@ -71,6 +84,7 @@ namespace DeadCells.Player
 
             _context = _controller.Context;
             _camera = FindFirstObjectByType<CameraFollow2D>();
+            _spawnHead = GetComponentInParent<PlayerController>() != null ? GetComponentInParent<PlayerController>().GetComponentInChildren<PlayerSpawnHead>(true) : null;
             _context.RollStarted += OnRollStarted;
             _context.Jumped += OnJumped;
             _context.AirJumped += OnAirJumped;
@@ -80,6 +94,9 @@ namespace DeadCells.Player
             _context.StompEnded += OnStompEnded;
             _context.LedgeClimbFinished += OnLedgeClimbFinished;
             _context.Awakened += OnAwakened;
+            _context.Stunned += OnStunned;
+            _controller.Health.Damaged += OnHurt;
+            _controller.Health.Died += OnKilled;
             _context.Combat.StrikePerformed += OnStrikePerformed;
 
             _bow = _context.Bow;
@@ -155,6 +172,9 @@ namespace DeadCells.Player
             _context.StompEnded -= OnStompEnded;
             _context.LedgeClimbFinished -= OnLedgeClimbFinished;
             _context.Awakened -= OnAwakened;
+            _context.Stunned -= OnStunned;
+            _controller.Health.Damaged -= OnHurt;
+            _controller.Health.Died -= OnKilled;
             _context.Combat.StrikePerformed -= OnStrikePerformed;
             if (_bow != null)
             {
@@ -357,6 +377,226 @@ namespace DeadCells.Player
                 strips[i].flipX = body.flipX;
                 strips[i].transform.localPosition = new Vector3(0f, shifts[i] * fade, 0f);
             }
+        }
+
+        // Taking a hit: a spark on the side the blow came from, a light spray of blood thrown the way the player is
+        // pushed, and a quick white flash on the body.
+        private void OnHurt(DamageInfo info)
+        {
+            Vector3 chest = ChestPoint();
+            int push = info.Direction == 0 ? -_context.FacingDirection : info.Direction;
+            _spawner.Play(GeneratedVfx.PlayerHitSpark, chest + new Vector3(-push * 0.25f, 0f, 0f), push < 0, Random.Range(-25f, 25f));
+            BloodDrops.Emit(chest, push, BloodBurst.Light, _context.GroundMask);
+            StartCoroutine(FlashBody(0.12f));
+        }
+
+        // Dying: a heavy burst of blood and a mist cloud, thrown the way the killing blow pushed.
+        private void OnKilled(DamageInfo info)
+        {
+            Vector3 chest = ChestPoint();
+            int push = info.Direction == 0 ? -_context.FacingDirection : info.Direction;
+            BloodDrops.Emit(chest, push, BloodBurst.Gore, _context.GroundMask, Random.Range(-10f, 10f));
+            BloodDrops.Emit(chest, push, BloodBurst.Heavy, _context.GroundMask, Random.Range(-25f, 25f));
+            _spawner.Play(GeneratedVfx.PlayerBloodMist, chest, push < 0, Random.Range(-10f, 10f));
+            StartCoroutine(FlashBody(0.2f));
+            StartCoroutine(ScarfLeaves());
+        }
+
+        // The scarf (the spawn head sprite) leaves the dead player: a copy of it rises off the neck and floats in the
+        // air, swaying and turning. After a few seconds a white beam drops from the sky onto it and carries it away
+        // upward. The body stays where it fell.
+        private System.Collections.IEnumerator ScarfLeaves()
+        {
+            if (_spawnHead == null || _spawnHead.Renderer == null || _spawnHead.Renderer.sprite == null)
+                yield break;
+            yield return new WaitForSeconds(0.3f);
+            if (_controller.Health.IsAlive)
+                yield break;
+
+            SpriteRenderer head = _spawnHead.Renderer;
+            Vector2 feet = _context.Position;
+            int facing = _context.FacingDirection;
+            var go = new GameObject("DriftingScarf");
+            go.transform.position = feet + new Vector2(0.24f * facing, 0.15f);
+            go.transform.localScale = Vector3.one * _spawnHead.BaseScale;
+            var scarf = go.AddComponent<SpriteRenderer>();
+            scarf.sprite = head.sprite;
+            scarf.flipX = facing < 0;
+            scarf.sharedMaterial = head.sharedMaterial;
+            scarf.sortingLayerID = head.sortingLayerID;
+            scarf.sortingOrder = head.sortingOrder + 1;
+            var block = new MaterialPropertyBlock();
+            head.GetPropertyBlock(block);
+            scarf.SetPropertyBlock(block);
+
+            // Rise off the neck and drift back, easing to a stop.
+            Vector2 start = go.transform.position;
+            Vector2 hover = start + new Vector2(-facing * 0.5f, 1.5f);
+            for (float t = 0f; t < ScarfLiftTime; t += Time.deltaTime)
+            {
+                float k = 1f - Mathf.Pow(1f - t / ScarfLiftTime, 3f);
+                go.transform.position = Vector2.Lerp(start, hover, k);
+                yield return null;
+            }
+
+            // Float, swaying, bobbing and turning slightly.
+            for (float t = 0f; t < ScarfFloatTime; t += Time.deltaTime)
+            {
+                go.transform.position = hover + new Vector2(Mathf.Sin(t * 3.2f) * 0.18f, Mathf.Sin(t * 2.1f + 1f) * 0.1f);
+                go.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 2.6f) * 10f);
+                yield return null;
+            }
+
+            // The beam comes down through it and the scarf is lifted away along it.
+            Vector2 held = go.transform.position;
+            // The strike: a white-hot flash on the scarf and a hit spark at the point of impact, then it goes black.
+            scarf.color = Color.white;
+            _spawner.Play(GeneratedVfx.PlayerHitSpark, held, false, Random.Range(-20f, 20f), 1.6f);
+            VfxDefinition beam = GeneratedVfx.AscendBeam;
+            _spawner.Play(beam, new Vector2(held.x, feet.y));
+            if (_camera != null)
+                _camera.Shake(AwakenShakeAmplitude * 1.6f, beam.Frames.Length / beam.Fps);
+            yield return new WaitForSeconds(0.04f);
+            scarf.color = Color.black;
+            yield return TearApart(scarf, block);
+            Destroy(go);
+        }
+
+        // The scarf is smitten by the beam: it convulses, then bursts into a grid of black shards thrown out at their own speeds
+        // after a tiny stagger, spinning and falling as they shrink away, so it looks destroyed, not carried off.
+        private System.Collections.IEnumerator TearApart(SpriteRenderer scarf, MaterialPropertyBlock block)
+        {
+            Sprite source = scarf.sprite;
+            Rect rect = source.rect;
+            const int columns = 6;
+            const int rows = 3;
+            int count = columns * rows;
+            var shards = new SpriteRenderer[count];
+            var pieces = new Sprite[count];
+            var startPositions = new Vector3[count];
+            var delays = new float[count];
+            var speeds = new float[count];
+            var angles = new float[count];
+            var spins = new float[count];
+
+            float cellWidth = rect.width / columns;
+            float cellHeight = rect.height / rows;
+            
+            for (int i = 0; i < count; i++)
+            {
+                int column = i % columns;
+                int row = i / columns;
+                var cell = new Rect(rect.x + column * cellWidth, rect.y + row * cellHeight, cellWidth, cellHeight);
+                var pivot = new Vector2((source.pivot.x - column * cellWidth) / cellWidth, (source.pivot.y - row * cellHeight) / cellHeight);
+                pieces[i] = Sprite.Create(source.texture, cell, pivot, source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+
+                var go = new GameObject("ScarfShard");
+                go.transform.SetPositionAndRotation(scarf.transform.position, scarf.transform.rotation);
+                go.transform.localScale = scarf.transform.lossyScale;
+                var shard = go.AddComponent<SpriteRenderer>();
+                shard.sprite = pieces[i];
+                shard.flipX = scarf.flipX;
+                shard.sharedMaterial = scarf.sharedMaterial;
+                shard.sortingLayerID = scarf.sortingLayerID;
+                shard.sortingOrder = scarf.sortingOrder;
+                shard.color = Color.black;
+                shard.SetPropertyBlock(block);
+                shards[i] = shard;
+                startPositions[i] = go.transform.position;
+                delays[i] = Random.Range(0f, 0.08f);
+                speeds[i] = Random.Range(6f, 14f);
+                angles[i] = Random.Range(15f, 165f) * Mathf.Deg2Rad;
+                spins[i] = Random.Range(-540f, 540f);
+            }
+            scarf.enabled = false;
+
+            for (float t = 0f; t < ScarfLeaveTime; t += Time.deltaTime)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    // Struck: the whole scarf convulses in place under the light, then it blows apart, the shards
+                    // thrown out from its centre and falling as they spin and shrink to nothing.
+                    float local = t - ScarfConvulseTime - delays[i];
+                    Transform shardTransform = shards[i].transform;
+                    if (local < 0f)
+                    {
+                        float shake = t < ScarfConvulseTime ? 0.06f : 0f;
+                        shardTransform.position = startPositions[i] + new Vector3(Random.Range(-shake, shake), Random.Range(-shake, shake), 0f);
+                        continue;
+                    }
+                    Vector3 velocity = new Vector3(Mathf.Cos(angles[i]), Mathf.Sin(angles[i]), 0f) * speeds[i];
+                    shardTransform.position = startPositions[i] + velocity * local + new Vector3(0f, -0.5f * ShardGravity * local * local, 0f);
+                    shardTransform.rotation = Quaternion.Euler(0f, 0f, spins[i] * local);
+                    float life = ScarfLeaveTime - ScarfConvulseTime - delays[i];
+                    shardTransform.localScale = scarf.transform.lossyScale * Mathf.Clamp01(1f - local / life);
+                }
+                yield return null;
+            }
+
+            foreach (SpriteRenderer shard in shards)
+                Destroy(shard.gameObject);
+            foreach (Sprite piece in pieces)
+                Destroy(piece);
+        }
+
+        private Vector3 ChestPoint() => (Vector3)_context.Position + Vector3.up * 0.9f;
+
+        private System.Collections.IEnumerator FlashBody(float duration)
+        {
+            var block = new MaterialPropertyBlock();
+            int flashId = Shader.PropertyToID("_Flash");
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                _context.Sprite.GetPropertyBlock(block);
+                block.SetFloat(flashId, 1f - t / duration);
+                _context.Sprite.SetPropertyBlock(block);
+                yield return null;
+            }
+            _context.Sprite.GetPropertyBlock(block);
+            block.SetFloat(flashId, 0f);
+            _context.Sprite.SetPropertyBlock(block);
+        }
+
+        // A stun: a ring of gold stars circles the head for as long as the player is stunned, with a small spark where it
+        // lands. The stars orbit in an ellipse, pass in front of the head and behind it, spin, and shrink away at the end.
+        private void OnStunned(float duration)
+        {
+            _spawner.Play(GeneratedVfx.PlayerHitSpark, (Vector3)_context.Position + Vector3.up * StunHeadHeight, false, Random.Range(-20f, 20f), 0.8f);
+            StartCoroutine(StunStars(duration));
+        }
+
+        private System.Collections.IEnumerator StunStars(float duration)
+        {
+            const int count = 3;
+            SpriteRenderer body = _context.Sprite;
+            var stars = new SpriteRenderer[count];
+            for (int i = 0; i < count; i++)
+            {
+                var go = new GameObject("StunStar");
+                stars[i] = go.AddComponent<SpriteRenderer>();
+                stars[i].sprite = GeneratedVfx.StunStar;
+                stars[i].sharedMaterial = RuntimeSprites.UnlitMaterial;
+                stars[i].sortingLayerID = body.sortingLayerID;
+            }
+
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                Vector3 centre = (Vector3)_context.Position + Vector3.up * StunHeadHeight;
+                float shrink = Mathf.Clamp01((duration - t) / 0.2f);
+                for (int i = 0; i < count; i++)
+                {
+                    float angle = t * StunOrbitSpeed + i * Mathf.PI * 2f / count;
+                    stars[i].transform.position = centre + new Vector3(Mathf.Cos(angle) * 0.42f, Mathf.Sin(angle) * 0.13f, 0f);
+                    stars[i].transform.rotation = Quaternion.Euler(0f, 0f, t * 240f);
+                    stars[i].transform.localScale = Vector3.one * shrink;
+                    // The star on the near side of the orbit passes in front of the head, the far side behind it.
+                    stars[i].sortingOrder = body.sortingOrder + (Mathf.Sin(angle) < 0f ? 2 : -1);
+                }
+                yield return null;
+            }
+
+            foreach (SpriteRenderer star in stars)
+                Destroy(star.gameObject);
         }
 
         // One small puff at the feet as the player gets up onto the ledge, trailing behind.

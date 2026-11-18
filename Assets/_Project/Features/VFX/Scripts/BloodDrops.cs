@@ -61,6 +61,11 @@ namespace DeadCells.VFX
         private static readonly Color32 BloodSrgb = new Color32(138, 6, 12, 255);
         private static readonly Color32 BloodDarkSrgb = new Color32(80, 3, 8, 255);
         private static readonly Color32 BloodShineSrgb = new Color32(230, 84, 72, 255);
+        // Enemy blood is blue.
+        private static readonly Color32 BlueBrightSrgb = new Color32(46, 150, 245, 255);
+        private static readonly Color32 BlueSrgb = new Color32(24, 98, 200, 255);
+        private static readonly Color32 BlueDarkSrgb = new Color32(10, 50, 120, 255);
+        private static readonly Color32 BlueShineSrgb = new Color32(180, 228, 255, 255);
 
         private static BloodDrops s_instance;
 
@@ -75,6 +80,10 @@ namespace DeadCells.VFX
         private Color32 _mid;
         private Color32 _dark;
         private Color32 _shine;
+        private Color32 _blueBright;
+        private Color32 _blueMid;
+        private Color32 _blueDark;
+        private Color32 _blueShine;
         private bool _meshDirty;
 
         private sealed class Drop
@@ -88,6 +97,7 @@ namespace DeadCells.VFX
             public int State;
             public int TrailCount;
             public LayerMask Collision;
+            public bool Blue;
             public Vector2 StainMin;
             public Vector2 StainMax;
             public float SlideTop;
@@ -95,13 +105,13 @@ namespace DeadCells.VFX
 
         /// <summary>
         /// Throws a burst of blood from origin. direction is the push direction (-1 left, 1 right);
-        /// tilt rotates the whole cone in degrees. collision is what the drops land on.
+        /// tilt rotates the whole cone in degrees. collision is what the drops land on. blue draws enemy blood.
         /// </summary>
-        public static void Emit(Vector2 origin, int direction, in BloodBurst burst, LayerMask collision, float tilt = 0f)
+        public static void Emit(Vector2 origin, int direction, in BloodBurst burst, LayerMask collision, float tilt = 0f, bool blue = false)
         {
             if (s_instance == null)
                 s_instance = new GameObject("BloodDrops").AddComponent<BloodDrops>();
-            s_instance.Spawn(origin, direction < 0 ? -1 : 1, burst, collision, tilt);
+            s_instance.Spawn(origin, direction < 0 ? -1 : 1, burst, collision, tilt, blue);
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -113,6 +123,10 @@ namespace DeadCells.VFX
             _mid = RuntimeSprites.ToRenderSpace(BloodSrgb);
             _dark = RuntimeSprites.ToRenderSpace(BloodDarkSrgb);
             _shine = RuntimeSprites.ToRenderSpace(BloodShineSrgb);
+            _blueBright = RuntimeSprites.ToRenderSpace(BlueBrightSrgb);
+            _blueMid = RuntimeSprites.ToRenderSpace(BlueSrgb);
+            _blueDark = RuntimeSprites.ToRenderSpace(BlueDarkSrgb);
+            _blueShine = RuntimeSprites.ToRenderSpace(BlueShineSrgb);
 
             _mesh = new Mesh { name = "BloodDrops" };
             _mesh.MarkDynamic();
@@ -127,7 +141,7 @@ namespace DeadCells.VFX
                 Destroy(_mesh);
         }
 
-        private void Spawn(Vector2 origin, int direction, in BloodBurst burst, LayerMask collision, float tilt)
+        private void Spawn(Vector2 origin, int direction, in BloodBurst burst, LayerMask collision, float tilt, bool blue)
         {
             for (int i = 0; i < burst.Count && _active.Count < MaxDrops; i++)
             {
@@ -142,6 +156,7 @@ namespace DeadCells.VFX
                 drop.State = Flying;
                 drop.TrailCount = 0;
                 drop.Collision = collision;
+                drop.Blue = blue;
                 _active.Add(drop);
             }
         }
@@ -260,7 +275,7 @@ namespace DeadCells.VFX
                 if (drop.State == Stained)
                 {
                     float fade = 1f - Mathf.Clamp01((drop.StateTime - StainTime) / FadeTime);
-                    AddRect(drop.StainMin, drop.StainMax, WithAlpha(_mid, fade));
+                    AddRect(drop.StainMin, drop.StainMax, WithAlpha(drop.Blue ? _blueMid : _mid, fade));
                     continue;
                 }
 
@@ -271,19 +286,19 @@ namespace DeadCells.VFX
                 {
                     float halfWidth = Mathf.Max(Px, drop.Radius * Px) * 0.5f;
                     AddRect(new Vector2(drop.Position.x - halfWidth, drop.Position.y),
-                        new Vector2(drop.Position.x + halfWidth, drop.SlideTop), _mid);
+                        new Vector2(drop.Position.x + halfWidth, drop.SlideTop), drop.Blue ? _blueMid : _mid);
                 }
 
                 // Head: a rounded pixel blob (two overlapping rectangles) with a highlight.
                 Vector2 head = Snap(drop.Position);
                 float half = Mathf.Max(Px, Mathf.Round(size / Px) * Px) * 0.5f;
                 float inset = half > Px ? Px * 0.5f : 0f;
-                AddRect(head - new Vector2(half, half - inset), head + new Vector2(half, half - inset), _bright);
-                AddRect(head - new Vector2(half - inset, half), head + new Vector2(half - inset, half), _bright);
+                AddRect(head - new Vector2(half, half - inset), head + new Vector2(half, half - inset), drop.Blue ? _blueBright : _bright);
+                AddRect(head - new Vector2(half - inset, half), head + new Vector2(half - inset, half), drop.Blue ? _blueBright : _bright);
                 if (drop.Radius >= 1.5f)
                 {
                     Vector2 shine = head + new Vector2(-inset, half - Px);
-                    AddRect(shine, shine + new Vector2(Px, Px), _shine);
+                    AddRect(shine, shine + new Vector2(Px, Px), drop.Blue ? _blueShine : _shine);
                 }
             }
 
@@ -302,13 +317,13 @@ namespace DeadCells.VFX
                 return;
             Vector2 previous = drop.Position;
             float previousWidth = size * 0.85f;
-            Color32 previousColor = _mid;
+            Color32 previousColor = drop.Blue ? _blueMid : _mid;
             for (int k = 0; k < drop.TrailCount; k++)
             {
                 Vector2 current = drop.Trail[k];
                 float along = (k + 1) / (float)points;
                 float width = size * 0.85f * Mathf.Pow(1f - along, 0.9f);
-                Color32 color = along < 0.45f ? _mid : _dark;
+                Color32 color = along < 0.45f ? (drop.Blue ? _blueMid : _mid) : (drop.Blue ? _blueDark : _dark);
                 Vector2 segment = current - previous;
                 if (segment.sqrMagnitude > 1e-8f)
                 {

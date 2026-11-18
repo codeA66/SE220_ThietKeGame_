@@ -29,6 +29,12 @@ namespace DeadCells.VFX
         private static readonly Color32 SmokeLight = new Color32(244, 242, 238, 255);
         private static readonly Color32 Gold = new Color32(255, 214, 90, 255);
         private static readonly Color32 BloodDark = new Color32(80, 3, 8, 255);
+        // Enemy blood and the impact flares on enemies are blue.
+        private static readonly Color32 BlueBlood = new Color32(24, 98, 200, 255);
+        private static readonly Color32 BlueBloodDark = new Color32(10, 50, 120, 255);
+        private static readonly Color32 BlueHot = new Color32(205, 238, 255, 255);
+        private static readonly Color32 BlueTip = new Color32(52, 150, 255, 255);
+        private static readonly Color32 BlueCritHot = new Color32(150, 225, 255, 255);
         private static readonly Color32 Rubble = new Color32(96, 86, 80, 255);
 
         // The big centred effects are flattened below their centre so they sit on the floor instead of
@@ -48,6 +54,8 @@ namespace DeadCells.VFX
         private static readonly List<Object> s_owned = new List<Object>();
 
         private static VfxDefinition s_hitSpark;
+        private static VfxDefinition s_playerHitSpark;
+        private static VfxDefinition s_playerBloodMist;
         private static VfxDefinition s_deathPuff;
         // Dust is drawn several times with different seeds; one is picked at random each time it plays.
         private const int DustVariants = 4;
@@ -57,6 +65,7 @@ namespace DeadCells.VFX
         private static VfxDefinition s_critSpark;
         private static VfxDefinition s_bloodMist;
         private static VfxDefinition s_ascendBeam;
+        private static Sprite s_stunStar;
         private static VfxDefinition s_shieldClang;
         private static VfxDefinition s_muzzleFlash;
         private static VfxDefinition s_muzzleFlashHeavy;
@@ -75,6 +84,8 @@ namespace DeadCells.VFX
             }
             s_owned.Clear();
             s_hitSpark = null;
+            s_playerHitSpark = null;
+            s_playerBloodMist = null;
             s_deathPuff = null;
             System.Array.Clear(s_runDust, 0, DustVariants);
             System.Array.Clear(s_rollDust, 0, DustVariants);
@@ -82,6 +93,7 @@ namespace DeadCells.VFX
             s_critSpark = null;
             s_bloodMist = null;
             s_ascendBeam = null;
+            s_stunStar = null;
             s_shieldClang = null;
             s_muzzleFlash = null;
             s_muzzleFlashHeavy = null;
@@ -104,7 +116,7 @@ namespace DeadCells.VFX
             {
                 if (!IsUsable(s_hitSpark))
                     s_hitSpark = Register(VfxDefinition.Create("Vfx_HitSpark",
-                        BuildHitSpark(HitSparkSize, 1f, Cream, Ember, false), Fps, 1f, 10, 4));
+                        BuildHitSpark(HitSparkSize, 1f, BlueHot, BlueTip, false), Fps, 1f, 10, 4));
                 return s_hitSpark;
             }
         }
@@ -116,7 +128,7 @@ namespace DeadCells.VFX
             {
                 if (!IsUsable(s_critSpark))
                     s_critSpark = Register(VfxDefinition.Create("Vfx_CritSpark",
-                        BuildHitSpark(CritSparkSize, 1.35f, Gold, Ember, true), Fps, 1f, 11, 2));
+                        BuildHitSpark(CritSparkSize, 1.35f, BlueCritHot, BlueTip, true), Fps, 1f, 11, 2));
                 return s_critSpark;
             }
         }
@@ -127,8 +139,57 @@ namespace DeadCells.VFX
             get
             {
                 if (!IsUsable(s_bloodMist))
-                    s_bloodMist = Register(VfxDefinition.Create("Vfx_BloodMist", BuildBloodMist(), Fps, 1f, 7, 1));
+                    s_bloodMist = Register(VfxDefinition.Create("Vfx_BloodMist", BuildBloodMist(BlueBloodDark, BlueBlood), Fps, 1f, 7, 1));
                 return s_bloodMist;
+            }
+        }
+
+        // The player's own hit spark and blood mist keep the warm flare and red blood; the enemy versions are blue.
+        public static VfxDefinition PlayerHitSpark
+        {
+            get
+            {
+                if (!IsUsable(s_playerHitSpark))
+                    s_playerHitSpark = Register(VfxDefinition.Create("Vfx_PlayerHitSpark",
+                        BuildHitSpark(HitSparkSize, 1f, Cream, Ember, false), Fps, 1f, 10, 2));
+                return s_playerHitSpark;
+            }
+        }
+
+        public static VfxDefinition PlayerBloodMist
+        {
+            get
+            {
+                if (!IsUsable(s_playerBloodMist))
+                    s_playerBloodMist = Register(VfxDefinition.Create("Vfx_PlayerBloodMist", BuildBloodMist(BloodDark, Blood), Fps, 1f, 7, 1));
+                return s_playerBloodMist;
+            }
+        }
+
+        // A small four-point star, gold with a white core, for the circle of stars that orbits a stunned head.
+        public static Sprite StunStar
+        {
+            get
+            {
+                if (s_stunStar == null)
+                {
+                    var pixels = new Pixels(9, 9);
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        Color32 color = i == 1 ? White : Gold;
+                        pixels.Plot(4 + i, 4, color);
+                        pixels.Plot(4 - i, 4, color);
+                        pixels.Plot(4, 4 + i, color);
+                        pixels.Plot(4, 4 - i, color);
+                    }
+                    pixels.Plot(4, 4, White);
+                    pixels.Plot(3, 4, White);
+                    pixels.Plot(5, 4, White);
+                    pixels.Plot(4, 3, White);
+                    pixels.Plot(4, 5, White);
+                    s_stunStar = pixels.ToSprite(new Vector2(0.5f, 0.5f));
+                }
+                return s_stunStar;
             }
         }
 
@@ -356,7 +417,7 @@ namespace DeadCells.VFX
 
         // Crit kill: a cloud of blood mist bursting out of the wound, drawn going right (flip it for the
         // left). The drops themselves are real particles in BloodDrops.
-        private static Sprite[] BuildBloodMist()
+        private static Sprite[] BuildBloodMist(Color32 darkColor, Color32 midColor)
         {
             const int width = 112;
             const int height = 96;
@@ -386,8 +447,8 @@ namespace DeadCells.VFX
                     float x = originX + Mathf.Cos(angle[i]) * reach[i] * travel;
                     float y = originY + Mathf.Sin(angle[i]) * reach[i] * travel - t * 4f;
                     float radius = bulk[i] * (0.6f + 0.6f * travel) * (1f - 0.5f * t);
-                    pixels.Disc(x, y, radius, BloodDark);
-                    pixels.Disc(x - radius * 0.2f, y + radius * 0.25f, radius * 0.55f, Blood);
+                    pixels.Disc(x, y, radius, darkColor);
+                    pixels.Disc(x - radius * 0.2f, y + radius * 0.25f, radius * 0.55f, midColor);
                 }
                 pixels.Dissolve(Mathf.Clamp01((t - 0.45f) / 0.55f));
                 frames[f] = pixels.ToSprite(new Vector2(originX / width, originY / height));

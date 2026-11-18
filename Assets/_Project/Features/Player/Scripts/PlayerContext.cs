@@ -83,11 +83,15 @@ namespace DeadCells.Player
 
         /// <summary>The spawn intro finished and the player is standing up, about to take control.</summary>
         public event Action Awakened;
+        /// <summary>The player lost control to a stun. Argument: how long it lasts (seconds).</summary>
+        public event Action<float> Stunned;
 
         public SpriteRenderer Sprite => _sprite;
         public LayerMask GroundMask => _groundMask;
 
         public void NotifyAwakened() => Awakened?.Invoke();
+
+        public void NotifyStunned(float duration) => Stunned?.Invoke(duration);
 
         public void NotifyStompStarted() => StompStarted?.Invoke();
 

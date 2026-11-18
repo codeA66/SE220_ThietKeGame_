@@ -48,6 +48,9 @@ namespace DeadCells.VFX
 
         /// <summary>White motes that float up off the body, no flash and no bounce. Plain white and grey.</summary>
         public static readonly SparkBurst Ascend = new SparkBurst(1, 9f, 14f, 87f, 93f, 0.55f, 0.85f, 1.5f, 2.3f, 0f, 0f, 0f, true);
+
+        /// <summary>One pale white mote drifting slowly up and away, like a soul leaving. No gravity, no bounce.</summary>
+        public static readonly SparkBurst Soul = new SparkBurst(1, 1.4f, 3f, 72f, 108f, 1f, 1.7f, 1.3f, 2.1f, 0f, 0f, 0f, true);
     }
 
     // World-space sparks that collide with the level. Each spark flies with gravity and air drag, bounces off
