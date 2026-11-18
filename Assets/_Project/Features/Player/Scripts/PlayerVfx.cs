@@ -16,24 +16,25 @@ namespace DeadCells.Player
         [SerializeField] private VfxDefinition _airJumpVfx;
         [SerializeField] private VfxDefinition _landVfx;
 
-        [Tooltip("Dust kicked up while running. Left empty, a generated pixel-art puff is used.")]
+        [Tooltip("Dust puffed out on a ledge climb. Left empty, a generated pixel-art puff is used.")]
         [SerializeField] private VfxDefinition _runDustVfx;
-        [Tooltip("Dust burst when a roll starts. Left empty, a generated pixel-art burst is used.")]
+        [Tooltip("Dust burst when a roll starts and when skidding. Left empty, a generated burst is used.")]
         [SerializeField] private VfxDefinition _rollDustVfx;
+        [Tooltip("Shockwave when an air stomp hits the ground. Left empty, a generated shockwave is used.")]
+        [SerializeField] private VfxDefinition _stompVfx;
+        [Tooltip("Leave a fading trail of afterimages behind every roll and stomp dive.")]
+        [SerializeField] private bool _rollAfterimages = true;
 
         [Header("Rules")]
         [Tooltip("Also play the air-jump effect on ground jumps.")]
         [SerializeField] private bool _jumpVfxOnGroundJump;
         [Tooltip("Minimum downward speed at impact for the landing dust (units/s).")]
         [SerializeField] private float _minLandSpeed = 8f;
-        [Tooltip("Ground distance covered between two run-dust puffs (units).")]
-        [Min(0.1f)]
-        [SerializeField] private float _runDustStride = 2.2f;
-        [Tooltip("Ground speed needed before running kicks up dust (units/s).")]
-        [SerializeField] private float _minRunDustSpeed = 3f;
+        [Tooltip("Ground speed needed before turning around kicks up a skid burst (units/s).")]
+        [SerializeField] private float _minSkidSpeed = 4f;
 
         private PlayerContext _context;
-        private float _strideDistance;
+        private float _lastVelocityX;
 
         private void Start()
         {
@@ -41,13 +42,20 @@ namespace DeadCells.Player
                 _runDustVfx = GeneratedVfx.RunDust;
             if (_rollDustVfx == null)
                 _rollDustVfx = GeneratedVfx.RollDust;
+            if (_stompVfx == null)
+                _stompVfx = GeneratedVfx.StompWave;
 
             _context = _controller.Context;
             _context.RollStarted += OnRollStarted;
             _context.Jumped += OnJumped;
             _context.AirJumped += OnAirJumped;
             _context.Landed += OnLanded;
+            _context.Stomped += OnStomped;
+            _context.LedgeClimbStarted += OnLedgeClimbStarted;
             _context.Combat.StrikePerformed += OnStrikePerformed;
+
+            if (_rollAfterimages)
+                gameObject.AddComponent<PlayerAfterimages>().Setup(_context);
         }
 
         private void OnDestroy()
@@ -58,6 +66,8 @@ namespace DeadCells.Player
             _context.Jumped -= OnJumped;
             _context.AirJumped -= OnAirJumped;
             _context.Landed -= OnLanded;
+            _context.Stomped -= OnStomped;
+            _context.LedgeClimbStarted -= OnLedgeClimbStarted;
             _context.Combat.StrikePerformed -= OnStrikePerformed;
         }
 
@@ -67,19 +77,12 @@ namespace DeadCells.Player
                 return;
 
             float velocityX = _context.Velocity.x;
-            float speed = Mathf.Abs(velocityX);
-            if (!_context.IsGrounded || speed < _minRunDustSpeed)
-            {
-                _strideDistance = 0f;
-                return;
-            }
+            float lastVelocityX = _lastVelocityX;
+            _lastVelocityX = velocityX;
 
-            _strideDistance += speed * Time.deltaTime;
-            if (_strideDistance < _runDustStride)
-                return;
-
-            _strideDistance = 0f;
-            _spawner.Play(_runDustVfx, _context.Position, velocityX < 0f);
+            // Turning around at speed: dust is thrown the way the player was going.
+            if (_context.IsGrounded && Mathf.Abs(lastVelocityX) >= _minSkidSpeed && velocityX * lastVelocityX < 0f)
+                _spawner.Play(_rollDustVfx, _context.Position, lastVelocityX > 0f);
         }
 
         // Dust trails behind the roll, so it flips with the facing.
@@ -101,6 +104,15 @@ namespace DeadCells.Player
         {
             if (impactSpeed >= _minLandSpeed)
                 _spawner.Play(_landVfx, feet);
+        }
+
+        private void OnStomped(Vector2 feet) => _spawner.Play(_stompVfx, feet);
+
+        // A puff each way on the ledge top as the player hauls up onto it.
+        private void OnLedgeClimbStarted(Vector2 standPoint)
+        {
+            _spawner.Play(_runDustVfx, standPoint, false);
+            _spawner.Play(_runDustVfx, standPoint, true);
         }
     }
 }

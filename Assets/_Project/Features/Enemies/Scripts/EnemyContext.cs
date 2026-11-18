@@ -1,3 +1,4 @@
+using System;
 using DeadCells.Combat;
 using DeadCells.VFX;
 using UnityEngine;
@@ -34,6 +35,7 @@ namespace DeadCells.Enemies
         public Health Health { get; }
         public EnemyData Data { get; }
         public GameObject Owner => _body.gameObject;
+        public LayerMask GroundMask => _groundMask;
 
         public Transform Player { get; set; }
         public ProjectileSpawner Projectiles { get; set; }
@@ -112,6 +114,15 @@ namespace DeadCells.Enemies
         {
             _body.simulated = active;
             _collider.enabled = active;
+        }
+
+        // Raised the moment a dead enemy disappears, just before its object is switched off.
+        public event Action Vanished;
+
+        public void Vanish()
+        {
+            Vanished?.Invoke();
+            Owner.SetActive(false);
         }
 
         // ---------- Attacks ----------

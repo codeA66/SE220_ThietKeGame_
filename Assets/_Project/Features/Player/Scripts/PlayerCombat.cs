@@ -46,7 +46,7 @@ namespace DeadCells.Player
                 bounds.center.x + facing * (strike.RangeWidth * 0.5f + strike.RangeOffset.x),
                 bounds.min.y + height * 0.5f + strike.RangeOffset.y);
 
-            var info = new DamageInfo(strike.Damage, facing, strike.Knockback, 0f, false, _owner.gameObject);
+            var info = new DamageInfo(strike.Damage, facing, strike.Knockback, 0f, strike.CanCrit, _owner.gameObject);
             int hits = _query.Strike(center, size, info);
             if (hits > 0)
                 StrikeHit?.Invoke(hits, info.IsCritical);

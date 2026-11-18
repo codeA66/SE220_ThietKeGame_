@@ -26,6 +26,7 @@ namespace DeadCells.Player.StateMachine.States
             _end = Ctx.LedgeStandPoint;
             Ctx.SetKinematic(true);
             Ctx.Animator.SetClimbing(true);
+            Ctx.NotifyLedgeClimbStarted();
         }
 
         public override void Exit()

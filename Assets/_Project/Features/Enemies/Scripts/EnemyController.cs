@@ -46,7 +46,7 @@ namespace DeadCells.Enemies
             if (_showHealthBar)
                 gameObject.AddComponent<EnemyHealthBar>().Setup(_health, GetComponent<BoxCollider2D>());
             gameObject.AddComponent<EnemyDamageNumbers>().Setup(_health, GetComponent<BoxCollider2D>());
-            gameObject.AddComponent<EnemyVfx>().Setup(_health, _context);
+            gameObject.AddComponent<EnemyVfx>().Setup(_health, _context, GetComponent<BoxCollider2D>());
             Initialize(_player, _projectiles, _vfx);
         }
 

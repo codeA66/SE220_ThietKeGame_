@@ -26,13 +26,14 @@ namespace DeadCells.VFX
             }
         }
 
-        public void Play(VfxDefinition definition, Vector3 position, bool flipX = false)
+        /// <summary>Plays an effect once. angle rotates it in degrees around its pivot (counter-clockwise).</summary>
+        public void Play(VfxDefinition definition, Vector3 position, bool flipX = false, float angle = 0f)
         {
             if (definition == null)
                 return;
             var pool = GetPool(definition);
             var vfx = pool.Count > 0 ? pool.Pop() : Create(definition);
-            vfx.Play(position, flipX);
+            vfx.Play(position, flipX, angle);
         }
 
         private Stack<PooledVfx> GetPool(VfxDefinition definition)

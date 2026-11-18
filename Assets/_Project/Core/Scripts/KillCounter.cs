@@ -12,6 +12,10 @@ namespace DeadCells.Core
 
         public static event Action<int> Changed;
 
+        // Statics survive between Play sessions when domain reload is off, so a new session starts at zero.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => Kills = 0;
+
         public static void AddKill()
         {
             Kills++;

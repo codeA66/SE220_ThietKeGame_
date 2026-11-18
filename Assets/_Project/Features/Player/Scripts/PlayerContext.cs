@@ -72,6 +72,20 @@ namespace DeadCells.Player
         public event Action<Vector2> RollStarted;
         /// <summary>A hit landed on the perfect-dodge ghost.</summary>
         public event Action PerfectDodged;
+        /// <summary>An air stomp dive started.</summary>
+        public event Action StompStarted;
+        /// <summary>An air stomp hit the ground. Argument: feet position.</summary>
+        public event Action<Vector2> Stomped;
+        /// <summary>A ledge climb started. Argument: the point the player will stand on.</summary>
+        public event Action<Vector2> LedgeClimbStarted;
+
+        public SpriteRenderer Sprite => _sprite;
+
+        public void NotifyStompStarted() => StompStarted?.Invoke();
+
+        public void NotifyStomped() => Stomped?.Invoke(Position);
+
+        public void NotifyLedgeClimbStarted() => LedgeClimbStarted?.Invoke(LedgeStandPoint);
 
         public PlayerMovementConfig Config { get; }
         public PlayerCombat Combat { get; set; }
