@@ -26,14 +26,18 @@ namespace DeadCells.Player
         private static readonly int BowReleaseHash = Animator.StringToHash("Bow.BowRelease");
         private static readonly int BowCrouchReleaseHash = Animator.StringToHash("Bow.BowCrouchRelease");
         private static readonly int BowReleaseSpeedHash = Animator.StringToHash("BowReleaseSpeed");
+        private static readonly int SpawnPhaseHash = Animator.StringToHash("SpawnPhase");
 
         [SerializeField] private Animator _animator;
         private int _bowLayer;
         private float _bowReleaseLength;
         private float _bowCrouchReleaseLength;
 
+        public float RebirthLength { get; private set; }
+
         private void Awake()
         {
+            RebirthLength = GetClipLength("Player_Rebirth");
             _bowLayer = _animator.GetLayerIndex("Bow");
             if (_bowLayer < 0)
                 throw new System.InvalidOperationException("Player Animator requires the Bow layer.");
@@ -87,6 +91,9 @@ namespace DeadCells.Player
         public void SetHurt(bool hurt) => _animator.SetBool(HurtHash, hurt);
 
         public void SetDead(bool dead) => _animator.SetBool(DeadHash, dead);
+
+        /// <summary>0 = none, 1 = lying headless, 2 = rising (rebirth).</summary>
+        public void SetSpawnPhase(int phase) => _animator.SetInteger(SpawnPhaseHash, phase);
 
         /// <summary>
         /// Length in seconds of a clip in the controller, or 0 if it is missing.

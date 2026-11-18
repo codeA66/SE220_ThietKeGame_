@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a81595dc750a284abb38982eb99db97, type: 3}
   m_Name: Bow_StartBow
   m_EditorClassIdentifier: Combat::DeadCells.Combat.BowWeaponData
+  _scalingStat: 2
   _ammoCapacity: 6
   _projectileSpeed: 14
   _flightLifetime: 4

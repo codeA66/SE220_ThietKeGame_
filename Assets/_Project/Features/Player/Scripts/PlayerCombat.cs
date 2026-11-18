@@ -12,13 +12,15 @@ namespace DeadCells.Player
         private readonly Transform _owner;
         private readonly BoxCollider2D _collider;
         private readonly HitQuery _query;
+        private readonly PlayerRunStats _stats;
 
-        public PlayerCombat(Transform owner, BoxCollider2D collider, WeaponData weapon, LayerMask targets)
+        public PlayerCombat(Transform owner, BoxCollider2D collider, WeaponData weapon, LayerMask targets, PlayerRunStats stats)
         {
             _owner = owner;
             _collider = collider;
             MeleeWeapon = weapon;
             _query = new HitQuery(targets);
+            _stats = stats;
         }
 
         /// <summary>Arguments: number of targets hit, whether any hit was critical.</summary>
@@ -46,7 +48,8 @@ namespace DeadCells.Player
                 bounds.center.x + facing * (strike.RangeWidth * 0.5f + strike.RangeOffset.x),
                 bounds.min.y + height * 0.5f + strike.RangeOffset.y);
 
-            var info = new DamageInfo(strike.Damage, facing, strike.Knockback, 0f, strike.CanCrit, _owner.gameObject);
+            int damage = _stats.ScaleDamage(strike.Damage, MeleeWeapon.ScalingStat);
+            var info = new DamageInfo(damage, facing, strike.Knockback, 0f, strike.CanCrit, _owner.gameObject);
             int hits = _query.Strike(center, size, info);
             if (hits > 0)
                 StrikeHit?.Invoke(hits, info.IsCritical);

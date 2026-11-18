@@ -1,29 +1,30 @@
+using UnityEngine;
+
 namespace DeadCells.Enemies.States
 {
     /// <summary>
-    /// Shield "dash": charge forward TravelDistance in TravelDuration (DC: distance 8, duration 0.6),
-    /// hitting the player once and stunning them (DC: stunTime 1). Stops at walls and ledges.
+    /// Shieldbearer ram (Wiki: "charges up, then charges forward and deal damage on contact", stuns the player).
+    /// Travels Skill.TravelDistance in Skill.TravelDuration (DC: distance 8, duration 0.6); stops at walls/ledges.
     /// </summary>
     public class EnemyDashAttackState : EnemyAttackStateBase
     {
         private float _speed;
         private bool _stopped;
 
-        public EnemyDashAttackState(EnemyContext context, EnemyStateMachine machine) : base(context, machine) { }
+        public EnemyDashAttackState(EnemyContext context, EnemyStateMachine machine, int skillIndex)
+            : base(context, machine, skillIndex) { }
 
         protected override void OnExecuteStart()
         {
-            var d = Ctx.Data;
-            _speed = d.TravelDistance / UnityEngine.Mathf.Max(d.TravelDuration, 0.05f);
+            _speed = Skill.TravelDistance / Mathf.Max(Skill.TravelDuration, 0.05f);
             _stopped = false;
         }
 
         protected override bool ExecuteTick()
         {
-            var d = Ctx.Data;
             if (!_stopped)
-                Ctx.Strike(d.HitReach, d.HitHeight, d.Damage, d.Knockback, d.StunDealt);
-            return ExecuteTime >= d.TravelDuration;
+                Ctx.Strike(Skill);
+            return ExecuteTime >= Skill.TravelDuration;
         }
 
         protected override void ExecuteFixedTick()

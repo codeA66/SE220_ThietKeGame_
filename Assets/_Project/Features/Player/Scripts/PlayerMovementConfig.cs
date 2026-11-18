@@ -137,6 +137,10 @@ namespace DeadCells.Player
         [Tooltip("How far below the collider the ground is searched (units).")]
         [SerializeField] private float _groundCheckDistance = 0.05f;
 
+        [Header("Spawn Intro")]
+        [Tooltip("On scene start the body lies headless until the head drops and crawls to it, then it rises.")]
+        [SerializeField] private bool _playSpawnIntro = true;
+
         public float RunSpeed => _runSpeed;
         public float AirSpeed => _airSpeed;
         public float JumpBaseVelocity => _jumpBaseVelocity;
@@ -183,5 +187,6 @@ namespace DeadCells.Player
         public float StompStun => _stompStun;
         public Vector2 StompArea => _stompArea;
         public float GroundCheckDistance => _groundCheckDistance;
+        public bool PlaySpawnIntro => _playSpawnIntro;
     }
 }

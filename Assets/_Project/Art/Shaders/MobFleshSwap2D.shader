@@ -9,6 +9,7 @@ Shader "DeadCells/MobFleshSwap2D"
         [MainTexture][NoScaleOffset] _MainTex ("Sprite", 2D) = "white" {}
         _FleshColor ("Flesh Color (replaces magenta)", Color) = (1, 0, 1, 1)
         _Flash ("Flash (0-1, set per renderer)", Range(0, 1)) = 0
+        _FlashColor ("Flash Color (set per renderer)", Color) = (1, 1, 1, 1)
     }
 
     SubShader
@@ -60,6 +61,7 @@ Shader "DeadCells/MobFleshSwap2D"
             CBUFFER_START(UnityPerMaterial)
                 half4 _FleshColor;
                 half _Flash;
+                half4 _FlashColor;
             CBUFFER_END
 
             Varyings Vert(Attributes input)
@@ -85,7 +87,7 @@ Shader "DeadCells/MobFleshSwap2D"
                 c.rgb = lerp(c.rgb, _FleshColor.rgb, isFlesh);
 
                 c *= input.color;
-                c.rgb = lerp(c.rgb, half3(1, 1, 1), _Flash);
+                c.rgb = lerp(c.rgb, _FlashColor.rgb, _Flash);
                 return c;
             }
             ENDHLSL

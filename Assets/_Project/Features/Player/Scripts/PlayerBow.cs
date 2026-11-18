@@ -14,6 +14,7 @@ namespace DeadCells.Player
 
         private readonly List<RecoverableArrow> _activeArrows = new();
         private ObjectPool<RecoverableArrow> _pool;
+        private PlayerRunStats _stats;
         private LayerMask _targets;
         private LayerMask _ground;
         private int _nextShot;
@@ -30,7 +31,7 @@ namespace DeadCells.Player
         /// <summary>An arrow hit a wall or floor. Arguments: impact point, flight direction, combo finisher.</summary>
         public event Action<Vector2, int, bool> ArrowWorldHit;
 
-        public void Initialize(LayerMask targets, LayerMask ground)
+        public void Initialize(LayerMask targets, LayerMask ground, PlayerRunStats stats)
         {
             if (_pool != null)
                 throw new InvalidOperationException("PlayerBow is already initialized.");
@@ -38,6 +39,7 @@ namespace DeadCells.Player
                 throw new InvalidOperationException("PlayerBow requires valid bow data and an arrow prefab.");
             _targets = targets;
             _ground = ground;
+            _stats = stats;
             _pool = new ObjectPool<RecoverableArrow>(CreateArrow, null, ReleaseArrow, DestroyArrow,
                 collectionCheck: true, defaultCapacity: _data.AmmoCapacity, maxSize: _data.AmmoCapacity);
             Ammo = _data.AmmoCapacity;
@@ -70,7 +72,8 @@ namespace DeadCells.Player
             _nextShot = (_nextShot + 1) % _data.ShotCount;
             _comboExpiresAt = Time.time + _data.ComboResetTime;
             _readyAt = Time.time + shot.Cooldown;
-            arrow.Launch(feet + offset, facing, _data, shot, _targets, _ground, gameObject, heavy);
+            int damage = _stats.ScaleDamage(shot.Damage, _data.ScalingStat);
+            arrow.Launch(feet + offset, facing, _data, damage, _targets, _ground, gameObject, heavy);
             Fired?.Invoke(feet + offset, facing, heavy);
             AmmoChanged?.Invoke(Ammo, _data.AmmoCapacity);
             return true;
@@ -81,7 +84,16 @@ namespace DeadCells.Player
             if (_pool == null)
                 return;
             while (_activeArrows.Count > 0)
-                _activeArrows[_activeArrows.Count - 1].Recall();
+            {
+                int last = _activeArrows.Count - 1;
+                // Flying arrows live at the scene root, so on scene unload they can be destroyed before this runs.
+                if (_activeArrows[last] == null)
+                {
+                    _activeArrows.RemoveAt(last);
+                    continue;
+                }
+                _activeArrows[last].Recall();
+            }
             _nextShot = 0;
             _comboExpiresAt = float.NegativeInfinity;
             _readyAt = float.NegativeInfinity;
@@ -119,7 +131,10 @@ namespace DeadCells.Player
         private void ReleaseArrow(RecoverableArrow arrow)
         {
             arrow.gameObject.SetActive(false);
-            arrow.transform.SetParent(transform, false);
+            // Unity forbids re-parenting while this object is being deactivated (OnDisable -> ResetShots).
+            // The arrow stays hidden at the root; Launch detaches it from any parent anyway.
+            if (gameObject.activeInHierarchy)
+                arrow.transform.SetParent(transform, false);
         }
 
         private void DestroyArrow(RecoverableArrow arrow) => Destroy(arrow.gameObject);

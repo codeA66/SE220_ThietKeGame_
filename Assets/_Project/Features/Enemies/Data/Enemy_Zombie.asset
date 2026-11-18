@@ -14,36 +14,78 @@ MonoBehaviour:
   m_EditorClassIdentifier: Enemies::DeadCells.Enemies.EnemyData
   _dcId: Zombie
   _fleshColor: {r: 0.73333335, g: 0.7372549, b: 0.654902, a: 1}
+  _glowColor: {r: 0.6666667, g: 0.85882354, b: 0.25882354, a: 1}
   _maxHealth: 120
   _hitStun: 0.25
   _knockbackResistance: 0
+  _hasFrontShield: 0
+  _shieldStaggerDuration: 0.4
   _patrolSpeed: 1.2
   _chaseSpeed: 2.2
+  _turnDelay: 0
   _idleTimeRange: {x: 0.8, y: 2}
   _patrolTimeRange: {x: 1.5, y: 3}
   _detectRangeCells: 10
   _loseRangeCells: 16
   _maxHeightDiffCells: 4
-  _keepAwayCells: 0
-  _attackKind: 0
-  _damage: 10
-  _charge: 0.8
-  _cooldown: 0.8
-  _recover: 0.1
-  _hitFrame: 3
-  _attackRangeCells: 1.35
-  _hitReachCells: 1.35
-  _hitHeightCells: 2.2
-  _knockback: 4
-  _stunDealt: 0
-  _hitCount: 1
-  _travelCells: 8
-  _travelDuration: 0.6
-  _lungeUpSpeed: 5
-  _projectilePrefab: {fileID: 0}
-  _projectileSpeed: 14
-  _projectileCount: 1
-  _fuseTime: 1.5
-  _blastRadiusCells: 2.9
-  _throwSpread: 1.5
-  _blastVfx: {fileID: 0}
+  _seeThroughWalls: 0
+  _backstepTriggerCells: 0
+  _backstepCells: 2.5
+  _backstepDuration: 0.3
+  _backstepCooldown: 1
+  _canTeleport: 0
+  _teleportCooldown: 3.5
+  _teleportBehindCells: 2.5
+  _skills:
+  - DcId: cc
+    Kind: 0
+    ChargeAnim: AtkLoad
+    ExecuteAnim: Atk
+    MinRangeCells: 0
+    MaxRangeCells: 1.35
+    Damage: 10
+    Charge: 0.8
+    Cooldown: 0.8
+    Recover: 0.1
+    HitFrame: 3
+    HitReachCells: 1.35
+    HitHeightCells: 2.2
+    Knockback: 4
+    StunDealt: 0
+    TravelCells: 0
+    TravelDuration: 0
+    LungeUpSpeed: 0
+    ProjectilePrefab: {fileID: 0}
+    ProjectileSpeed: 0
+    MuzzleHeight: 1
+    ProjectileCount: 1
+    FuseTime: 0
+    BlastRadiusCells: 0
+    LandingSpreadCells: 0
+    BlastVfx: {fileID: 0}
+  - DcId: jump
+    Kind: 1
+    ChargeAnim: LungeLoad
+    ExecuteAnim: Lunge
+    MinRangeCells: 1.35
+    MaxRangeCells: 6
+    Damage: 20
+    Charge: 0.95
+    Cooldown: 4
+    Recover: 0.2
+    HitFrame: 0
+    HitReachCells: 1.2
+    HitHeightCells: 2.2
+    Knockback: 5
+    StunDealt: 0
+    TravelCells: 6
+    TravelDuration: 0.5
+    LungeUpSpeed: 6
+    ProjectilePrefab: {fileID: 0}
+    ProjectileSpeed: 0
+    MuzzleHeight: 1
+    ProjectileCount: 1
+    FuseTime: 0
+    BlastRadiusCells: 0
+    LandingSpreadCells: 0
+    BlastVfx: {fileID: 0}

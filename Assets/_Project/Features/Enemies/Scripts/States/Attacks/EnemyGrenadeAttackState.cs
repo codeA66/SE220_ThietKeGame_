@@ -3,17 +3,22 @@ using UnityEngine;
 namespace DeadCells.Enemies.States
 {
     /// <summary>
-    /// Grenader "grenade": on HitFrame, lob ProjectileCount fused grenades (DC: count 3, triggerDelay 1.5)
-    /// toward the player, spread horizontally. Each explodes in BlastRadius (DC: radius 2.9 cells).
+    /// Grenadier bomb (Wiki: "fires a bomb at the player's location. They detonate after a delay upon landing";
+    /// no contact damage). Throws Skill.ProjectileCount bombs (DC: count 3) landing around the player's
+    /// position at throw time; each fuse (DC: triggerDelay 1.5) starts when it lands.
     /// </summary>
     public class EnemyGrenadeAttackState : EnemyAttackStateBase
     {
         private const float ThrowHeight = 1.4f;
+        private const float FlightTime = 0.8f;
         private const float AfterThrow = 0.3f;
 
         private bool _thrown;
 
-        public EnemyGrenadeAttackState(EnemyContext context, EnemyStateMachine machine) : base(context, machine) { }
+        public EnemyGrenadeAttackState(EnemyContext context, EnemyStateMachine machine, int skillIndex)
+            : base(context, machine, skillIndex) { }
+
+        protected override void OnChargeStart() => Ctx.Face(Ctx.DirectionToPlayer);
 
         protected override void OnExecuteStart() => _thrown = false;
 
@@ -29,22 +34,20 @@ namespace DeadCells.Enemies.States
 
         private void Throw()
         {
-            var d = Ctx.Data;
-            if (Ctx.Projectiles == null || d.ProjectilePrefab == null)
+            if (Ctx.Projectiles == null || Skill.ProjectilePrefab == null || Ctx.Player == null)
                 return;
             var from = new Vector2(Ctx.Position.x + Ctx.Facing * 0.3f, Ctx.Position.y + ThrowHeight);
-            float dx = Ctx.Player != null ? Ctx.Player.position.x - from.x : Ctx.Facing * 3f;
+            Vector2 target = Ctx.Player.position;
             float g = Mathf.Abs(Physics2D.gravity.y);
-            const float flightTime = 0.9f;
-            // Velocity that lands at the player's x after flightTime (same height assumed).
-            float vx = dx / flightTime;
-            float vy = 0.5f * g * flightTime;
-            int n = d.ProjectileCount;
+            int n = Skill.ProjectileCount;
             for (int i = 0; i < n; i++)
             {
-                float offset = (i - (n - 1) * 0.5f) * d.ThrowSpread;
-                var p = Ctx.Projectiles.Get(d.ProjectilePrefab);
-                p.LaunchLob(from, new Vector2(vx + offset, vy), d.Damage, d.FuseTime, d.BlastRadius, d.BlastVfx, Ctx.Owner);
+                float offset = n > 1 ? Mathf.Lerp(-Skill.LandingSpread, Skill.LandingSpread, i / (float)(n - 1)) : 0f;
+                // Ballistic velocity that reaches (target.x + offset, target.y) after FlightTime.
+                float vx = (target.x + offset - from.x) / FlightTime;
+                float vy = (target.y - from.y) / FlightTime + 0.5f * g * FlightTime;
+                var p = Ctx.Projectiles.Get(Skill.ProjectilePrefab);
+                p.LaunchLob(from, new Vector2(vx, vy), Skill.Damage, Skill.FuseTime, Skill.BlastRadius, Skill.BlastVfx, Ctx.Owner);
             }
         }
     }

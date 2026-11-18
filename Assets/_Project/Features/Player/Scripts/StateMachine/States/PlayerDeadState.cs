@@ -1,7 +1,7 @@
 namespace DeadCells.Player.StateMachine.States
 {
     /// <summary>
-    /// No control while dead. The controller decides when to respawn (temporary until the run loop exists).
+    /// Disables movement and actions while playing the death animation.
     /// </summary>
     public class PlayerDeadState : PlayerStateBase
     {

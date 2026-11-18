@@ -5,7 +5,8 @@ namespace DeadCells.Combat
     /// <summary>
     /// Freezes time briefly on impact, optionally followed by a short slow-motion (DC: critical hits
     /// freeze one frame, then slow down for a few tenths of a second). Overlapping requests extend the
-    /// effect instead of stacking. One per scene.
+    /// effect instead of stacking. A menu can also pause gameplay through it, which wins over both.
+    /// One per scene.
     /// </summary>
     public class HitStop : MonoBehaviour
     {
@@ -13,6 +14,7 @@ namespace DeadCells.Combat
         private float _slowUntil = -1f;
         private float _slowScale = 1f;
         private bool _isActive;
+        private bool _menuPaused;
 
         public void Trigger(float duration)
         {
@@ -31,41 +33,52 @@ namespace DeadCells.Combat
             _slowUntil = Mathf.Max(_slowUntil, Time.unscaledTime + duration);
             _slowScale = Mathf.Clamp01(scale);
             _isActive = true;
-            if (Time.unscaledTime >= _resumeAt)
-                Time.timeScale = _slowScale;
+            ApplyTimeScale();
         }
 
-        // Only touches timeScale while an effect runs, so other systems can still own it otherwise.
+        public void SetMenuPaused(bool paused)
+        {
+            if (!isActiveAndEnabled)
+                return;
+
+            _menuPaused = paused;
+            ApplyTimeScale();
+        }
+
+        // Only touches timeScale while an effect or a menu pause runs, so other systems can own it otherwise.
         private void Update()
         {
             if (!_isActive)
                 return;
             float now = Time.unscaledTime;
-            if (now < _resumeAt)
+            if (now >= _resumeAt && now >= _slowUntil)
             {
-                Time.timeScale = 0f;
-                return;
+                _resumeAt = -1f;
+                _slowUntil = -1f;
+                _isActive = false;
             }
-            if (now < _slowUntil)
-            {
-                Time.timeScale = _slowScale;
-                return;
-            }
-            Clear();
+            ApplyTimeScale();
         }
 
         private void OnDisable()
         {
-            if (_isActive)
-                Clear();
-        }
-
-        private void Clear()
-        {
+            if (_isActive || _menuPaused)
+                Time.timeScale = 1f;
             _resumeAt = -1f;
             _slowUntil = -1f;
             _isActive = false;
-            Time.timeScale = 1f;
+            _menuPaused = false;
+        }
+
+        private void ApplyTimeScale()
+        {
+            float now = Time.unscaledTime;
+            if (_menuPaused || now < _resumeAt)
+                Time.timeScale = 0f;
+            else if (now < _slowUntil)
+                Time.timeScale = _slowScale;
+            else
+                Time.timeScale = 1f;
         }
     }
 }

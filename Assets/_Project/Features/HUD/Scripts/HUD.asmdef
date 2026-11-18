@@ -1,0 +1,13 @@
+{
+    "name": "HUD",
+    "rootNamespace": "DeadCells.HUD",
+    "references": [
+        "Combat",
+        "Currency",
+        "Player",
+        "Unity.RenderPipelines.Universal.2D.Runtime",
+        "UnityEngine.UI",
+        "VFX"
+    ],
+    "autoReferenced": true
+}

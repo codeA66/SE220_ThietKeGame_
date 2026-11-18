@@ -28,6 +28,7 @@ namespace DeadCells.Player.StateMachine
             Crouch = new PlayerCrouchState(context, this);
             Hurt = new PlayerHurtState(context, this);
             Dead = new PlayerDeadState(context, this);
+            Spawn = new PlayerSpawnState(context, this);
         }
 
         public IPlayerState Current { get; private set; }
@@ -47,6 +48,7 @@ namespace DeadCells.Player.StateMachine
         public IPlayerState Crouch { get; }
         public IPlayerState Hurt { get; }
         public IPlayerState Dead { get; }
+        public IPlayerState Spawn { get; }
 
         /// <summary>
         /// Switches state. Only one transition is accepted per frame.

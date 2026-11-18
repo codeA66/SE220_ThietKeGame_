@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace DeadCells.Player.StateMachine.States
 {
-    /// <summary>Hold to draw, release a fully drawn shot; early release and interrupts spend no ammo.</summary>
+    /// <summary>
+    /// One press draws for the shot's ChargeTime and fires automatically. Jumping (and air jumps) keep the
+    /// draw going; a press during recovery queues the next shot. Rolling cancels and spends no ammo.
+    /// </summary>
     public class PlayerBowAttackState : PlayerStateBase
     {
         private BowWeaponData.Shot _shot;
@@ -11,10 +14,19 @@ namespace DeadCells.Player.StateMachine.States
         private float _recoveryDuration;
         private bool _released;
         private bool _crouching;
+        private bool _queued;
+        private bool _wasGrounded;
 
         public PlayerBowAttackState(PlayerContext context, PlayerStateMachine machine) : base(context, machine) { }
 
         public override void Enter()
+        {
+            _queued = false;
+            _wasGrounded = Ctx.IsGrounded;
+            BeginDraw();
+        }
+
+        private void BeginDraw()
         {
             _shot = Ctx.Bow.GetNextShot();
             _timer = 0f;
@@ -40,21 +52,32 @@ namespace DeadCells.Player.StateMachine.States
                 return;
             }
 
+            TickJumpAndLanding();
+
             _timer += Time.deltaTime;
             if (_released)
             {
-                if (_timer >= _recoveryDuration)
-                    ReturnToDefault();
+                if (Ctx.Input.AttackPressed)
+                    _queued = true;
+                if (_timer < _recoveryDuration)
+                    return;
+                if (_queued && Ctx.Bow.CanShoot)
+                {
+                    _queued = false;
+                    BeginDraw();
+                    return;
+                }
+                ReturnToDefault();
                 return;
             }
 
             Ctx.FaceInput();
             UpdateCrouching();
             Ctx.Animator.DrawBow(_crouching, Mathf.Clamp01(_timer / _shot.ChargeTime));
-            if (!Ctx.Input.AttackReleased && Ctx.Input.AttackHeld)
+            if (_timer < _shot.ChargeTime)
                 return;
 
-            if (_timer < _shot.ChargeTime || !Ctx.Bow.TryFire(Ctx.Position, Ctx.FacingDirection, _crouching, _shot))
+            if (!Ctx.Bow.TryFire(Ctx.Position, Ctx.FacingDirection, _crouching, _shot))
             {
                 ReturnToDefault();
                 return;
@@ -75,6 +98,19 @@ namespace DeadCells.Player.StateMachine.States
             bool falling = Ctx.Velocity.y < 0f && !Ctx.IsGrounded;
             Ctx.SetGravityScale(Ctx.Config.GravityScale * (falling ? Ctx.Config.FallGravityMultiplier : 1f));
             Ctx.ClampFallSpeed();
+        }
+
+        /// <summary>Ground jump (with coyote time) or air jump without leaving the bow state.</summary>
+        private void TickJumpAndLanding()
+        {
+            if (Ctx.IsGrounded && !_wasGrounded)
+                Ctx.NotifyLanded();
+            _wasGrounded = Ctx.IsGrounded;
+
+            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld)
+                Ctx.StartJump();
+            else if (Ctx.CanAirJump)
+                Ctx.StartAirJump();
         }
 
         private void UpdateCrouching()

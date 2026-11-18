@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12a64d5e48a19a646881f4a35fb1d376, type: 3}
   m_Name: Weapon_StartSword
   m_EditorClassIdentifier: Combat::DeadCells.Combat.WeaponData
+  _scalingStat: 1
   _combo:
   - AnimState: AttackA
     ClipName: Player_AttackA

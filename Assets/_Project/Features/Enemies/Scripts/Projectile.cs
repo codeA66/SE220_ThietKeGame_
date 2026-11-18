@@ -33,6 +33,8 @@ namespace DeadCells.Enemies
         private VfxDefinition _blastVfx;
         private float _timer;
         private float _fuse;
+        private float _fuseTimer;
+        private bool _landed;
         private bool _live;
         private Color _baseColor;
         private TrailRibbon _trail;
@@ -81,6 +83,8 @@ namespace DeadCells.Enemies
             _knockback = knockback;
             _owner = owner;
             _timer = 0f;
+            _fuseTimer = 0f;
+            _landed = false;
             _live = true;
             _renderer.color = _baseColor;
             gameObject.SetActive(true);
@@ -101,16 +105,29 @@ namespace DeadCells.Enemies
 
             if (_mode == Mode.Lob)
             {
-                // Blink in the last 40% of the fuse.
-                if (_timer > _fuse * 0.6f)
-                    _renderer.color = Mathf.Repeat(_timer * 10f, 1f) < 0.5f ? _warnColor : _baseColor;
-                if (_timer >= _fuse)
+                // Wiki: bombs "detonate after a delay upon landing". Blink while the fuse burns.
+                if (_landed)
+                {
+                    _fuseTimer += Time.deltaTime;
+                    _renderer.color = Mathf.Repeat(_fuseTimer * 8f, 1f) < 0.5f ? _warnColor : _baseColor;
+                    if (_fuseTimer >= _fuse)
+                        Explode();
+                }
+                else if (_timer >= _maxLifetime)
+                {
                     Explode();
+                }
             }
             else if (_timer >= _maxLifetime)
             {
                 Finish();
             }
+        }
+
+        private void OnCollisionEnter2D(Collision2D collision)
+        {
+            if (_live && _mode == Mode.Lob && (_ground.value & (1 << collision.gameObject.layer)) != 0)
+                _landed = true;
         }
 
         private void FixedUpdate()
@@ -128,7 +145,7 @@ namespace DeadCells.Enemies
             if ((_targets.value & layerBit) != 0 && other.TryGetComponent<Hurtbox>(out var hurtbox) && hurtbox.Target != null)
             {
                 int dir = _body.linearVelocity.x >= 0f ? 1 : -1;
-                hurtbox.Target.TakeDamage(new DamageInfo(_damage, dir, _knockback, 0f, false, _owner));
+                hurtbox.Target.TakeDamage(new DamageInfo(_damage, dir, _knockback, 0f, false, _owner, isProjectile: true));
                 Finish();
             }
             else if ((_ground.value & layerBit) != 0)
@@ -144,7 +161,7 @@ namespace DeadCells.Enemies
         {
             _query.ResetSwing();
             Vector2 center = transform.position;
-            _query.Strike(center, Vector2.one * (_blastRadius * 2f), new DamageInfo(_damage, 0, 4f, 0f, false, _owner));
+            _query.Strike(center, Vector2.one * (_blastRadius * 2f), new DamageInfo(_damage, 0, 4f, 0f, false, _owner, isProjectile: true));
             if (_vfx != null)
                 _vfx.Play(_blastVfx, center);
             Finish();
