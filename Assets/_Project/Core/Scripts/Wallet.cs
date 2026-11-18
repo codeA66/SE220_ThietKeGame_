@@ -14,6 +14,14 @@ namespace DeadCells.Core
         /// <summary>Arguments: gold, gems.</summary>
         public static event Action<int, int> Changed;
 
+        // Statics survive between Play sessions when domain reload is off, so a new session starts empty.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            Gold = 0;
+            Gems = 0;
+        }
+
         public static void AddGold(int amount)
         {
             if (amount <= 0)
