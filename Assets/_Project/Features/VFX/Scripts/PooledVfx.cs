@@ -35,9 +35,10 @@ namespace DeadCells.VFX
             _renderer.color = definition.Tint;
         }
 
-        public void Play(Vector3 position, bool flipX, float angle = 0f)
+        public void Play(Vector3 position, bool flipX, float angle = 0f, float scale = 1f)
         {
             transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, angle));
+            transform.localScale = Vector3.one * (Definition.Scale * scale);
             _renderer.flipX = flipX;
             _timer = 0f;
             _frame = 0;

@@ -16,9 +16,9 @@ namespace DeadCells.Player
         [SerializeField] private VfxDefinition _airJumpVfx;
         [SerializeField] private VfxDefinition _landVfx;
 
-        [Tooltip("Dust puffed out on a ledge climb. Left empty, a generated pixel-art puff is used.")]
+        [Tooltip("Small puffs laid along the floor during a roll. Left empty, generated puffs are used, picked at random.")]
         [SerializeField] private VfxDefinition _runDustVfx;
-        [Tooltip("Dust burst when a roll starts and when skidding. Left empty, a generated burst is used.")]
+        [Tooltip("Dust burst when a roll starts. Left empty, generated bursts are used, picked at random so no two rolls look alike.")]
         [SerializeField] private VfxDefinition _rollDustVfx;
         [Tooltip("Shockwave when an air stomp hits the ground. Left empty, a generated shockwave is used.")]
         [SerializeField] private VfxDefinition _stompVfx;
@@ -30,19 +30,17 @@ namespace DeadCells.Player
         [SerializeField] private bool _jumpVfxOnGroundJump;
         [Tooltip("Minimum downward speed at impact for the landing dust (units/s).")]
         [SerializeField] private float _minLandSpeed = 8f;
-        [Tooltip("Ground speed needed before turning around kicks up a skid burst (units/s).")]
-        [SerializeField] private float _minSkidSpeed = 4f;
+        [Tooltip("Seconds between the small dust puffs laid down along the floor while rolling.")]
+        [Min(0.02f)]
+        [SerializeField] private float _rollTrailInterval = 0.06f;
 
         private PlayerContext _context;
         private PlayerBow _bow;
-        private float _lastVelocityX;
+        private float _rollTrailUntil = -1f;
+        private float _nextRollTrailAt;
 
         private void Start()
         {
-            if (_runDustVfx == null)
-                _runDustVfx = GeneratedVfx.RunDust;
-            if (_rollDustVfx == null)
-                _rollDustVfx = GeneratedVfx.RollDust;
             if (_stompVfx == null)
                 _stompVfx = GeneratedVfx.StompWave;
 
@@ -52,7 +50,7 @@ namespace DeadCells.Player
             _context.AirJumped += OnAirJumped;
             _context.Landed += OnLanded;
             _context.Stomped += OnStomped;
-            _context.LedgeClimbStarted += OnLedgeClimbStarted;
+            _context.LedgeClimbFinished += OnLedgeClimbFinished;
             _context.Combat.StrikePerformed += OnStrikePerformed;
 
             _bow = _context.Bow;
@@ -75,7 +73,7 @@ namespace DeadCells.Player
             _context.AirJumped -= OnAirJumped;
             _context.Landed -= OnLanded;
             _context.Stomped -= OnStomped;
-            _context.LedgeClimbStarted -= OnLedgeClimbStarted;
+            _context.LedgeClimbFinished -= OnLedgeClimbFinished;
             _context.Combat.StrikePerformed -= OnStrikePerformed;
             if (_bow != null)
             {
@@ -89,17 +87,26 @@ namespace DeadCells.Player
             if (_context == null)
                 return;
 
-            float velocityX = _context.Velocity.x;
-            float lastVelocityX = _lastVelocityX;
-            _lastVelocityX = velocityX;
-
-            // Turning around at speed: dust is thrown the way the player was going.
-            if (_context.IsGrounded && Mathf.Abs(lastVelocityX) >= _minSkidSpeed && velocityX * lastVelocityX < 0f)
-                _spawner.Play(_rollDustVfx, _context.Position, lastVelocityX > 0f);
+            // Rolling on the ground: lay small puffs along the floor behind the player.
+            if (Time.time < _rollTrailUntil && _context.IsGrounded && Time.time >= _nextRollTrailAt)
+            {
+                _nextRollTrailAt = Time.time + _rollTrailInterval;
+                _spawner.Play(RunDust, _context.Position, _context.FacingDirection < 0, 0f, Random.Range(0.7f, 1.2f));
+            }
         }
 
-        // Dust trails behind the roll, so it flips with the facing.
-        private void OnRollStarted(Vector2 feet) => _spawner.Play(_rollDustVfx, feet, _context.FacingDirection < 0);
+        // A serialized asset wins; otherwise a randomly chosen generated variant, so no two puffs look alike.
+        private VfxDefinition RunDust => _runDustVfx != null ? _runDustVfx : GeneratedVfx.RunDust;
+
+        private VfxDefinition RollDust => _rollDustVfx != null ? _rollDustVfx : GeneratedVfx.RollDust;
+
+        // The opening burst, then small puffs along the floor for as long as the roll lasts.
+        private void OnRollStarted(Vector2 feet)
+        {
+            _spawner.Play(RollDust, feet, _context.FacingDirection < 0, 0f, Random.Range(0.85f, 1.25f));
+            _rollTrailUntil = Time.time + _context.Config.RollDuration;
+            _nextRollTrailAt = Time.time + _rollTrailInterval;
+        }
 
         // Swing frames are drawn facing right with the hero's feet at the canvas centre, like the hero sprites.
         private void OnStrikePerformed(WeaponData.Strike strike, Vector2 feet, int facing) =>
@@ -129,11 +136,8 @@ namespace DeadCells.Player
         private void OnArrowWorldHit(Vector2 point, int direction, bool heavy) =>
             _spawner.Play(heavy ? GeneratedVfx.ArrowImpactHeavy : GeneratedVfx.ArrowImpact, point, direction > 0);
 
-        // A puff each way on the ledge top as the player hauls up onto it.
-        private void OnLedgeClimbStarted(Vector2 standPoint)
-        {
-            _spawner.Play(_runDustVfx, standPoint, false);
-            _spawner.Play(_runDustVfx, standPoint, true);
-        }
+        // One small puff at the feet as the player gets up onto the ledge, trailing behind.
+        private void OnLedgeClimbFinished(Vector2 feet) =>
+            _spawner.Play(GeneratedVfx.LedgeDust, feet, _context.FacingDirection < 0, 0f, Random.Range(0.8f, 1.2f));
     }
 }

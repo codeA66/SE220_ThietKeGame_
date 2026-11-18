@@ -26,7 +26,6 @@ namespace DeadCells.Player.StateMachine.States
             _end = Ctx.LedgeStandPoint;
             Ctx.SetKinematic(true);
             Ctx.Animator.SetClimbing(true);
-            Ctx.NotifyLedgeClimbStarted();
         }
 
         public override void Exit()
@@ -40,8 +39,10 @@ namespace DeadCells.Player.StateMachine.States
         public override void Tick()
         {
             _timer += Time.deltaTime;
-            if (_timer >= _duration)
-                Machine.ChangeState(Ctx.HasMoveInput ? Machine.Run : Machine.Idle);
+            if (_timer < _duration)
+                return;
+            Ctx.NotifyLedgeClimbFinished();
+            Machine.ChangeState(Ctx.HasMoveInput ? Machine.Run : Machine.Idle);
         }
 
         public override void FixedTick()

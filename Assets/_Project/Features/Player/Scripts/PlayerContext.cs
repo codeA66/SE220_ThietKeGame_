@@ -76,8 +76,8 @@ namespace DeadCells.Player
         public event Action StompStarted;
         /// <summary>An air stomp hit the ground. Argument: feet position.</summary>
         public event Action<Vector2> Stomped;
-        /// <summary>A ledge climb started. Argument: the point the player will stand on.</summary>
-        public event Action<Vector2> LedgeClimbStarted;
+        /// <summary>A ledge climb finished and the player is standing on the ledge. Argument: feet position.</summary>
+        public event Action<Vector2> LedgeClimbFinished;
 
         public SpriteRenderer Sprite => _sprite;
 
@@ -85,7 +85,7 @@ namespace DeadCells.Player
 
         public void NotifyStomped() => Stomped?.Invoke(Position);
 
-        public void NotifyLedgeClimbStarted() => LedgeClimbStarted?.Invoke(LedgeStandPoint);
+        public void NotifyLedgeClimbFinished() => LedgeClimbFinished?.Invoke(Position);
 
         public PlayerMovementConfig Config { get; }
         public PlayerCombat Combat { get; set; }

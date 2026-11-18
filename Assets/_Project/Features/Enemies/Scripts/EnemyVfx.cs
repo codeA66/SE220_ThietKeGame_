@@ -11,6 +11,10 @@ namespace DeadCells.Enemies
     public class EnemyVfx : MonoBehaviour
     {
         private const float HitSideOffset = 0.6f;
+        // A blocked hit rings off the shield face, which sits a little further out than the body.
+        private const float ShieldFaceOffset = 0.95f;
+        // Block sparks are thrown back toward the attacker, tilted randomly up to this many degrees.
+        private const float BlockSparkTilt = 12f;
         // Each hit flare is tilted by a random angle up to this many degrees either way around the line
         // of the blow, so it always follows the attack direction but no two hits look the same.
         private const float MaxHitTilt = 25f;
@@ -23,6 +27,7 @@ namespace DeadCells.Enemies
         private VfxDefinition _hitSpark;
         private VfxDefinition _critSpark;
         private VfxDefinition _bloodMist;
+        private VfxDefinition _shieldClang;
         private VfxDefinition _deathPuff;
 
         public void Setup(Health health, EnemyContext context, BoxCollider2D collider)
@@ -33,9 +38,11 @@ namespace DeadCells.Enemies
             _hitSpark = GeneratedVfx.HitSpark;
             _critSpark = GeneratedVfx.CritSpark;
             _bloodMist = GeneratedVfx.BloodMist;
+            _shieldClang = GeneratedVfx.ShieldClang;
             _deathPuff = GeneratedVfx.DeathPuff;
             _health.Damaged += OnDamaged;
             _health.Died += OnDied;
+            _health.Blocked += OnBlocked;
             _context.Vanished += OnVanished;
         }
 
@@ -45,6 +52,7 @@ namespace DeadCells.Enemies
                 return;
             _health.Damaged -= OnDamaged;
             _health.Died -= OnDied;
+            _health.Blocked -= OnBlocked;
             _context.Vanished -= OnVanished;
         }
 
@@ -52,6 +60,20 @@ namespace DeadCells.Enemies
 
         // The killing blow always gets the heavy spray.
         private void OnDied(DamageInfo info) => PlayHit(info, true);
+
+        // A hit stopped by a shield: bloom-bright sparks fly back off the shield face toward the attacker.
+        private void OnBlocked(DamageInfo info)
+        {
+            // Direction is the way the target would be pushed, so the attacker is on the opposite side.
+            int towardAttacker = info.Direction == 0 ? -_context.Facing : -info.Direction;
+            float halfWidth = _collider.size.x * 0.5f * Mathf.Abs(transform.lossyScale.x);
+            Vector3 face = Center() + new Vector3(towardAttacker * halfWidth * ShieldFaceOffset, 0f, 0f);
+            float tilt = Random.Range(-BlockSparkTilt, BlockSparkTilt);
+            // The baked clang flare underneath, then the physical sparks and their glow on top.
+            if (_context.Vfx != null)
+                _context.Vfx.Play(_shieldClang, face, towardAttacker < 0, tilt * towardAttacker);
+            Sparks.Emit(face, towardAttacker, SparkBurst.Shield, _context.GroundMask, tilt);
+        }
 
         private void OnVanished()
         {
