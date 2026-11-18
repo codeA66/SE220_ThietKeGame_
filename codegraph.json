@@ -1,0 +1,10 @@
+{
+  "exclude": [
+    ".agents/",
+    ".claude/",
+    ".codex/",
+    "graphify-out/",
+    "SourceAssets/",
+    "templates/"
+  ]
+}

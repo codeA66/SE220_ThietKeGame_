@@ -1,0 +1,5 @@
+[mcp_servers.unity]
+command = 'C:\Users\habayakka\AppData\Local\Unity\bin\unity.exe'
+args = ['mcp', '--project-path', 'D:\thietkegame']
+startup_timeout_sec = 30
+tool_timeout_sec = 120

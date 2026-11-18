@@ -54,3 +54,10 @@ Thumbs.db
 # Heavy third-party assets (keep local, not on GitHub)
 /[Aa]ssets/_ThirdParty/
 /[Aa]ssets/_ThirdParty.meta
+
+# Local code intelligence (rebuild from source; do not commit caches)
+/.codegraph/
+/graphify-out/
+
+# Isolated local Fortress agent repositories; never stage their snapshots in the parent repo
+/.fortress-workspaces/

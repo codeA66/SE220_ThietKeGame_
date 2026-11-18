@@ -6,7 +6,7 @@ genre: "2D roguelite action-platformer (Dead Cells-like)"
 target_platforms: [Windows, WebGL, Android]
 
 # Unity
-unity_version: "6000.5.0f1"
+unity_version: "6000.6.9f1"
 render_pipeline: "URP"            # URP 2D renderer
 scripting_backend: "Mono"         # Mono for fast iteration; switch to IL2CPP for release builds
 ui_system: "UGUI"                 # UGUI (template default, simplest for a course project)
