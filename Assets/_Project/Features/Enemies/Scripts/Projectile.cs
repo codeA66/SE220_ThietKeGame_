@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DeadCells.Combat;
 using DeadCells.VFX;
 using UnityEngine;
@@ -20,12 +21,17 @@ namespace DeadCells.Enemies
         [SerializeField] private Color _warnColor = new Color(1f, 0.3f, 0.3f);
         [SerializeField] private float _maxLifetime = 4f;
 
+        private const int MaxBlastResults = 16;
+
         private Rigidbody2D _body;
         private Action<Projectile> _release;
         private VfxSpawner _vfx;
-        private HitQuery _query;
+        private readonly Collider2D[] _blastResults = new Collider2D[MaxBlastResults];
+        private readonly HashSet<IDamageable> _blastHitTargets = new();
+        private ContactFilter2D _blastFilter;
         private LayerMask _targets;
         private LayerMask _ground;
+        private LayerMask _straightObstacles;
         private GameObject _owner;
         private int _damage;
         private float _knockback;
@@ -39,16 +45,33 @@ namespace DeadCells.Enemies
         private Color _baseColor;
 
         public Mode Kind => _mode;
+        public bool IsLive => _live;
 
         public void Setup(Action<Projectile> release, VfxSpawner vfx, LayerMask targets, LayerMask ground)
+        {
+            int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
+            int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
+            LayerMask straightObstacles = ground.value & ~oneWayBit;
+            Setup(release, vfx, targets, ground, straightObstacles);
+        }
+
+        public void Setup(Action<Projectile> release, VfxSpawner vfx, LayerMask targets, LayerMask ground, LayerMask straightObstacles)
         {
             _body = GetComponent<Rigidbody2D>();
             _release = release;
             _vfx = vfx;
             _targets = targets;
             _ground = ground;
-            _query = new HitQuery(targets);
-            _baseColor = _renderer.color;
+            _straightObstacles = straightObstacles;
+            _blastFilter = new ContactFilter2D { useTriggers = true };
+            _blastFilter.SetLayerMask(targets);
+            _baseColor = _renderer != null ? _renderer.color : Color.white;
+            if (_renderer != null && _renderer.sortingLayerID == 0)
+            {
+                int vfxLayerId = SortingLayer.NameToID("VFX");
+                if (vfxLayerId != 0)
+                    _renderer.sortingLayerID = vfxLayerId;
+            }
         }
 
         public void LaunchStraight(Vector2 position, Vector2 velocity, int damage, float knockback, GameObject owner)
@@ -79,7 +102,8 @@ namespace DeadCells.Enemies
             _fuseTimer = 0f;
             _landed = false;
             _live = true;
-            _renderer.color = _baseColor;
+            if (_renderer != null)
+                _renderer.color = _baseColor;
             gameObject.SetActive(true);
             _body.linearVelocity = velocity;
             _body.angularVelocity = 0f;
@@ -97,7 +121,8 @@ namespace DeadCells.Enemies
                 if (_landed)
                 {
                     _fuseTimer += Time.deltaTime;
-                    _renderer.color = Mathf.Repeat(_fuseTimer * 8f, 1f) < 0.5f ? _warnColor : _baseColor;
+                    if (_renderer != null)
+                        _renderer.color = Mathf.Repeat(_fuseTimer * 8f, 1f) < 0.5f ? _warnColor : _baseColor;
                     if (_fuseTimer >= _fuse)
                         Explode();
                 }
@@ -133,10 +158,11 @@ namespace DeadCells.Enemies
             if ((_targets.value & layerBit) != 0 && other.TryGetComponent<Hurtbox>(out var hurtbox) && hurtbox.Target != null)
             {
                 int dir = _body.linearVelocity.x >= 0f ? 1 : -1;
-                hurtbox.Target.TakeDamage(new DamageInfo(_damage, dir, _knockback, 0f, false, _owner, isProjectile: true));
-                Finish();
+                bool hit = hurtbox.Target.TakeDamage(new DamageInfo(_damage, dir, _knockback, 0f, false, _owner, isProjectile: true));
+                if (hit)
+                    Finish();
             }
-            else if ((_ground.value & layerBit) != 0)
+            else if ((_straightObstacles.value & layerBit) != 0)
             {
                 Finish();
             }
@@ -144,9 +170,24 @@ namespace DeadCells.Enemies
 
         private void Explode()
         {
-            _query.ResetSwing();
+            _blastHitTargets.Clear();
             Vector2 center = transform.position;
-            _query.Strike(center, Vector2.one * (_blastRadius * 2f), new DamageInfo(_damage, 0, 4f, 0f, false, _owner, isProjectile: true));
+            int count = Physics2D.OverlapCircle(center, _blastRadius, _blastFilter, _blastResults);
+            for (int i = 0; i < count; i++)
+            {
+                if (!_blastResults[i].TryGetComponent<Hurtbox>(out var hurtbox))
+                    continue;
+                var target = hurtbox.Target;
+                if (target == null || !target.IsAlive)
+                    continue;
+                Vector2 targetPos = _blastResults[i].bounds.center;
+                if (Physics2D.Linecast(center, targetPos, _straightObstacles))
+                    continue;
+                if (!_blastHitTargets.Add(target))
+                    continue;
+                int dir = targetPos.x >= center.x ? 1 : -1;
+                target.TakeDamage(new DamageInfo(_damage, dir, 5f, 0f, false, _owner, isProjectile: true));
+            }
             if (_vfx != null)
                 _vfx.Play(_blastVfx, center);
             Finish();
