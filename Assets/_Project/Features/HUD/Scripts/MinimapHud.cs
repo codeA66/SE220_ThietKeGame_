@@ -92,20 +92,36 @@ namespace DeadCells.HUD
 
         private void BuildPanel()
         {
-            var canvasObject = new GameObject("MinimapCanvas");
-            canvasObject.transform.SetParent(transform, false);
-            var canvas = canvasObject.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;
-            var scaler = canvasObject.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            // Sit in the gold counter's own canvas, so both use the same scaling, and hang just under the counter.
+            var gold = FindFirstObjectByType<GoldHud>();
+            Canvas host = gold != null && gold.Amount != null ? gold.Amount.canvas : null;
+            Transform parent;
+            bool underGold = host != null;
+            if (underGold)
+            {
+                parent = host.rootCanvas.transform;
+            }
+            else
+            {
+                var canvasObject = new GameObject("MinimapCanvas");
+                canvasObject.transform.SetParent(transform, false);
+                var canvas = canvasObject.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 10;
+                var scaler = canvasObject.AddComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+                parent = canvasObject.transform;
+            }
+            Transform panelParent = parent;
 
             // The border is a slightly larger solid panel behind the map.
-            RectTransform frame = NewRect("Frame", canvasObject.transform, _panelSize + new Vector2(8f, 8f));
+            RectTransform frame = NewRect("Frame", panelParent, _panelSize + new Vector2(8f, 8f));
             frame.gameObject.AddComponent<Image>().color = _border;
             Anchor(frame);
+            if (underGold)
+                frame.anchoredPosition = OffsetUnder((RectTransform)gold.Amount.transform, (RectTransform)parent);
 
             RectTransform map = NewRect("Map", frame, _panelSize);
             var image = map.gameObject.AddComponent<RawImage>();
@@ -118,6 +134,17 @@ namespace DeadCells.HUD
             marker.gameObject.AddComponent<Image>().color = new Color(0.93f, 0.75f, 0.34f, 1f);
             marker.anchorMin = marker.anchorMax = marker.pivot = new Vector2(0.5f, 0.5f);
             marker.anchoredPosition = Vector2.zero;
+        }
+
+        // Where the top-right anchored frame must sit so its top edge is a little below the bottom of the counter and
+        // its right edge lines up with the counter's, in the canvas's own units.
+        private static Vector2 OffsetUnder(RectTransform counter, RectTransform canvas)
+        {
+            var corners = new Vector3[4];
+            counter.GetWorldCorners(corners);
+            Vector3 bottomRight = canvas.InverseTransformPoint(corners[3]);
+            Rect rect = canvas.rect;
+            return new Vector2(bottomRight.x - rect.xMax, bottomRight.y - rect.yMax - 14f);
         }
 
         private void Anchor(RectTransform rect)
