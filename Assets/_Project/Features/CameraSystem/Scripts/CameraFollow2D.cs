@@ -82,6 +82,28 @@ namespace DeadCells.CameraSystem
         }
 
         /// <summary>
+        /// Immediately warps the camera to the target focus + offset (clamped to bounds if enabled)
+        /// and resets SmoothDamp/look-ahead state so long-distance teleports have zero lag.
+        /// </summary>
+        public void SnapToTarget()
+        {
+            if (_target == null)
+                return;
+            if (_camera == null)
+                _camera = GetComponent<Camera>();
+            _focus = (Vector2)_target.position + _offset;
+            _lastTargetPosition = _target.position;
+            _lookAheadCurrent = 0f;
+            _lookAheadVelocity = 0f;
+            _velocity = Vector3.zero;
+            var desired = new Vector3(_focus.x, _focus.y, transform.position.z);
+            if (_useBounds && _camera != null)
+                desired = ClampToBounds(desired);
+            _basePosition = desired;
+            transform.position = _basePosition + ShakeOffset();
+        }
+
+        /// <summary>
         /// Random jitter that decays linearly over the duration. Uses unscaled time so it still plays
         /// during hit-stop. A stronger request replaces a weaker one in progress.
         /// </summary>
