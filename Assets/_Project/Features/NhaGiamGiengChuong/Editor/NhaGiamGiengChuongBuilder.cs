@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using DeadCells.Currency;
 using DeadCells.Enemies;
 using DeadCells.HUD;
@@ -1668,6 +1669,214 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             }
         }
 
+        private static void AddControlsHintBadge(GameObject playerHudGo)
+        {
+            var badgeGo = new GameObject("ControlsHintBadge", typeof(RectTransform));
+            badgeGo.transform.SetParent(playerHudGo.transform, false);
+            var rect = badgeGo.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0f);
+            rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(1f, 0f);
+            rect.anchoredPosition = new Vector2(-20f, 18f);
+            rect.sizeDelta = new Vector2(610f, 34f);
+
+            var bg = badgeGo.AddComponent<UnityEngine.UI.Image>();
+            bg.color = new Color(0.05f, 0.06f, 0.10f, 0.72f);
+            bg.raycastTarget = false;
+
+            var textGo = new GameObject("Label", typeof(RectTransform));
+            textGo.transform.SetParent(badgeGo.transform, false);
+            var textRect = textGo.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(12f, 0f);
+            textRect.offsetMax = new Vector2(-12f, 0f);
+            var text = textGo.AddComponent<UnityEngine.UI.Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 18;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = new Color(0.88f, 0.90f, 0.94f, 0.95f);
+            text.text = "[Esc] Tạm dừng  ·  [1/2] Vũ khí  ·  [Shift] Lăn  ·  [E] Tương tác";
+            text.raycastTarget = false;
+        }
+
+        private static void BuildPauseMenu(
+            LevelRunController run,
+            PlayerController player,
+            PlayerInputReader playerInput,
+            HitStop hitStop)
+        {
+            var root = new GameObject("PauseMenu");
+            var canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 90;
+
+            var scaler = root.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            root.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+            var controller = root.AddComponent<PauseMenuController>();
+
+            var panelRoot = new GameObject("PanelRoot", typeof(RectTransform));
+            panelRoot.transform.SetParent(root.transform, false);
+            var panelRect = panelRoot.GetComponent<RectTransform>();
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+            var backdropImg = panelRoot.AddComponent<UnityEngine.UI.Image>();
+            backdropImg.color = new Color(0.03f, 0.04f, 0.06f, 0.86f);
+            backdropImg.raycastTarget = true;
+
+            var cardBorder = new GameObject("CardBorder", typeof(RectTransform));
+            cardBorder.transform.SetParent(panelRoot.transform, false);
+            var borderRect = cardBorder.GetComponent<RectTransform>();
+            borderRect.anchorMin = new Vector2(0.5f, 0.5f);
+            borderRect.anchorMax = new Vector2(0.5f, 0.5f);
+            borderRect.sizeDelta = new Vector2(940f, 560f);
+            borderRect.anchoredPosition = Vector2.zero;
+            var borderImg = cardBorder.AddComponent<UnityEngine.UI.Image>();
+            borderImg.color = new Color(0.68f, 0.54f, 0.28f, 0.95f);
+            borderImg.raycastTarget = false;
+
+            var cardFill = new GameObject("CardFill", typeof(RectTransform));
+            cardFill.transform.SetParent(cardBorder.transform, false);
+            var fillRect = cardFill.GetComponent<RectTransform>();
+            fillRect.anchorMin = new Vector2(0.5f, 0.5f);
+            fillRect.anchorMax = new Vector2(0.5f, 0.5f);
+            fillRect.sizeDelta = new Vector2(932f, 552f);
+            fillRect.anchoredPosition = Vector2.zero;
+            var fillImg = cardFill.AddComponent<UnityEngine.UI.Image>();
+            fillImg.color = new Color(0.07f, 0.08f, 0.12f, 0.97f);
+            fillImg.raycastTarget = false;
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var titleGo = new GameObject("TitleText", typeof(RectTransform));
+            titleGo.transform.SetParent(cardFill.transform, false);
+            var titleRect = titleGo.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0.5f, 0.5f);
+            titleRect.anchorMax = new Vector2(0.5f, 0.5f);
+            titleRect.sizeDelta = new Vector2(760f, 70f);
+            titleRect.anchoredPosition = new Vector2(0f, 214f);
+            var titleText = titleGo.AddComponent<UnityEngine.UI.Text>();
+            titleText.font = font;
+            titleText.fontSize = 48;
+            titleText.fontStyle = FontStyle.Bold;
+            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.color = new Color(0.96f, 0.88f, 0.62f, 1f);
+            titleText.text = "TẠM DỪNG";
+            titleText.raycastTarget = false;
+
+            CreatePauseDivider(cardFill.transform, "DividerTop", 780f, 168f);
+
+            string[] leftLegend =
+            {
+                "A/D — Di chuyển",
+                "Space — Nhảy / Nhảy đôi / Bám tường",
+                "Chuột trái / Enter — Tấn công",
+                "Shift — Lăn né (i-frame)",
+            };
+            string[] rightLegend =
+            {
+                "S + Space — Đập đất / Tụt sàn",
+                "W/S — Leo xích",
+                "1/2 — Đổi Kiếm / Cung",
+                "E — Tương tác",
+            };
+            for (int i = 0; i < leftLegend.Length; i++)
+            {
+                float y = 114f - i * 48f;
+                CreatePauseLegendRow(cardFill.transform, $"LegendLeft_{i}", leftLegend[i], new Vector2(-210f, y), font);
+                CreatePauseLegendRow(cardFill.transform, $"LegendRight_{i}", rightLegend[i], new Vector2(215f, y), font);
+            }
+
+            CreatePauseDivider(cardFill.transform, "DividerBottom", 780f, -80f);
+
+            var resumeButton = CreatePauseButton(cardFill.transform, "ResumeButton", "Tiếp tục [Esc]", new Vector2(-264f, -164f), new Color(0.28f, 0.34f, 0.44f, 1f), font);
+            var restartButton = CreatePauseButton(cardFill.transform, "RestartButton", "Chơi lại", new Vector2(0f, -164f), new Color(0.22f, 0.24f, 0.30f, 1f), font);
+            var quitButton = CreatePauseButton(cardFill.transform, "QuitButton", "Thoát game", new Vector2(264f, -164f), new Color(0.30f, 0.16f, 0.18f, 1f), font);
+
+            panelRoot.SetActive(false);
+
+            var so = new SerializedObject(controller);
+            so.FindProperty("_run").objectReferenceValue = run;
+            so.FindProperty("_player").objectReferenceValue = player;
+            so.FindProperty("_playerInput").objectReferenceValue = playerInput;
+            so.FindProperty("_hitStop").objectReferenceValue = hitStop;
+            so.FindProperty("_panelRoot").objectReferenceValue = panelRoot;
+            so.FindProperty("_resumeButton").objectReferenceValue = resumeButton;
+            so.FindProperty("_restartButton").objectReferenceValue = restartButton;
+            so.FindProperty("_quitButton").objectReferenceValue = quitButton;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void CreatePauseDivider(Transform parent, string name, float width, float y)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(width, 2f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            var img = go.AddComponent<UnityEngine.UI.Image>();
+            img.color = new Color(0.68f, 0.54f, 0.28f, 0.65f);
+            img.raycastTarget = false;
+        }
+
+        private static void CreatePauseLegendRow(Transform parent, string name, string textValue, Vector2 pos, Font font)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(400f, 40f);
+            rect.anchoredPosition = pos;
+            var text = go.AddComponent<UnityEngine.UI.Text>();
+            text.font = font;
+            text.fontSize = 21;
+            text.alignment = TextAnchor.MiddleLeft;
+            text.color = new Color(0.86f, 0.89f, 0.94f, 1f);
+            text.text = textValue;
+            text.raycastTarget = false;
+        }
+
+        private static UnityEngine.UI.Button CreatePauseButton(Transform parent, string name, string label, Vector2 pos, Color bgColor, Font font)
+        {
+            var btnGo = new GameObject(name, typeof(RectTransform));
+            btnGo.transform.SetParent(parent, false);
+            var btnRect = btnGo.GetComponent<RectTransform>();
+            btnRect.anchorMin = new Vector2(0.5f, 0.5f);
+            btnRect.anchorMax = new Vector2(0.5f, 0.5f);
+            btnRect.sizeDelta = new Vector2(236f, 64f);
+            btnRect.anchoredPosition = pos;
+            var btnImg = btnGo.AddComponent<UnityEngine.UI.Image>();
+            btnImg.color = bgColor;
+            btnImg.raycastTarget = true;
+            var button = btnGo.AddComponent<UnityEngine.UI.Button>();
+            button.targetGraphic = btnImg;
+
+            var labelGo = new GameObject("Label", typeof(RectTransform));
+            labelGo.transform.SetParent(btnGo.transform, false);
+            var labelRect = labelGo.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = Vector2.zero;
+            labelRect.offsetMax = Vector2.zero;
+            var labelText = labelGo.AddComponent<UnityEngine.UI.Text>();
+            labelText.font = font;
+            labelText.fontSize = 26;
+            labelText.alignment = TextAnchor.MiddleCenter;
+            labelText.color = Color.white;
+            labelText.text = label;
+            labelText.raycastTarget = false;
+            return button;
+        }
+
         // ==================== SCENE ASSEMBLY (M6 + I1 + URP Post-Processing + Ambient VFX) ====================
 
         private static void EnsureGoldPickupSortingLayer()
@@ -1772,6 +1981,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             soProj.ApplyModifiedPropertiesWithoutUndo();
 
             var runController = systemsGo.AddComponent<LevelRunController>();
+
+            var audioHubGo = new GameObject("CombatAudioHub");
+            audioHubGo.AddComponent<CombatAudioHub>();
 
             // 4. Main Camera + CameraFollow2D (renderPostProcessing = true, orthoSize=7, full-scale 340u x 86u bounds)
             var camGo = new GameObject("Main Camera");
@@ -2080,6 +2292,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             soEquipHud.FindProperty("_bow").objectReferenceValue = playerBow;
             soEquipHud.ApplyModifiedPropertiesWithoutUndo();
 
+            AddControlsHintBadge(playerHudGo);
+
             var resultPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ResultPanelPrefabPath);
             if (resultPrefab == null)
                 throw new InvalidOperationException("Missing ResultPanel prefab: " + ResultPanelPrefabPath);
@@ -2089,6 +2303,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var soPanel = new SerializedObject(resultPanel);
             soPanel.FindProperty("_run").objectReferenceValue = runController;
             soPanel.ApplyModifiedPropertiesWithoutUndo();
+
+            BuildPauseMenu(runController, playerCtrl, playerInput, hitStop);
 
             var eventSystemGo = new GameObject("EventSystem");
             eventSystemGo.AddComponent<EventSystem>();
@@ -2572,6 +2788,25 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 var feedbackAudio = feedbackRoot.AddComponent<AudioSource>();
                 feedbackAudio.playOnAwake = false;
                 feedbackAudio.spatialBlend = 0f;
+
+                var srcPickupFeedback = srcFeedbackRoot.GetComponent<ItemPickupFeedback>()
+                    ?? srcFeedbackRoot.GetComponentInChildren<ItemPickupFeedback>(true);
+                if (srcPickupFeedback == null)
+                    throw new InvalidOperationException("Main_Level.unity 'Combat and Pickup Feedback' missing ItemPickupFeedback.");
+
+                var soSrcPickup = new SerializedObject(srcPickupFeedback);
+                var pickupFeedback = feedbackRoot.AddComponent<ItemPickupFeedback>();
+                var soPickup = new SerializedObject(pickupFeedback);
+                soPickup.FindProperty("_player").objectReferenceValue = playerGo.transform;
+                soPickup.FindProperty("_wallet").objectReferenceValue = goldWallet;
+                soPickup.FindProperty("_effects").objectReferenceValue = vfxSpawner;
+                soPickup.FindProperty("_glint").objectReferenceValue = soSrcPickup.FindProperty("_glint").objectReferenceValue;
+                soPickup.FindProperty("_audio").objectReferenceValue = feedbackAudio;
+                soPickup.FindProperty("_goldSound").objectReferenceValue = soSrcPickup.FindProperty("_goldSound").objectReferenceValue;
+                soPickup.FindProperty("_weaponSound").objectReferenceValue = soSrcPickup.FindProperty("_weaponSound").objectReferenceValue;
+                var weaponsProp = soPickup.FindProperty("_weapons");
+                weaponsProp.arraySize = 0;
+                soPickup.ApplyModifiedPropertiesWithoutUndo();
 
                 int enemyBarVfxLayerId = SortingLayerSetup.GetSortingLayerId("VFX");
                 foreach (var enemy in allEnemies)

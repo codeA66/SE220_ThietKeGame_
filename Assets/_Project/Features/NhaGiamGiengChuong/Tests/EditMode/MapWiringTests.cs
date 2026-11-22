@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using DeadCells.Enemies;
+using DeadCells.HUD;
 using DeadCells.Player;
 using DeadCells.VFX;
 using NUnit.Framework;
@@ -15,6 +17,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
@@ -1948,6 +1951,84 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 Assert.IsNotNull(ps, $"[A18/{psName}/ParticleSystem]");
                 Assert.LessOrEqual(ps.shape.scale.x, 32f, $"[A18/{psName}/ShapeWidth]");
             }
+        }
+
+        [Test]
+        public void A19_Round8Phase4_AudioHubItemPickupAndPauseMenu()
+        {
+            EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
+
+            // 1. Task 4.1: CombatAudioHub + ItemPickupFeedback on "Combat and Pickup Feedback"
+            var audioHubs = Object.FindObjectsByType<CombatAudioHub>(FindObjectsInactive.Include);
+            Assert.AreEqual(1, audioHubs.Length, "[A19/CombatAudioHubCount]");
+
+            var pickupFeedbacks = Object.FindObjectsByType<ItemPickupFeedback>(FindObjectsInactive.Include);
+            Assert.AreEqual(1, pickupFeedbacks.Length, "[A19/ItemPickupFeedbackCount]");
+            var pickupFeedback = pickupFeedbacks[0];
+            Assert.AreEqual("Combat and Pickup Feedback", pickupFeedback.gameObject.name, "[A19/ItemPickupFeedbackName]");
+
+            var soFeedback = new SerializedObject(pickupFeedback);
+            Assert.IsNotNull(soFeedback.FindProperty("_player").objectReferenceValue, "[A19/ItemPickup.Player]");
+            Assert.IsNotNull(soFeedback.FindProperty("_wallet").objectReferenceValue, "[A19/ItemPickup.Wallet]");
+            Assert.IsNotNull(soFeedback.FindProperty("_effects").objectReferenceValue, "[A19/ItemPickup.Effects]");
+            Assert.IsNotNull(soFeedback.FindProperty("_glint").objectReferenceValue, "[A19/ItemPickup.Glint]");
+            Assert.IsNotNull(soFeedback.FindProperty("_audio").objectReferenceValue, "[A19/ItemPickup.Audio]");
+            Assert.IsNotNull(soFeedback.FindProperty("_goldSound").objectReferenceValue, "[A19/ItemPickup.GoldSound]");
+            Assert.IsNotNull(soFeedback.FindProperty("_weapons"), "[A19/ItemPickup.WeaponsArray]");
+
+            // 2. Task 4.2: PauseMenu uGUI Canvas + PauseMenuController + bottom-right ControlsHintBadge under PlayerHUD
+            var pauseMenus = Object.FindObjectsByType<PauseMenuController>(FindObjectsInactive.Include);
+            Assert.AreEqual(1, pauseMenus.Length, "[A19/PauseMenuCount]");
+            var pauseMenu = pauseMenus[0];
+            Assert.IsTrue(pauseMenu.gameObject.activeSelf, "[A19/PauseMenu.RootActive]");
+
+            var pauseCanvas = pauseMenu.GetComponent<Canvas>() ?? pauseMenu.GetComponentInParent<Canvas>(true);
+            Assert.IsNotNull(pauseCanvas, "[A19/PauseMenu.Canvas]");
+            Assert.AreEqual(90, pauseCanvas.sortingOrder, "[A19/PauseMenu.SortingOrder]");
+            var pauseScaler = pauseCanvas.GetComponent<CanvasScaler>();
+            Assert.IsNotNull(pauseScaler, "[A19/PauseMenu.CanvasScaler]");
+            Assert.AreEqual(CanvasScaler.ScaleMode.ScaleWithScreenSize, pauseScaler.uiScaleMode, "[A19/PauseMenu.ScaleMode]");
+            Assert.AreEqual(new Vector2(1920f, 1080f), pauseScaler.referenceResolution, "[A19/PauseMenu.RefRes]");
+
+            var soPause = new SerializedObject(pauseMenu);
+            Assert.IsNotNull(soPause.FindProperty("_run").objectReferenceValue, "[A19/PauseMenu.Run]");
+            Assert.IsNotNull(soPause.FindProperty("_player").objectReferenceValue, "[A19/PauseMenu.Player]");
+            Assert.IsNotNull(soPause.FindProperty("_playerInput").objectReferenceValue, "[A19/PauseMenu.PlayerInput]");
+            Assert.IsNotNull(soPause.FindProperty("_hitStop").objectReferenceValue, "[A19/PauseMenu.HitStop]");
+            var panelRoot = soPause.FindProperty("_panelRoot").objectReferenceValue as GameObject;
+            Assert.IsNotNull(panelRoot, "[A19/PauseMenu.PanelRoot]");
+            Assert.IsFalse(panelRoot.activeSelf, "[A19/PauseMenu.HiddenInitially]");
+
+            var resumeBtn = soPause.FindProperty("_resumeButton").objectReferenceValue as Button;
+            var restartBtn = soPause.FindProperty("_restartButton").objectReferenceValue as Button;
+            var quitBtn = soPause.FindProperty("_quitButton").objectReferenceValue as Button;
+            Assert.IsNotNull(resumeBtn, "[A19/PauseMenu.ResumeButton]");
+            Assert.IsNotNull(restartBtn, "[A19/PauseMenu.RestartButton]");
+            Assert.IsNotNull(quitBtn, "[A19/PauseMenu.QuitButton]");
+
+            var panelTexts = panelRoot.GetComponentsInChildren<Text>(true).Select(t => t.text).ToArray();
+            Assert.IsTrue(panelTexts.Any(t => t.Contains("TẠM DỪNG")), "[A19/PauseMenu.Title]");
+            Assert.IsTrue(panelTexts.Any(t => t.Contains("Tiếp tục")), "[A19/PauseMenu.ResumeLabel]");
+            Assert.IsTrue(panelTexts.Any(t => t.Contains("Chơi lại")), "[A19/PauseMenu.RestartLabel]");
+            Assert.IsTrue(panelTexts.Any(t => t.Contains("Thoát game")), "[A19/PauseMenu.QuitLabel]");
+            string joinedLegend = string.Join(" ", panelTexts);
+            StringAssert.Contains("A/D", joinedLegend, "[A19/PauseMenu.LegendMove]");
+            StringAssert.Contains("Space", joinedLegend, "[A19/PauseMenu.LegendJump]");
+            StringAssert.Contains("Shift", joinedLegend, "[A19/PauseMenu.LegendRoll]");
+            StringAssert.Contains("E", joinedLegend, "[A19/PauseMenu.LegendInteract]");
+
+            var playerHud = GameObject.Find("PlayerHUD");
+            Assert.IsNotNull(playerHud, "[A19/PlayerHUD]");
+            var hintTr = playerHud.transform.Find("ControlsHintBadge");
+            Assert.IsNotNull(hintTr, "[A19/ControlsHintBadge]");
+            var hintRect = hintTr.GetComponent<RectTransform>();
+            Assert.IsNotNull(hintRect, "[A19/ControlsHintBadge.Rect]");
+            Assert.AreEqual(new Vector2(1f, 0f), hintRect.anchorMin, "[A19/ControlsHintBadge.AnchorMin]");
+            Assert.AreEqual(new Vector2(1f, 0f), hintRect.anchorMax, "[A19/ControlsHintBadge.AnchorMax]");
+            var hintText = hintTr.GetComponentInChildren<Text>(true);
+            Assert.IsNotNull(hintText, "[A19/ControlsHintBadge.Text]");
+            StringAssert.Contains("[Esc] Tạm dừng", hintText.text, "[A19/ControlsHintBadge.Esc]");
+            StringAssert.Contains("[1/2] Vũ khí", hintText.text, "[A19/ControlsHintBadge.Weapons]");
         }
 
         private static Bounds GetVisualSpriteBounds(GameObject go)
