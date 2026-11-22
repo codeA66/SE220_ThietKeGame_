@@ -18,11 +18,11 @@ MonoBehaviour:
     ClipName: Player_AttackA
     Damage: 25
     HitFrame: 5
-    AnimSpeed: 1.5
+    AnimSpeed: 1.25
     RangeWidthCells: 2.7
     RangeHeightCells: 0
     RangeOffsetCells: {x: 0, y: 0}
-    Knockback: 0
+    Knockback: 3.5
     CanCrit: 0
     Charge: 0.1
     SwingVfx: {fileID: 11400000, guid: 626046ee4116d224190aac073e08c198, type: 2}
@@ -30,23 +30,23 @@ MonoBehaviour:
     ClipName: Player_AttackB
     Damage: 30
     HitFrame: 7
-    AnimSpeed: 2
+    AnimSpeed: 1.35
     RangeWidthCells: 2.7
     RangeHeightCells: 0
     RangeOffsetCells: {x: 0, y: 0}
-    Knockback: 0
+    Knockback: 4.5
     CanCrit: 0
     Charge: 0.1
     SwingVfx: {fileID: 11400000, guid: 087b08c68d8e67e4099dad24003f9982, type: 2}
   - AnimState: AttackC
     ClipName: Player_AttackC
-    Damage: 40
+    Damage: 45
     HitFrame: 9
-    AnimSpeed: 1
+    AnimSpeed: 0.95
     RangeWidthCells: 3.5
     RangeHeightCells: 2.7
     RangeOffsetCells: {x: 0, y: 0}
-    Knockback: 0
-    CanCrit: 0
+    Knockback: 8
+    CanCrit: 1
     Charge: 0.24
     SwingVfx: {fileID: 11400000, guid: 2dec88b9f0055d14792f8faaccf9b70f, type: 2}

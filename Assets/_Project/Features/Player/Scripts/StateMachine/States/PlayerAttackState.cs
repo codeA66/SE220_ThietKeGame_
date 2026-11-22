@@ -70,6 +70,8 @@ namespace DeadCells.Player.StateMachine.States
             if (!_hitDone && _timer >= _hitTime)
             {
                 _hitDone = true;
+                if (Ctx.IsGrounded)
+                    Ctx.SetHorizontalVelocity(Ctx.FacingDirection * 3.8f);
                 Ctx.Combat.PerformStrike(_strike, Ctx.FacingDirection);
             }
 

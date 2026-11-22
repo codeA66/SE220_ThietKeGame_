@@ -14,6 +14,7 @@ namespace DeadCells.Player
         private readonly HitQuery _query;
         private readonly PlayerRunStats _stats;
         private readonly Action<IDamageable, DamageInfo> _onTargetHit;
+        private bool _anyFatalInStrike;
 
         public PlayerCombat(Transform owner, BoxCollider2D collider, WeaponData weapon, LayerMask targets, PlayerRunStats stats)
         {
@@ -24,6 +25,8 @@ namespace DeadCells.Player
             _stats = stats;
             _onTargetHit = (target, hitInfo) =>
             {
+                if (target != null && !target.IsAlive)
+                    _anyFatalInStrike = true;
                 if (target is Health health)
                     TargetHit?.Invoke(health, hitInfo);
             };
@@ -31,6 +34,8 @@ namespace DeadCells.Player
 
         /// <summary>Arguments: number of targets hit, whether any hit was critical.</summary>
         public event Action<int, bool> StrikeHit;
+        /// <summary>Arguments: hits, isCritical, anyFatal, direction.</summary>
+        public event Action<int, bool, bool, int> ImpactDealt;
         /// <summary>A combo hit lands (hit or miss). Arguments: strike, feet position, facing.</summary>
         public event Action<WeaponData.Strike, Vector2, int> StrikePerformed;
         /// <summary>Raised for each Health target damaged by a melee strike.</summary>
@@ -57,10 +62,14 @@ namespace DeadCells.Player
                 bounds.min.y + height * 0.5f + strike.RangeOffset.y);
 
             int damage = _stats.ScaleDamage(strike.Damage, MeleeWeapon.ScalingStat);
-            var info = new DamageInfo(damage, facing, strike.Knockback, 0f, false, _owner.gameObject);
+            var info = new DamageInfo(damage, facing, strike.Knockback, strike.CanCrit ? 0.35f : 0f, strike.CanCrit, _owner.gameObject);
+            _anyFatalInStrike = false;
             int hits = _query.Strike(center, size, info, _onTargetHit);
             if (hits > 0)
+            {
                 StrikeHit?.Invoke(hits, info.IsCritical);
+                ImpactDealt?.Invoke(hits, info.IsCritical, _anyFatalInStrike, facing);
+            }
             return hits;
         }
 
@@ -76,9 +85,13 @@ namespace DeadCells.Player
                 ? _stats.ScaleDamage(damage, MeleeWeapon != null ? MeleeWeapon.ScalingStat : CombatStat.Brutality)
                 : damage;
             var info = new DamageInfo(scaledDamage, 0, 0f, stun, false, _owner.gameObject);
-            int hits = _query.Strike(center, area, info);
+            _anyFatalInStrike = false;
+            int hits = _query.Strike(center, area, info, _onTargetHit);
             if (hits > 0)
+            {
                 StrikeHit?.Invoke(hits, false);
+                ImpactDealt?.Invoke(hits, false, _anyFatalInStrike, 0);
+            }
             return hits;
         }
     }

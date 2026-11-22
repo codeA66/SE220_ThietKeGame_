@@ -50,6 +50,7 @@ namespace DeadCells.Player
         public Health Health => _health;
         public PlayerWeaponLoadout Weapons => _context?.Weapons;
         public PlayerRunStats RunStats { get; private set; }
+        public event System.Action<int> Staggered;
 
         private void Awake()
         {
@@ -208,6 +209,7 @@ namespace DeadCells.Player
                 return;
             _context.Combat.LastDamageTaken = new DamageInfo(0, direction, _config.HurtMinKnockback, duration, false, null);
             _machine.ForceChangeState(_machine.Hurt);
+            Staggered?.Invoke(direction);
         }
 
         private void OnDied(DamageInfo info)

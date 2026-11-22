@@ -37,6 +37,10 @@ namespace DeadCells.CameraSystem
         private float _shakeAmplitude;
         private float _shakeDuration;
         private float _shakeUntil = -1f;
+        private Vector2 _punchDir;
+        private float _punchAmplitude;
+        private float _punchDuration;
+        private float _punchUntil = -1f;
 
         private void Awake()
         {
@@ -78,7 +82,7 @@ namespace DeadCells.CameraSystem
                 desired = ClampToBounds(desired);
 
             _basePosition = Vector3.SmoothDamp(_basePosition, desired, ref _velocity, _smoothTime);
-            transform.position = _basePosition + ShakeOffset();
+            transform.position = _basePosition + ShakeOffset() + PunchOffset();
         }
 
         /// <summary>
@@ -100,8 +104,10 @@ namespace DeadCells.CameraSystem
             if (_useBounds && _camera != null)
                 desired = ClampToBounds(desired);
             _basePosition = desired;
-            transform.position = _basePosition + ShakeOffset();
+            transform.position = _basePosition + ShakeOffset() + PunchOffset();
         }
+
+        public Vector3 CurrentPunchOffset => PunchOffset();
 
         /// <summary>
         /// Random jitter that decays linearly over the duration. Uses unscaled time so it still plays
@@ -116,6 +122,35 @@ namespace DeadCells.CameraSystem
             _shakeAmplitude = amplitude;
             _shakeDuration = duration;
             _shakeUntil = Time.unscaledTime + duration;
+        }
+
+        /// <summary>
+        /// Directional kick decaying quadratically over unscaled time so impacts have directional punch.
+        /// </summary>
+        public void Punch(Vector2 direction, float amplitude, float duration)
+        {
+            if (duration <= 0f || amplitude <= 0f || direction.sqrMagnitude < 0.0001f)
+                return;
+            float remaining = _punchUntil - Time.unscaledTime;
+            float currentAmp = remaining > 0f && _punchDuration > 0f
+                ? _punchAmplitude * Mathf.Pow(Mathf.Clamp01(remaining / _punchDuration), 2f)
+                : 0f;
+            if (amplitude < currentAmp)
+                return;
+            _punchDir = direction.normalized;
+            _punchAmplitude = amplitude;
+            _punchDuration = duration;
+            _punchUntil = Time.unscaledTime + duration;
+        }
+
+        private Vector3 PunchOffset()
+        {
+            float remaining = _punchUntil - Time.unscaledTime;
+            if (remaining <= 0f || _punchDuration <= 0f)
+                return Vector3.zero;
+            float t = 1f - Mathf.Clamp01(remaining / _punchDuration);
+            float falloff = (1f - t) * (1f - t);
+            return new Vector3(_punchDir.x, _punchDir.y, 0f) * (_punchAmplitude * falloff);
         }
 
         private Vector3 ShakeOffset()
