@@ -1,3 +1,4 @@
+using DeadCells.Combat;
 using DeadCells.Core;
 using DeadCells.Player;
 using UnityEngine;
@@ -5,25 +6,40 @@ using UnityEngine.UI;
 
 namespace DeadCells.HUD
 {
-    // A corner map of the level around the player. A second orthographic camera follows the player and draws the
-    // level, without the UI, into a small render texture that sits in the top-right corner under the gold counter,
-    // with a marker for the player at its centre. Builds its own canvas and camera, so it needs no scene wiring.
+    // A corner map of the level around the player, drawn as a mosaic: one chunky block per world cell, not a shrunken
+    // copy of the screen. Each cell is checked against the level's colliders, so ground is a solid block with a
+    // bright rim where it meets open air, one-way platforms get their own colour, enemies are red blocks and the
+    // player a bright gold one. It scrolls a whole cell at a time. Sits in the top-right corner under the gold
+    // counter and builds itself, so it needs no scene wiring.
     [DisallowMultipleComponent]
     public sealed class MinimapHud : MonoBehaviour
     {
-        private const int TextureWidth = 320;
-        private const int TextureHeight = 180;
+        private static readonly Color32 Empty = new Color32(14, 11, 16, 255);
+        private static readonly Color32 EmptyAlt = new Color32(18, 14, 20, 255);
+        private static readonly Color32 Ground = new Color32(86, 70, 52, 255);
+        private static readonly Color32 GroundRim = new Color32(176, 138, 64, 255);
+        private static readonly Color32 OneWay = new Color32(132, 122, 168, 255);
+        private static readonly Color32 EnemyColor = new Color32(206, 44, 52, 255);
+        private static readonly Color32 PlayerColor = new Color32(255, 226, 120, 255);
 
-        [SerializeField, Min(2f)] private float _viewHeight = 14f;
-        [SerializeField] private Vector2 _panelSize = new Vector2(320f, 180f);
-        [Tooltip("Distance from the top-right corner, in reference pixels. The gold counter sits at the top.")]
+        [Tooltip("How many cells the map shows, across and down. One cell is one world unit.")]
+        [SerializeField] private Vector2Int _cells = new Vector2Int(36, 20);
+        [SerializeField, Min(0.02f)] private float _refreshInterval = 0.1f;
+        [SerializeField] private Vector2 _panelSize = new Vector2(288f, 160f);
+        [Tooltip("Distance from the top-right corner, in reference pixels, when there is no gold counter to hang under.")]
         [SerializeField] private Vector2 _cornerOffset = new Vector2(-32f, -84f);
-        [SerializeField] private Color _backdrop = new Color(0.05f, 0.04f, 0.06f, 1f);
         [SerializeField] private Color _border = new Color(0.69f, 0.54f, 0.25f, 1f);
 
         private Transform _target;
-        private Camera _camera;
-        private RenderTexture _texture;
+        private PlayerController _player;
+        private Texture2D _texture;
+        private Color32[] _pixels;
+        private bool[] _solid;
+        private bool[] _oneWay;
+        private Collider2D[] _hits;
+        private Health[] _healths = new Health[0];
+        private float _nextRefresh;
+        private float _nextHealthScan;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateInScene()
@@ -35,59 +51,110 @@ namespace DeadCells.HUD
 
         private void Start()
         {
-            var player = FindFirstObjectByType<PlayerController>();
-            if (player == null)
+            _player = FindFirstObjectByType<PlayerController>();
+            if (_player == null)
             {
                 GameDebug.LogWarning("No player in the scene, so the minimap has nothing to follow.", LogTopic.UI);
                 enabled = false;
                 return;
             }
 
-            _target = player.transform;
-            BuildCamera();
+            _target = _player.transform;
+            _texture = new Texture2D(_cells.x, _cells.y, TextureFormat.RGBA32, false)
+            {
+                name = "MinimapMosaic",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+            };
+            _pixels = new Color32[_cells.x * _cells.y];
+            _solid = new bool[_pixels.Length];
+            _oneWay = new bool[_pixels.Length];
+            _hits = new Collider2D[4];
             BuildPanel();
+            Refresh();
         }
 
-        private void LateUpdate()
+        private void Update()
         {
-            if (_target == null || _camera == null)
+            if (_target == null || Time.unscaledTime < _nextRefresh)
                 return;
-            Vector3 position = _target.position;
-            _camera.transform.position = new Vector3(position.x, position.y, _camera.transform.position.z);
+            _nextRefresh = Time.unscaledTime + _refreshInterval;
+            Refresh();
         }
 
         private void OnDestroy()
         {
             if (_texture != null)
-            {
-                _texture.Release();
                 Destroy(_texture);
-            }
         }
 
-        private void BuildCamera()
+        // Redraws the whole mosaic around the player's current cell.
+        private void Refresh()
         {
-            _texture = new RenderTexture(TextureWidth, TextureHeight, 0, RenderTextureFormat.ARGB32)
-            {
-                name = "MinimapTexture",
-                filterMode = FilterMode.Point,
-                antiAliasing = 1,
-            };
+            if (_player.Context == null)
+                return;
+            LayerMask ground = _player.Context.GroundMask;
+            Vector2 position = _target.position;
+            // Whole-cell origin so the map steps from cell to cell instead of shimmering.
+            int originX = Mathf.FloorToInt(position.x) - _cells.x / 2;
+            int originY = Mathf.FloorToInt(position.y) - _cells.y / 2;
 
-            var go = new GameObject("MinimapCamera");
-            go.transform.SetParent(transform, false);
-            go.transform.position = new Vector3(_target.position.x, _target.position.y, -10f);
-            _camera = go.AddComponent<Camera>();
-            _camera.orthographic = true;
-            _camera.orthographicSize = _viewHeight * 0.5f;
-            _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = _backdrop;
-            _camera.targetTexture = _texture;
-            // The level and the characters, not the UI.
-            int uiLayer = LayerMask.NameToLayer("UI");
-            _camera.cullingMask = uiLayer >= 0 ? ~(1 << uiLayer) : ~0;
-            // Draw before the main camera so the main view is never affected.
-            _camera.depth = -50f;
+            // First pass: which cells hold ground, and whether each is a one-way platform.
+            var filter = new ContactFilter2D { useLayerMask = true, layerMask = ground, useTriggers = false };
+            for (int y = 0; y < _cells.y; y++)
+            {
+                for (int x = 0; x < _cells.x; x++)
+                {
+                    var centre = new Vector2(originX + x + 0.5f, originY + y + 0.5f);
+                    int count = Physics2D.OverlapPoint(centre, filter, _hits);
+                    int index = y * _cells.x + x;
+                    _solid[index] = count > 0;
+                    _oneWay[index] = count > 0 && _hits[0].usedByEffector;
+                }
+            }
+
+            // Second pass: colour them, with a bright rim on ground that touches open air above or beside it.
+            for (int y = 0; y < _cells.y; y++)
+            {
+                for (int x = 0; x < _cells.x; x++)
+                {
+                    int index = y * _cells.x + x;
+                    if (!_solid[index])
+                        _pixels[index] = (x + y) % 2 == 0 ? Empty : EmptyAlt;
+                    else if (_oneWay[index])
+                        _pixels[index] = OneWay;
+                    else
+                        _pixels[index] = !CellSolid(x, y + 1) || !CellSolid(x - 1, y) || !CellSolid(x + 1, y) ? GroundRim : Ground;
+                }
+            }
+
+            // Enemies and other living things as red blocks, the player as a gold one.
+            if (Time.unscaledTime >= _nextHealthScan)
+            {
+                _nextHealthScan = Time.unscaledTime + 0.5f;
+                _healths = FindObjectsByType<Health>(FindObjectsSortMode.None);
+            }
+            foreach (Health health in _healths)
+            {
+                if (health == null || !health.IsAlive || health == _player.Health)
+                    continue;
+                Plot(health.transform.position, originX, originY, EnemyColor);
+            }
+            Plot(position + Vector2.up * 0.5f, originX, originY, PlayerColor);
+
+            _texture.SetPixels32(_pixels);
+            _texture.Apply(false);
+        }
+
+        private bool CellSolid(int x, int y) => x >= 0 && y >= 0 && x < _cells.x && y < _cells.y && _solid[y * _cells.x + x];
+
+        private void Plot(Vector2 world, int originX, int originY, Color32 color)
+        {
+            int x = Mathf.FloorToInt(world.x) - originX;
+            int y = Mathf.FloorToInt(world.y) - originY;
+            if (x < 0 || y < 0 || x >= _cells.x || y >= _cells.y)
+                return;
+            _pixels[y * _cells.x + x] = color;
         }
 
         private void BuildPanel()
@@ -114,10 +181,9 @@ namespace DeadCells.HUD
                 scaler.matchWidthOrHeight = 0.5f;
                 parent = canvasObject.transform;
             }
-            Transform panelParent = parent;
 
             // The border is a slightly larger solid panel behind the map.
-            RectTransform frame = NewRect("Frame", panelParent, _panelSize + new Vector2(8f, 8f));
+            RectTransform frame = NewRect("Frame", parent, _panelSize + new Vector2(8f, 8f));
             frame.gameObject.AddComponent<Image>().color = _border;
             Anchor(frame);
             if (underGold)
@@ -128,12 +194,6 @@ namespace DeadCells.HUD
             image.texture = _texture;
             map.anchorMin = map.anchorMax = map.pivot = new Vector2(0.5f, 0.5f);
             map.anchoredPosition = Vector2.zero;
-
-            // The player is always at the centre of the map.
-            RectTransform marker = NewRect("PlayerMarker", map, new Vector2(10f, 10f));
-            marker.gameObject.AddComponent<Image>().color = new Color(0.93f, 0.75f, 0.34f, 1f);
-            marker.anchorMin = marker.anchorMax = marker.pivot = new Vector2(0.5f, 0.5f);
-            marker.anchoredPosition = Vector2.zero;
         }
 
         // Where the top-right anchored frame must sit so its top edge is a little below the bottom of the counter and
