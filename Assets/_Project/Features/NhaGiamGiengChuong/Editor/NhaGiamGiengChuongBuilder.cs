@@ -11,6 +11,7 @@ using DeadCells.Player;
 using DeadCells.VFX;
 using DeadCells.Tools.Editor;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -37,7 +38,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
         public const string ScenePath = "Assets/_Project/Scenes/NhaGiamGiengChuong.unity";
         public const string ResultPanelPrefabPath = UiFolder + "/ResultPanel.prefab";
 
-        private const string SandboxScenePath = "Assets/_Project/Scenes/Sandbox_Player.unity";
         private const string MainLevelScenePath = "Assets/_Project/Scenes/Main_Level.unity";
         private const string PlayerPrefabPath = "Assets/_Project/Features/Player/Prefabs/Player.prefab";
         private const string PlayerHudPrefabPath = "Assets/_Project/Features/HUD/Prefabs/PlayerHUD.prefab";
@@ -189,6 +189,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             EnvironmentMaterialBuilder.EnsureAll();
             CharacterLitShaderMigrator.ApplyLitHybridToCharacterMaterials();
             MainLevelSceneRemediator.EnsureSharedPostProcessProfile();
+            EnsurePlayerWallClingAnimation();
+            EnsurePlayerPrefabVfxWiring();
 
             var spriteLit = AssetDatabase.LoadAssetAtPath<Material>(SpriteLitMatPath);
             if (spriteLit == null)
@@ -216,13 +218,10 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // 2. Build ResultPanel UI Prefab
             BuildResultPanelPrefab();
 
-            // 3. Extract VfxSpawner prewarm list from Sandbox_Player before creating target scene
-            VfxDefinition[] sandboxPrewarm = ExtractSandboxVfxPrewarm();
+            // 3. Build and save target scene
+            BuildScene(spriteLit, particlesUnlit, palette);
 
-            // 4. Build and save target scene
-            BuildScene(spriteLit, particlesUnlit, palette, sandboxPrewarm);
-
-            // 5. Register scene in EditorBuildSettings (keeping Main_Level at index 0)
+            // 4. Register scene in EditorBuildSettings (keeping Main_Level at index 0)
             EnsureSceneInBuildSettings(ScenePath);
 
             AssetDatabase.SaveAssets();
@@ -1643,7 +1642,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             }
         }
 
-        private static void BuildScene(Material spriteLit, Material particlesUnlit, PrisonPalette pal, VfxDefinition[] sandboxVfxPrewarm)
+        private static void BuildScene(Material spriteLit, Material particlesUnlit, PrisonPalette pal)
         {
             EnsureGoldPickupSortingLayer();
 
@@ -1684,13 +1683,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             BuildAmbientVfx(particlesUnlit);
 
             // 3. Systems (VfxSpawner, HitStop, ProjectileSpawner, LevelRunController)
+            var allVfxPrewarm = LoadAllVfxDefinitions();
             var vfxGo = new GameObject("VfxSpawner");
             var vfxSpawner = vfxGo.AddComponent<VfxSpawner>();
             var soVfx = new SerializedObject(vfxSpawner);
             var prewarmProp = soVfx.FindProperty("_prewarm");
-            prewarmProp.arraySize = sandboxVfxPrewarm.Length;
-            for (int i = 0; i < sandboxVfxPrewarm.Length; i++)
-                prewarmProp.GetArrayElementAtIndex(i).objectReferenceValue = sandboxVfxPrewarm[i];
+            prewarmProp.arraySize = allVfxPrewarm.Length;
+            for (int i = 0; i < allVfxPrewarm.Length; i++)
+                prewarmProp.GetArrayElementAtIndex(i).objectReferenceValue = allVfxPrewarm[i];
             soVfx.ApplyModifiedPropertiesWithoutUndo();
 
             var systemsGo = new GameObject("Systems");
@@ -1771,10 +1771,12 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 soHead.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            // Wire CameraFollow2D to Player with full-scale bounds Rect(-104, -20, 340, 86)
+            // Wire CameraFollow2D to Player with Dead Cells tight framing and full-scale bounds Rect(-104, -20, 340, 86)
             var soCam = new SerializedObject(camFollow);
             soCam.FindProperty("_target").objectReferenceValue = playerGo.transform;
             soCam.FindProperty("_offset").vector2Value = new Vector2(0f, 1.5f);
+            soCam.FindProperty("_deadzone").vector2Value = new Vector2(0.55f, 0.35f);
+            soCam.FindProperty("_smoothTime").floatValue = 0.09f;
             soCam.FindProperty("_useBounds").boolValue = true;
             soCam.FindProperty("_bounds").rectValue = new Rect(-104f, -20f, 340f, 86f);
             soCam.ApplyModifiedPropertiesWithoutUndo();
@@ -2033,9 +2035,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             uiModule.actionsAsset = inputActions;
             BindUiInputModuleActions(uiModule, inputActions);
 
-            // 9b. Clone Scrolls of Power + Power Scroll HUD + Scroll cinematic + Gold HUD read-only from Main_Level.unity
+            // 9b. Clone Scrolls of Power + Power Scroll HUD + Scroll cinematic + Gold HUD + EnemyImpactFeedback read-only from Main_Level.unity
             //     and wire Run Gold (GoldWallet + EnemyGoldDrops with all 30 enemies) BEFORE atmosphere/lighting pass.
-            CloneMainLevelScrollsAndGoldEconomy(scene, pal, playerGo, playerCtrl, playerHealth, hitStop, playerHudGo, allEnemies);
+            CloneMainLevelScrollsAndGoldEconomy(scene, pal, playerGo, playerCtrl, playerHealth, hitStop, playerHudGo, allEnemies, vfxSpawner);
 
             var scrollInteractionRef = UnityEngine.Object.FindAnyObjectByType<PowerScrollInteraction>();
             if (scrollInteractionRef != null)
@@ -2325,7 +2327,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             Health playerHealth,
             HitStop hitStop,
             GameObject playerHudGo,
-            EnemyController[] allEnemies)
+            EnemyController[] allEnemies,
+            VfxSpawner vfxSpawner)
         {
             var mainLevelScene = EditorSceneManager.OpenScene(MainLevelScenePath, OpenSceneMode.Additive);
             if (!mainLevelScene.IsValid() || !mainLevelScene.isLoaded)
@@ -2465,6 +2468,60 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 var soGoldHud = new SerializedObject(goldHud);
                 soGoldHud.FindProperty("_wallet").objectReferenceValue = goldWallet;
                 soGoldHud.ApplyModifiedPropertiesWithoutUndo();
+
+                // 5. Clone "Enemy_Shield hit feedback" from Main_Level's "Combat and Pickup Feedback" onto all 30 enemies
+                var srcFeedbackRoot = FindInSceneByName(mainLevelScene, "Combat and Pickup Feedback");
+                if (srcFeedbackRoot == null)
+                    throw new InvalidOperationException("Main_Level.unity missing 'Combat and Pickup Feedback'.");
+                var srcEnemyFeedback = srcFeedbackRoot.GetComponentsInChildren<EnemyImpactFeedback>(true)
+                    .FirstOrDefault(f => f != null && f.gameObject.name == "Enemy_Shield hit feedback")
+                    ?? srcFeedbackRoot.GetComponentInChildren<EnemyImpactFeedback>(true);
+                if (srcEnemyFeedback == null)
+                    throw new InvalidOperationException("Main_Level.unity 'Combat and Pickup Feedback' missing EnemyImpactFeedback template.");
+
+                var feedbackRoot = new GameObject("Combat and Pickup Feedback");
+                SceneManager.MoveGameObjectToScene(feedbackRoot, targetScene);
+                var feedbackAudio = feedbackRoot.AddComponent<AudioSource>();
+                feedbackAudio.playOnAwake = false;
+                feedbackAudio.spatialBlend = 0f;
+
+                int enemyBarVfxLayerId = SortingLayerSetup.GetSortingLayerId("VFX");
+                foreach (var enemy in allEnemies)
+                {
+                    if (enemy == null)
+                        continue;
+
+                    var fbClone = UnityEngine.Object.Instantiate(srcEnemyFeedback.gameObject);
+                    fbClone.name = $"{enemy.name} hit feedback";
+                    fbClone.transform.SetParent(null, true);
+                    SceneManager.MoveGameObjectToScene(fbClone, targetScene);
+                    fbClone.transform.SetParent(feedbackRoot.transform, false);
+
+                    var fbComp = fbClone.GetComponent<EnemyImpactFeedback>();
+                    var soFb = new SerializedObject(fbComp);
+                    soFb.FindProperty("_target").objectReferenceValue = enemy.GetComponent<Health>();
+                    soFb.FindProperty("_body").objectReferenceValue = enemy.GetComponent<BoxCollider2D>();
+                    soFb.FindProperty("_vfx").objectReferenceValue = vfxSpawner;
+                    soFb.FindProperty("_audio").objectReferenceValue = feedbackAudio;
+                    soFb.ApplyModifiedPropertiesWithoutUndo();
+
+                    var barGo = soFb.FindProperty("_bar").objectReferenceValue as GameObject;
+                    if (barGo != null)
+                    {
+                        foreach (var sr in barGo.GetComponentsInChildren<SpriteRenderer>(true))
+                        {
+                            if (sr == null)
+                                continue;
+                            sr.sortingLayerID = enemyBarVfxLayerId;
+                            if (sr.gameObject.name == "Outline")
+                                sr.sortingOrder = 8;
+                            else if (sr.gameObject.name == "Track")
+                                sr.sortingOrder = 9;
+                            else if (sr.gameObject.name == "Remaining health")
+                                sr.sortingOrder = 10;
+                        }
+                    }
+                }
             }
             finally
             {
@@ -2813,22 +2870,188 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static VfxDefinition[] ExtractSandboxVfxPrewarm()
+        private static void EnsurePlayerWallClingAnimation()
         {
-            EditorSceneManager.OpenScene(SandboxScenePath, OpenSceneMode.Single);
-            var spawner = UnityEngine.Object.FindAnyObjectByType<VfxSpawner>();
-            if (spawner == null)
-                return Array.Empty<VfxDefinition>();
+            const string animPath = "Assets/_Project/Features/Player/Animations/Player_WallCling.anim";
+            const string controllerPath = "Assets/_Project/Features/Player/Animations/Player.controller";
 
-            var so = new SerializedObject(spawner);
-            var prop = so.FindProperty("_prewarm");
-            var list = new List<VfxDefinition>();
-            for (int i = 0; i < prop.arraySize; i++)
+            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(animPath);
+            if (clip == null)
             {
-                if (prop.GetArrayElementAtIndex(i).objectReferenceValue is VfxDefinition def)
-                    list.Add(def);
+                var keyframes = new ObjectReferenceKeyframe[12];
+                for (int i = 0; i < 12; i++)
+                {
+                    string spritePath = $"Assets/_Project/Art/Characters/Player/Sprites/wallClimbA_{i:00}.png";
+                    var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+                    if (sprite == null)
+                        throw new InvalidOperationException("Missing wall-cling sprite: " + spritePath);
+
+                    keyframes[i] = new ObjectReferenceKeyframe
+                    {
+                        time = i / 12f,
+                        value = sprite
+                    };
+                }
+
+                clip = new AnimationClip { frameRate = 12f };
+                var binding = EditorCurveBinding.PPtrCurve(string.Empty, typeof(SpriteRenderer), "m_Sprite");
+                AnimationUtility.SetObjectReferenceCurve(clip, binding, keyframes);
+                var settings = AnimationUtility.GetAnimationClipSettings(clip);
+                settings.loopTime = true;
+                AnimationUtility.SetAnimationClipSettings(clip, settings);
+
+                AssetDatabase.CreateAsset(clip, animPath);
+                AssetDatabase.SaveAssets();
             }
-            return list.ToArray();
+
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+            if (controller == null)
+                throw new InvalidOperationException("Missing Player AnimatorController: " + controllerPath);
+
+            bool dirty = false;
+            if (!controller.parameters.Any(p => p.name == "WallClinging"))
+            {
+                controller.AddParameter("WallClinging", AnimatorControllerParameterType.Bool);
+                dirty = true;
+            }
+
+            var sm = controller.layers[0].stateMachine;
+            var wallClingState = sm.states.Select(s => s.state).FirstOrDefault(s => s.name == "WallCling");
+            if (wallClingState == null)
+            {
+                wallClingState = sm.AddState("WallCling", new Vector3(380f, 520f, 0f));
+                wallClingState.writeDefaultValues = true;
+                dirty = true;
+            }
+            if (wallClingState.motion != clip)
+            {
+                wallClingState.motion = clip;
+                dirty = true;
+            }
+
+            var anyToWallCling = sm.anyStateTransitions.FirstOrDefault(t => t.destinationState == wallClingState);
+            if (anyToWallCling == null)
+            {
+                anyToWallCling = sm.AddAnyStateTransition(wallClingState);
+                anyToWallCling.duration = 0f;
+                anyToWallCling.hasExitTime = false;
+                anyToWallCling.canTransitionToSelf = false;
+                anyToWallCling.AddCondition(AnimatorConditionMode.If, 0f, "WallClinging");
+                anyToWallCling.AddCondition(AnimatorConditionMode.IfNot, 0f, "Dead");
+                anyToWallCling.AddCondition(AnimatorConditionMode.IfNot, 0f, "Hurt");
+                dirty = true;
+            }
+
+            var fallState = sm.states.Select(s => s.state).FirstOrDefault(s => s.name == "Fall");
+            if (fallState == null)
+                throw new InvalidOperationException("Player.controller missing 'Fall' state.");
+
+            var wallClingToFall = wallClingState.transitions.FirstOrDefault(t => t.destinationState == fallState);
+            if (wallClingToFall == null)
+            {
+                wallClingToFall = wallClingState.AddTransition(fallState);
+                wallClingToFall.duration = 0f;
+                wallClingToFall.hasExitTime = false;
+                wallClingToFall.AddCondition(AnimatorConditionMode.IfNot, 0f, "WallClinging");
+                dirty = true;
+            }
+
+            var jumpState = sm.states.Select(s => s.state).FirstOrDefault(s => s.name == "Jump");
+            foreach (var tr in sm.anyStateTransitions)
+            {
+                if (tr.destinationState != fallState && tr.destinationState != jumpState)
+                    continue;
+                if (!tr.conditions.Any(c => c.parameter == "WallClinging"))
+                {
+                    tr.AddCondition(AnimatorConditionMode.IfNot, 0f, "WallClinging");
+                    dirty = true;
+                }
+            }
+
+            if (dirty)
+                EditorUtility.SetDirty(controller);
+        }
+
+        private static void EnsurePlayerPrefabVfxWiring()
+        {
+            var headSlimeVfx = AssetDatabase.LoadAssetAtPath<VfxDefinition>("Assets/_Project/Features/VFX/Data/Vfx_HeadSlime.asset");
+            if (headSlimeVfx == null)
+                throw new InvalidOperationException("Missing Vfx_HeadSlime.asset.");
+
+            var contactGlintVfx = AssetDatabase.LoadAssetAtPath<VfxDefinition>("Assets/_Project/Features/VFX/Data/Vfx_ContactGlint.asset");
+            if (contactGlintVfx == null)
+                throw new InvalidOperationException("Missing Vfx_ContactGlint.asset.");
+
+            var prefabRoot = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
+            if (prefabRoot == null)
+                throw new InvalidOperationException("Missing Player prefab: " + PlayerPrefabPath);
+
+            try
+            {
+                bool changed = false;
+
+                var spawnHead = prefabRoot.GetComponentInChildren<PlayerSpawnHead>(true);
+                if (spawnHead != null)
+                {
+                    var soHead = new SerializedObject(spawnHead);
+                    var slimeProp = soHead.FindProperty("_slimeVfx");
+                    if (slimeProp != null && slimeProp.objectReferenceValue == null)
+                    {
+                        slimeProp.objectReferenceValue = headSlimeVfx;
+                        soHead.ApplyModifiedPropertiesWithoutUndo();
+                        changed = true;
+                    }
+                }
+
+                var playerVfx = prefabRoot.GetComponentInChildren<PlayerVfx>(true);
+                if (playerVfx != null)
+                {
+                    var soPvfx = new SerializedObject(playerVfx);
+                    var dodgeProp = soPvfx.FindProperty("_dodgeGlintVfx");
+                    if (dodgeProp == null)
+                        throw new InvalidOperationException("PlayerVfx missing serialized field '_dodgeGlintVfx'.");
+                    if (dodgeProp.objectReferenceValue == null)
+                    {
+                        dodgeProp.objectReferenceValue = contactGlintVfx;
+                        soPvfx.ApplyModifiedPropertiesWithoutUndo();
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                    PrefabUtility.SaveAsPrefabAsset(prefabRoot, PlayerPrefabPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(prefabRoot);
+            }
+        }
+
+        private static VfxDefinition[] LoadAllVfxDefinitions()
+        {
+            string[] paths =
+            {
+                "Assets/_Project/Features/VFX/Data/Vfx_AirJump.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_CollectedGlint.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_ContactBlood.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_ContactGlint.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_Explosion.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_FatalBlood.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_HeadSlime.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_Land.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_SwingStartSwordA.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_SwingStartSwordB.asset",
+                "Assets/_Project/Features/VFX/Data/Vfx_SwingStartSwordC.asset",
+            };
+
+            var defs = new VfxDefinition[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+            {
+                defs[i] = AssetDatabase.LoadAssetAtPath<VfxDefinition>(paths[i]);
+                if (defs[i] == null)
+                    throw new InvalidOperationException("Missing VfxDefinition: " + paths[i]);
+            }
+            return defs;
         }
 
         private static void EnsureSceneInBuildSettings(string scenePath)

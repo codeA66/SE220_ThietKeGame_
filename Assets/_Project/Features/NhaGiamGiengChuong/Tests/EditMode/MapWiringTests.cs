@@ -1681,6 +1681,71 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             }
         }
 
+        [Test]
+        public void A17_Round8Phase2_EnemyImpactFeedbackPrewarmAndPlayerVfxWiring()
+        {
+            EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
+
+            // 1. 30 EnemyImpactFeedback instances wired to all 30 enemies with VFX-sorted health bars
+            var feedbacks = Object.FindObjectsByType<DeadCells.HUD.EnemyImpactFeedback>(FindObjectsInactive.Include);
+            Assert.AreEqual(30, feedbacks.Length, "[A17/FeedbackCount] Expected 30 EnemyImpactFeedback instances.");
+
+            string[] requiredProps =
+            {
+                "_target", "_body", "_vfx",
+                "_impactBlood", "_defeatBlood", "_impactFlash",
+                "_audio", "_hitSound", "_fatalSound",
+                "_numberPrefab", "_bar", "_fill",
+            };
+            var coveredTargets = new HashSet<Object>();
+            foreach (var fb in feedbacks)
+            {
+                var soFb = new SerializedObject(fb);
+                foreach (var propName in requiredProps)
+                {
+                    var prop = soFb.FindProperty(propName);
+                    Assert.IsNotNull(prop?.objectReferenceValue, $"[A17/Feedback/{fb.name}] Missing '{propName}'.");
+                }
+                coveredTargets.Add(soFb.FindProperty("_target").objectReferenceValue);
+
+                var barGo = soFb.FindProperty("_bar").objectReferenceValue as GameObject;
+                Assert.IsNotNull(barGo, $"[A17/Feedback/{fb.name}] _bar must be a GameObject.");
+                var barRenderers = barGo.GetComponentsInChildren<SpriteRenderer>(true);
+                Assert.IsNotEmpty(barRenderers, $"[A17/Feedback/{fb.name}] _bar missing SpriteRenderers.");
+                foreach (var sr in barRenderers)
+                {
+                    Assert.AreEqual("VFX", sr.sortingLayerName,
+                        $"[A17/FeedbackBarSorting/{fb.name}/{sr.name}] Enemy health bar must render on VFX sorting layer.");
+                }
+            }
+            Assert.AreEqual(30, coveredTargets.Count, "[A17/DistinctTargets] Expected 30 distinct EnemyImpactFeedback targets.");
+
+            // 2. VfxSpawner._prewarm contains 11 non-null VfxDefinition assets
+            var vfxSpawner = Object.FindAnyObjectByType<VfxSpawner>();
+            Assert.IsNotNull(vfxSpawner, "[A17/VfxSpawner]");
+            var prewarmProp = new SerializedObject(vfxSpawner).FindProperty("_prewarm");
+            Assert.IsNotNull(prewarmProp);
+            Assert.AreEqual(11, prewarmProp.arraySize, "[A17/PrewarmCount] Expected 11 prewarmed VfxDefinitions.");
+            for (int i = 0; i < prewarmProp.arraySize; i++)
+            {
+                Assert.IsNotNull(prewarmProp.GetArrayElementAtIndex(i).objectReferenceValue,
+                    $"[A17/PrewarmNull/{i}] Null VfxDefinition in VfxSpawner._prewarm.");
+            }
+
+            // 3. PlayerSpawnHead._slimeVfx and PlayerVfx._dodgeGlintVfx are wired on Player
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            Assert.IsNotNull(player, "[A17/Player]");
+            var spawnHead = player.GetComponentInChildren<PlayerSpawnHead>(true);
+            Assert.IsNotNull(spawnHead, "[A17/PlayerSpawnHead]");
+            Assert.IsNotNull(new SerializedObject(spawnHead).FindProperty("_slimeVfx")?.objectReferenceValue,
+                "[A17/SpawnHeadSlimeVfx] PlayerSpawnHead._slimeVfx must be wired.");
+
+            var playerVfx = player.GetComponentInChildren<PlayerVfx>(true);
+            Assert.IsNotNull(playerVfx, "[A17/PlayerVfx]");
+            Assert.IsNotNull(new SerializedObject(playerVfx).FindProperty("_dodgeGlintVfx")?.objectReferenceValue,
+                "[A17/DodgeGlintVfx] PlayerVfx._dodgeGlintVfx must be wired.");
+        }
+
         private static Bounds GetVisualSpriteBounds(GameObject go)
         {
             var renderers = go.GetComponentsInChildren<SpriteRenderer>(true)
