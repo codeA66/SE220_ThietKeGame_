@@ -42,12 +42,20 @@ MonoBehaviour:
   _ledgeChestHeight: 0.9
   _ledgeHeadHeight: 1.7
   _ledgeCheckDistance: 0.25
-  _oneWayLedgeGrabTolerance: 0.15
+  _oneWayLedgeGrabTolerance: 0.42
   _downInputThreshold: 0.5
   _dropThroughDuration: 0.25
   _stompSpeed: 25
   _stompLandDuration: 0.15
   _climbSpeed: 4
+  _climbHandOffsetX: 0.24
+  _wallClingEnabled: 1
+  _wallSlideMaxSpeed: 2.8
+  _wallJumpVelocity: {x: 9.5, y: 13.2}
+  _maxWallJumpsPerAir: 3
+  _wallCheckDistance: 0.14
+  _wallJumpHorizontalLockTime: 0.12
+  _wallRegrabCooldown: 0.14
   _perfectDodgeDuration: 0.25
   _crouchShrinkCollider: 1
   _crouchColliderHeight: 0.9

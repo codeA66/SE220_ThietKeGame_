@@ -25,6 +25,7 @@ namespace DeadCells.Player.StateMachine
             AirJump = new PlayerAirJumpState(context, this);
             Stomp = new PlayerStompState(context, this);
             Climb = new PlayerClimbState(context, this);
+            WallCling = new PlayerWallClingState(context, this);
             Crouch = new PlayerCrouchState(context, this);
             Hurt = new PlayerHurtState(context, this);
             Dead = new PlayerDeadState(context, this);
@@ -45,6 +46,7 @@ namespace DeadCells.Player.StateMachine
         public IPlayerState AirJump { get; }
         public IPlayerState Stomp { get; }
         public IPlayerState Climb { get; }
+        public IPlayerState WallCling { get; }
         public IPlayerState Crouch { get; }
         public IPlayerState Hurt { get; }
         public IPlayerState Dead { get; }

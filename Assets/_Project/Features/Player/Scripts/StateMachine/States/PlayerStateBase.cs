@@ -43,7 +43,7 @@ namespace DeadCells.Player.StateMachine.States
         }
 
         /// <summary>
-        /// Stomp, attack, roll, ledge climb or air jump while airborne. Returns true if a transition started.
+        /// Stomp, attack, roll, climb, ledge climb, wall cling or air jump while airborne. Returns true if a transition started.
         /// </summary>
         protected bool TryAirActions()
         {
@@ -53,8 +53,10 @@ namespace DeadCells.Player.StateMachine.States
             if (Ctx.Config.AllowAirAttack && TryAttack())
                 return true;
 
-            return TryRoll() || TryClimb() || TryLedgeClimb() || TryAirJump();
+            return TryRoll() || TryClimb() || TryLedgeClimb() || TryWallCling() || TryAirJump();
         }
+
+        protected bool TryWallCling() => Ctx.TryFindWall(out _) && Machine.ChangeState(Machine.WallCling);
 
         /// <summary>
         /// Grab a chain or vine the player overlaps while holding up. Returns true if a transition started.
@@ -111,6 +113,8 @@ namespace DeadCells.Player.StateMachine.States
 
         protected void ApplyAirControl()
         {
+            if (Ctx.IsWallJumpHorizontalLocked)
+                return;
             Ctx.FaceInput();
             Ctx.SetHorizontalVelocity(Ctx.Input.MoveX * Ctx.Config.AirSpeed);
         }

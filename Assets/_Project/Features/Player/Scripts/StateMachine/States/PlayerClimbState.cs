@@ -50,6 +50,16 @@ namespace DeadCells.Player.StateMachine.States
                 return;
             }
 
+            if (Ctx.HasMoveInput)
+            {
+                int inputDir = Ctx.Input.MoveX > 0f ? 1 : -1;
+                if (inputDir != Ctx.FacingDirection)
+                {
+                    Ctx.Face(inputDir);
+                    Ctx.AlignToClimbTarget();
+                }
+            }
+
             Ctx.Animator.SetClimbAnimSpeed(Mathf.Abs(Ctx.Input.MoveY) > 0.01f ? 1f : 0f);
         }
 

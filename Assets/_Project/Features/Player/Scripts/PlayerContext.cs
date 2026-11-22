@@ -21,6 +21,7 @@ namespace DeadCells.Player
         private readonly BoxCollider2D _collider;
         private readonly SpriteRenderer _sprite;
         private readonly LayerMask _groundMask;
+        private readonly LayerMask _solidWallMask;
         private readonly LayerMask _rollPassThroughMask;
         private readonly LayerMask _climbableMask;
         private readonly Vector2 _standingColliderSize;
@@ -37,6 +38,8 @@ namespace DeadCells.Player
         private float _dropRestoreTime;
         private float _lastAirborneVelocityY;
         private float _perfectDodgeUntil = float.NegativeInfinity;
+        private float _wallJumpLockUntil = float.NegativeInfinity;
+        private float _wallRegrabReadyAt = float.NegativeInfinity;
 
         public PlayerContext(
             Rigidbody2D body,
@@ -53,6 +56,9 @@ namespace DeadCells.Player
             _collider = collider;
             _sprite = sprite;
             _groundMask = groundMask;
+            int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
+            int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
+            _solidWallMask = _groundMask.value & ~oneWayBit;
             _rollPassThroughMask = rollPassThroughMask;
             _climbableMask = climbableMask;
             _standingColliderSize = collider.size;
@@ -60,14 +66,19 @@ namespace DeadCells.Player
             Config = config;
             Input = input;
             Animator = animator;
+            RefillAirMoves();
         }
 
         /// <summary>Ground jump started. Argument: feet position.</summary>
         public event Action<Vector2> Jumped;
         /// <summary>Air jump started. Argument: feet position.</summary>
         public event Action<Vector2> AirJumped;
+        /// <summary>Wall jump started. Arguments: feet position, kick-off direction.</summary>
+        public event Action<Vector2, int> WallJumped;
         /// <summary>Landed. Arguments: feet position, downward speed just before impact (positive).</summary>
         public event Action<Vector2, float> Landed;
+        /// <summary>Stomp impact landed. Argument: feet position.</summary>
+        public event Action<Vector2> StompLanded;
         /// <summary>A roll started. Argument: feet position where the perfect-dodge ghost stays.</summary>
         public event Action<Vector2> RollStarted;
         /// <summary>A hit landed on the perfect-dodge ghost.</summary>
@@ -89,6 +100,9 @@ namespace DeadCells.Player
         public Vector2 LedgeStandPoint { get; set; }
         public int AirJumpsRemaining { get; private set; }
         public int AirRollsRemaining { get; private set; }
+        public int WallJumpsRemaining { get; private set; }
+        public int WallDirection { get; private set; }
+        public bool IsWallJumpHorizontalLocked => Time.time < _wallJumpLockUntil;
 
         public Vector2 Velocity => _body.linearVelocity;
         public Vector2 Position => _body.position;
@@ -203,10 +217,13 @@ namespace DeadCells.Player
             _lastAirborneVelocityY = 0f;
         }
 
+        public void NotifyStompLanded() => StompLanded?.Invoke(Position);
+
         public void RefillAirMoves()
         {
             AirJumpsRemaining = Config.MaxAirJumps;
             AirRollsRemaining = Config.MaxAirRolls;
+            WallJumpsRemaining = Config.MaxWallJumpsPerAir;
         }
 
         // ---------- Roll ----------
@@ -321,7 +338,7 @@ namespace DeadCells.Player
         {
             SetGravityScale(0f);
             _body.linearVelocity = Vector2.zero;
-            _body.position = new Vector2(ClimbTarget.bounds.center.x, _body.position.y);
+            AlignToClimbTarget();
             RefillAirMoves();
         }
 
@@ -329,6 +346,49 @@ namespace DeadCells.Player
         {
             ClimbTarget = null;
             SetGravityScale(Config.GravityScale);
+        }
+
+        public void AlignToClimbTarget()
+        {
+            if (ClimbTarget != null)
+                _body.position = new Vector2(ClimbTarget.bounds.center.x - FacingDirection * Config.ClimbHandOffsetX, _body.position.y);
+        }
+
+        public bool TryFindWall(out int wallDir)
+        {
+            wallDir = 0;
+            if (!Config.WallClingEnabled || IsGrounded || Time.time < _wallRegrabReadyAt || Velocity.y > 2.0f || IsDownHeld)
+                return false;
+            int inputDir = Mathf.Abs(Input.MoveX) > 0.1f ? (Input.MoveX > 0f ? 1 : -1) : 0;
+            if (inputDir == 0)
+                return false;
+
+            var b = _collider.bounds;
+            float dist = b.extents.x + Config.WallCheckDistance;
+            var dir = new Vector2(inputDir, 0f);
+            var lowHit = Physics2D.Raycast(new Vector2(b.center.x, b.min.y + 0.45f), dir, dist, _solidWallMask);
+            var highHit = Physics2D.Raycast(new Vector2(b.center.x, b.min.y + 1.25f), dir, dist, _solidWallMask);
+            if (lowHit.collider == null || highHit.collider == null)
+                return false;
+            if (Mathf.Abs(lowHit.normal.x) < 0.9f || Mathf.Abs(highHit.normal.x) < 0.9f)
+                return false;
+
+            wallDir = inputDir;
+            WallDirection = inputDir;
+            return true;
+        }
+
+        public void StartWallJump(int awayDir)
+        {
+            SetHorizontalVelocity(awayDir * Config.WallJumpVelocity.x);
+            SetVerticalVelocity(Config.WallJumpVelocity.y);
+            Face(awayDir);
+            WallJumpsRemaining = Mathf.Max(0, WallJumpsRemaining - 1);
+            _lastJumpPressedTime = float.NegativeInfinity;
+            _lastGroundedTime = float.NegativeInfinity;
+            _wallJumpLockUntil = Time.time + Config.WallJumpHorizontalLockTime;
+            _wallRegrabReadyAt = Time.time + Config.WallRegrabCooldown;
+            WallJumped?.Invoke(Position, awayDir);
         }
 
         // ---------- Crouch ----------
@@ -361,7 +421,9 @@ namespace DeadCells.Player
         public bool TryFindLedge(out Vector2 standPoint)
         {
             standPoint = default;
-            if (!Config.LedgeClimbEnabled || !HasMoveInput || Mathf.Sign(Input.MoveX) != FacingDirection)
+            bool movingToward = (HasMoveInput && Mathf.Sign(Input.MoveX) == FacingDirection)
+                || (!HasMoveInput && Velocity.x * FacingDirection > 0.5f);
+            if (!Config.LedgeClimbEnabled || !movingToward)
                 return false;
 
             var bounds = _collider.bounds;

@@ -16,9 +16,11 @@ namespace DeadCells.Player.StateMachine.States
         public override void Enter()
         {
             _holdTimer = 0f;
-            _holding = UsesHoldBoost;
+            bool wallJump = UsesHoldBoost && Ctx.IsWallJumpHorizontalLocked;
+            _holding = UsesHoldBoost && !wallJump;
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
-            ApplyJumpImpulse();
+            if (!wallJump)
+                ApplyJumpImpulse();
         }
 
         /// <summary>
