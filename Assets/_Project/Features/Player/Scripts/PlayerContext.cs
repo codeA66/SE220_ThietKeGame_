@@ -97,6 +97,7 @@ namespace DeadCells.Player
         public bool WithinCoyoteTime => Time.time - _lastGroundedTime <= Config.CoyoteTime;
         public bool HasMoveInput => Mathf.Abs(Input.MoveX) > 0.01f;
         public bool IsDownHeld => Input.MoveY < -Config.DownInputThreshold;
+        public bool IsCrouchHeld => IsDownHeld || Input.CrouchHeld;
         public bool IsUpHeld => Input.MoveY > Config.DownInputThreshold;
         public Collider2D ClimbTarget { get; private set; }
         public Vector2 PerfectDodgeGhostPosition { get; private set; }

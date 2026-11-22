@@ -16,6 +16,8 @@ namespace DeadCells.Player.StateMachine.States
         private bool _crouching;
         private bool _queued;
         private bool _wasGrounded;
+        private float _jumpHoldTimer;
+        private bool _holdingJump;
 
         public PlayerBowAttackState(PlayerContext context, PlayerStateMachine machine) : base(context, machine) { }
 
@@ -23,6 +25,8 @@ namespace DeadCells.Player.StateMachine.States
         {
             _queued = false;
             _wasGrounded = Ctx.IsGrounded;
+            _holdingJump = false;
+            _jumpHoldTimer = 0f;
             BeginDraw();
         }
 
@@ -44,7 +48,9 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
         }
 
-        public override void Tick()
+        public override void Tick() => Tick(Time.deltaTime);
+
+        public void Tick(float deltaTime)
         {
             if (Ctx.Input.RollPressed && Ctx.CanRoll)
             {
@@ -54,7 +60,7 @@ namespace DeadCells.Player.StateMachine.States
 
             TickJumpAndLanding();
 
-            _timer += Time.deltaTime;
+            _timer += deltaTime;
             if (_released)
             {
                 if (Ctx.Input.AttackPressed)
@@ -91,6 +97,13 @@ namespace DeadCells.Player.StateMachine.States
 
         public override void FixedTick()
         {
+            if (_holdingJump && _jumpHoldTimer < Ctx.Config.JumpHoldTime)
+            {
+                float step = Mathf.Min(Time.fixedDeltaTime, Ctx.Config.JumpHoldTime - _jumpHoldTimer);
+                Ctx.AddVerticalVelocity(Ctx.Config.JumpHoldBoost * step / Ctx.Config.JumpHoldTime);
+                _jumpHoldTimer += step;
+            }
+
             if (!_released)
                 Ctx.FaceInput();
             float speed = Ctx.IsGrounded ? Ctx.Config.RunSpeed : Ctx.Config.AirSpeed;
@@ -108,14 +121,24 @@ namespace DeadCells.Player.StateMachine.States
             _wasGrounded = Ctx.IsGrounded;
 
             if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld)
+            {
                 Ctx.StartJump();
+                _holdingJump = true;
+                _jumpHoldTimer = 0f;
+            }
             else if (Ctx.CanAirJump)
+            {
                 Ctx.StartAirJump();
+                _holdingJump = false;
+            }
+
+            if (_holdingJump && !Ctx.Input.JumpHeld)
+                _holdingJump = false;
         }
 
         private void UpdateCrouching()
         {
-            _crouching = Ctx.IsGrounded && Ctx.IsDownHeld;
+            _crouching = Ctx.IsGrounded && Ctx.IsCrouchHeld;
             Ctx.SetCrouchCollider(_crouching);
             Ctx.Animator.SetCrouching(_crouching);
         }

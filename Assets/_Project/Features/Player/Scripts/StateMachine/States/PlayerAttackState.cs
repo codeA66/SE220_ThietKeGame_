@@ -23,6 +23,8 @@ namespace DeadCells.Player.StateMachine.States
 
         public PlayerAttackState(PlayerContext context, PlayerStateMachine machine) : base(context, machine) { }
 
+        public bool CanWeaponSwapCancel => _hitDone;
+
         private WeaponData Weapon => Ctx.Combat.MeleeWeapon;
 
         public override void Enter()
@@ -48,7 +50,9 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
         }
 
-        public override void Tick()
+        public override void Tick() => Tick(Time.deltaTime);
+
+        public void Tick(float deltaTime)
         {
             // Rolling out of a swing keeps the combo: the next attack continues from the following hit.
             if (Ctx.Input.RollPressed && Ctx.CanRoll)
@@ -61,7 +65,7 @@ namespace DeadCells.Player.StateMachine.States
             if (Ctx.Input.AttackPressed && _comboIndex < Weapon.ComboLength)
                 _nextQueued = true;
 
-            _timer += Time.deltaTime;
+            _timer += deltaTime;
 
             if (!_hitDone && _timer >= _hitTime)
             {
@@ -76,6 +80,17 @@ namespace DeadCells.Player.StateMachine.States
                 Ctx.PendingComboIndex = _comboIndex + 1;
                 Machine.ChangeState(Machine.Attack);
                 return;
+            }
+
+            if (_hitDone && normalized >= Ctx.Config.ComboChainNormalizedTime && Ctx.Input.JumpPressed && !Ctx.IsDownHeld)
+            {
+                if (Ctx.IsGrounded || Ctx.WithinCoyoteTime)
+                {
+                    Machine.ChangeState(Machine.Jump);
+                    return;
+                }
+                if (TryAirJump())
+                    return;
             }
 
             if (normalized >= 1f)

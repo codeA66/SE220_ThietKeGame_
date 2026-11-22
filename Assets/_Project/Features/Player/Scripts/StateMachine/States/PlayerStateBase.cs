@@ -63,9 +63,9 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.IsUpHeld && Ctx.TryFindClimbable() && Machine.ChangeState(Machine.Climb);
 
         /// <summary>
-        /// Crouch when holding down on the ground. Returns true if a transition started.
+        /// Crouch when holding down or crouch on the ground. Returns true if a transition started.
         /// </summary>
-        protected bool TryCrouch() => Ctx.IsDownHeld && Ctx.IsGrounded && Machine.ChangeState(Machine.Crouch);
+        protected bool TryCrouch() => Ctx.IsCrouchHeld && Ctx.IsGrounded && Machine.ChangeState(Machine.Crouch);
 
         /// <summary>
         /// Idle or Run depending on input, or Fall when airborne.

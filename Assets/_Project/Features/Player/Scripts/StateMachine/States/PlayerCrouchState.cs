@@ -25,7 +25,7 @@ namespace DeadCells.Player.StateMachine.States
         {
             if (TryGroundedActions())
                 return;
-            if (!Ctx.IsDownHeld)
+            if (!Ctx.IsCrouchHeld)
                 ReturnToDefault();
         }
 

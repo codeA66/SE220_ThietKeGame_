@@ -29,7 +29,7 @@ MonoBehaviour:
   _rollCooldown: 0.37
   _rollStartSpeed: 14
   _rollEndSpeed: 6
-  _rollCancelNormalizedTime: 0
+  _rollCancelNormalizedTime: 0.55
   _allowAirRoll: 1
   _maxAirRolls: 1
   _airRollKeepsGravity: 0

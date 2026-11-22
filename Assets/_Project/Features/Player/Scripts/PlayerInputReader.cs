@@ -18,6 +18,7 @@ namespace DeadCells.Player
         private InputAction _interact;
         private InputAction _equipSword;
         private InputAction _equipBow;
+        private InputAction _crouch;
 
         public float MoveX { get; private set; }
         public float MoveY { get; private set; }
@@ -30,6 +31,7 @@ namespace DeadCells.Player
         public bool InteractPressed { get; private set; }
         public bool EquipSwordPressed { get; private set; }
         public bool EquipBowPressed { get; private set; }
+        public bool CrouchHeld { get; private set; }
 
         private void Awake()
         {
@@ -41,6 +43,7 @@ namespace DeadCells.Player
             _interact = map.FindAction("Interact", throwIfNotFound: true);
             _equipSword = map.FindAction("EquipSword", throwIfNotFound: true);
             _equipBow = map.FindAction("EquipBow", throwIfNotFound: true);
+            _crouch = map.FindAction("Crouch", throwIfNotFound: false);
         }
 
         private void OnEnable() => _actions.FindActionMap("Player").Enable();
@@ -61,6 +64,7 @@ namespace DeadCells.Player
             InteractPressed = _interact.WasPressedThisFrame();
             EquipSwordPressed = _equipSword.WasPressedThisFrame();
             EquipBowPressed = _equipBow.WasPressedThisFrame();
+            CrouchHeld = _crouch != null && _crouch.IsPressed();
         }
     }
 }

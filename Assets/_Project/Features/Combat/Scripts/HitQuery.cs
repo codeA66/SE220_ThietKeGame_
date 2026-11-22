@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,7 +26,7 @@ namespace DeadCells.Combat
         public void ResetSwing() => _alreadyHit.Clear();
 
         /// <summary>Returns how many targets took the hit.</summary>
-        public int Strike(Vector2 center, Vector2 size, in DamageInfo info)
+        public int Strike(Vector2 center, Vector2 size, in DamageInfo info, Action<IDamageable, DamageInfo> onHit = null)
         {
             int count = Physics2D.OverlapBox(center, size, 0f, _filter, _results);
             int hits = 0;
@@ -37,7 +38,10 @@ namespace DeadCells.Combat
                 if (target == null || !target.IsAlive || !_alreadyHit.Add(target))
                     continue;
                 if (target.TakeDamage(info))
+                {
                     hits++;
+                    onHit?.Invoke(target, info);
+                }
             }
             return hits;
         }

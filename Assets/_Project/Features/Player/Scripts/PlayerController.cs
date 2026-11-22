@@ -66,6 +66,7 @@ namespace DeadCells.Player
             _machine = new PlayerStateMachine(_context);
             _spawnPoint = _body.position;
 
+            _context.Combat.TargetHit += OnMeleeTargetHit;
             _health.DamageFilter = FilterDamage;
             _health.Damaged += OnDamaged;
             _health.Died += OnDied;
@@ -73,11 +74,19 @@ namespace DeadCells.Player
 
         private void OnDestroy()
         {
+            if (_context?.Combat != null)
+                _context.Combat.TargetHit -= OnMeleeTargetHit;
             if (_health == null)
                 return;
             _health.DamageFilter = null;
             _health.Damaged -= OnDamaged;
             _health.Died -= OnDied;
+        }
+
+        private void OnMeleeTargetHit(Health victim, DamageInfo _)
+        {
+            if (victim != null)
+                _bow.ExtractArrowsFrom(victim);
         }
 
         private void Start()
@@ -148,6 +157,8 @@ namespace DeadCells.Player
         {
             if (!_health.IsAlive)
                 return;
+            if (_machine.Current is StateMachine.States.PlayerAttackState attackState && !attackState.CanWeaponSwapCancel)
+                return;
             PlayerWeaponSlot slot;
             if (_input.EquipSwordPressed)
                 slot = PlayerWeaponSlot.Sword;
@@ -163,7 +174,7 @@ namespace DeadCells.Player
                 return;
 
             IPlayerState next = !_context.IsGrounded ? _machine.Fall
-                : _context.IsDownHeld ? _machine.Crouch
+                : _context.IsCrouchHeld ? _machine.Crouch
                 : _context.HasMoveInput ? _machine.Run : _machine.Idle;
             _machine.ForceChangeState(next);
         }

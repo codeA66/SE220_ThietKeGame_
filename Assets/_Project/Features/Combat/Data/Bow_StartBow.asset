@@ -16,10 +16,10 @@ MonoBehaviour:
   _ammoCapacity: 6
   _projectileSpeed: 14
   _flightLifetime: 4
-  _embeddedLifetime: 12
+  _embeddedLifetime: 4.5
   _comboResetTime: 1
   _standingMuzzleOffset: {x: 0.90625, y: 1.4375}
-  _crouchingMuzzleOffset: {x: 0.8125, y: 0.71875}
+  _crouchingMuzzleOffset: {x: 0.8125, y: 0.5}
   _shots:
   - Damage: 35
     ChargeTime: 0.25

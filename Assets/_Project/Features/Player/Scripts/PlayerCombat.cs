@@ -13,6 +13,7 @@ namespace DeadCells.Player
         private readonly BoxCollider2D _collider;
         private readonly HitQuery _query;
         private readonly PlayerRunStats _stats;
+        private readonly Action<IDamageable, DamageInfo> _onTargetHit;
 
         public PlayerCombat(Transform owner, BoxCollider2D collider, WeaponData weapon, LayerMask targets, PlayerRunStats stats)
         {
@@ -21,12 +22,19 @@ namespace DeadCells.Player
             MeleeWeapon = weapon;
             _query = new HitQuery(targets);
             _stats = stats;
+            _onTargetHit = (target, hitInfo) =>
+            {
+                if (target is Health health)
+                    TargetHit?.Invoke(health, hitInfo);
+            };
         }
 
         /// <summary>Arguments: number of targets hit, whether any hit was critical.</summary>
         public event Action<int, bool> StrikeHit;
         /// <summary>A combo hit lands (hit or miss). Arguments: strike, feet position, facing.</summary>
         public event Action<WeaponData.Strike, Vector2, int> StrikePerformed;
+        /// <summary>Raised for each Health target damaged by a melee strike.</summary>
+        public event Action<Health, DamageInfo> TargetHit;
 
         public WeaponData MeleeWeapon { get; }
         public DamageInfo LastDamageTaken { get; set; }
@@ -50,7 +58,7 @@ namespace DeadCells.Player
 
             int damage = _stats.ScaleDamage(strike.Damage, MeleeWeapon.ScalingStat);
             var info = new DamageInfo(damage, facing, strike.Knockback, 0f, false, _owner.gameObject);
-            int hits = _query.Strike(center, size, info);
+            int hits = _query.Strike(center, size, info, _onTargetHit);
             if (hits > 0)
                 StrikeHit?.Invoke(hits, info.IsCritical);
             return hits;
@@ -64,7 +72,10 @@ namespace DeadCells.Player
             _query.ResetSwing();
             var bounds = _collider.bounds;
             var center = new Vector2(bounds.center.x, bounds.min.y + area.y * 0.5f);
-            var info = new DamageInfo(damage, 0, 0f, stun, false, _owner.gameObject);
+            int scaledDamage = _stats != null
+                ? _stats.ScaleDamage(damage, MeleeWeapon != null ? MeleeWeapon.ScalingStat : CombatStat.Brutality)
+                : damage;
+            var info = new DamageInfo(scaledDamage, 0, 0f, stun, false, _owner.gameObject);
             int hits = _query.Strike(center, area, info);
             if (hits > 0)
                 StrikeHit?.Invoke(hits, false);
