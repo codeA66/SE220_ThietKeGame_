@@ -501,6 +501,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddShelfWithFioles(artRoot, "Art_D_Shelf", pal, mat, 39.2f, 10.6f, -11);
             AddFloorJunkCluster(artRoot, "Art_C_Junk", pal, mat, 51.5f, 0f, 0);
             AddFloorJunkCluster(artRoot, "Art_D_Junk", pal, mat, 23.2f, 8f, 3);
+            AddFloorJunkCluster(artRoot, "Art_D_JunkWest", pal, mat, 26.5f, 8f, 2);
+            AddGroundedPrisonSprite(artRoot, "Art_D_Bed1", pal.WallBed, mat, 31.5f, 8f, 0.85f, -11, Color.white);
+            AddFloorJunkCluster(artRoot, "Art_D_JunkEast2", pal, mat, 39.8f, 8f, 5);
 
             // Phase 3 (P2-04): Damp floor-lip moss foliage on Floor_C
             AddPrisonSpriteProp(artRoot, "Art_C_Foliage1", pal.GroundFoliage[0], mat, new Vector2(48.2f, 0f), 0.85f, -2, new Color(0.84f, 0.94f, 0.86f, 0.95f));
@@ -508,11 +511,11 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // 11/11 Room Lighting — Room C (3 lights) & Room D (2 lights)
             var warmAmber = new Color(1f, 0.80f, 0.48f, 1f);
             var warmGold = new Color(1f, 0.86f, 0.56f, 1f);
-            AddStandingTorchBeacon(artRoot, "Art_C_TorchLower", mat, 49f, 0f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_C_TorchUpper", mat, 49f, 8f, warmGold, 6.0f, 1.25f);
-            AddCeilingLanternBeacon(artRoot, "Art_C_LanternCeiling", mat, 49f, 18.5f, warmGold, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_D_TorchWest", mat, 29.5f, 8f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_D_TorchEast", mat, 34.5f, 8f, warmAmber, 6.0f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_C_TorchLower", mat, 49f, 0f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_C_TorchUpper", mat, 49f, 8f, warmGold, 8.8f, 1.25f);
+            AddCeilingLanternBeacon(artRoot, "Art_C_LanternCeiling", mat, 49f, 18.5f, warmGold, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_D_TorchWest", mat, 29.5f, 8f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_D_TorchEast", mat, 34.5f, 8f, warmAmber, 8.8f, 1.25f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -565,6 +568,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_A_Bed", pal.WallBed, mat, 1.8f, 0f, 0.90f, -11, Color.white);
             AddWindowWithGodray(artRoot, "Art_A_Window", mat, unlitMat, pal, new Vector2(7.6f, 3.6f));
             AddFloorJunkCluster(artRoot, "Art_A_Junk", pal, mat, 0.6f, 0f, 1);
+            AddFloorJunkCluster(artRoot, "Art_A_JunkEast", pal, mat, 10.0f, 0f, 6);
 
             // Room B grounded landmarks (preserving A08 names & grounded y=0)
             AddGroundedPrisonSprite(artRoot, "Art_B_Arch1", pal.ArcheSmall, mat, 24f, 0f, 1f, -14, new Color(0.88f, 0.90f, 0.92f, 1f));
@@ -575,9 +579,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             // 11/11 Room Lighting — Room A (1 light on solid brick between Bay #0 and TP_0_Spawn) & Room B (2 lights)
             var warmAmber = new Color(1f, 0.80f, 0.48f, 1f);
-            AddStandingTorchBeacon(artRoot, "Art_A_Torch", mat, 14.3f, 0f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_B_TorchWest", mat, 24f, 0f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_B_TorchEast", mat, 36f, 0f, warmAmber, 6.0f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_A_Torch", mat, 14.3f, 0f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_B_TorchWest", mat, 24f, 0f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_B_TorchEast", mat, 36f, 0f, warmAmber, 8.8f, 1.25f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -641,9 +645,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             // 11/11 Room Lighting — Room G (3 torches here + I3 chest GlowHighlight in scene)
             var warmAmber = new Color(1f, 0.80f, 0.48f, 1f);
-            AddStandingTorchBeacon(artRoot, "Art_G_TorchLower", mat, 60f, 0f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_G_TorchUpperWest", mat, 65.6f, 8f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_G_TorchUpperEast", mat, 71.8f, 8f, warmAmber, 6.0f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_G_TorchLower", mat, 60f, 0f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_G_TorchUpperWest", mat, 65.6f, 8f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_G_TorchUpperEast", mat, 71.8f, 8f, warmAmber, 8.8f, 1.25f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -733,6 +737,10 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_J_Bed", pal.WallBed, mat, 3.6f, 16f, 1f, -11, Color.white);
             AddFloorJunkCluster(artRoot, "Art_J_Junk", pal, mat, -12.0f, 16f, 2);
             AddFloorJunkCluster(artRoot, "Art_K_Junk", pal, mat, -18.5f, 16f, 6);
+            AddFloorJunkCluster(artRoot, "Art_K_JunkMid", pal, mat, -23.0f, 16f, 6);
+            AddFloorJunkCluster(artRoot, "Art_H_LandingJunk", pal, mat, 19.8f, 8f, 1);
+            AddFloorJunkCluster(artRoot, "Art_H_StepJunkMid", pal, mat, 13.5f, 12f, 4);
+            AddFloorJunkCluster(artRoot, "Art_H_StepJunkTop", pal, mat, 7.5f, 16f, 7);
 
             // Phase 3 (P2-04): Ornate iron hanging cage in Room K
             AddScaledCeilingProp(artRoot, "Art_K_OrnateCage1", pal.OrnateCages[1], mat, -27.5f, 30.5f, 0.90f, -7, Color.white);
@@ -740,14 +748,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // 11/11 Room Lighting — Room H (3), Room J (2), Room K (3)
             var warmAmber = new Color(1f, 0.80f, 0.48f, 1f);
             var warmGold = new Color(1f, 0.86f, 0.56f, 1f);
-            AddStandingTorchBeacon(artRoot, "Art_H_TorchLanding", mat, 19f, 8f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_H_TorchMid", mat, 12f, 12f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_H_TorchTop", mat, 8f, 16f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_J_TorchWest", mat, -8.3f, 16f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_J_TorchEast", mat, 0f, 16f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_K_TorchLower", mat, -20.5f, 16f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_K_TorchUpper", mat, -22f, 24f, warmGold, 6.0f, 1.25f);
-            AddCeilingLanternBeacon(artRoot, "Art_K_LanternCeiling", mat, -23f, 30.5f, warmGold, 6.0f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_H_TorchLanding", mat, 19f, 8f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_H_TorchMid", mat, 12f, 12f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_H_TorchTop", mat, 8f, 16f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_J_TorchWest", mat, -8.3f, 16f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_J_TorchEast", mat, 0f, 16f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_K_TorchLower", mat, -20.5f, 16f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_K_TorchUpper", mat, -22f, 24f, warmGold, 8.8f, 1.25f);
+            AddCeilingLanternBeacon(artRoot, "Art_K_LanternCeiling", mat, -23f, 30.5f, warmGold, 8.8f, 1.25f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -821,11 +829,16 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddWindowWithGodray(artRoot, "Art_E_WindowWest", mat, unlitMat, pal, new Vector2(-3.5f, 28.6f));
             AddWindowWithGodray(artRoot, "Art_E_WindowEast", mat, unlitMat, pal, new Vector2(20.2f, 28.6f));
             AddFloorJunkCluster(artRoot, "Art_E_Junk", pal, mat, 10.0f, 24f, 4);
+            AddFloorJunkCluster(artRoot, "Art_E_JunkWest", pal, mat, -5.5f, 24f, 1);
+            AddFloorJunkCluster(artRoot, "Art_E_JunkMid", pal, mat, 1.5f, 24f, 6);
+            AddFloorJunkCluster(artRoot, "Art_E_JunkEast", pal, mat, 18.0f, 24f, 9);
 
             // Room L dressing
             AddPrisonSpriteProp(artRoot, "Art_L_BannerBig", pal.BannerBig, pal.MatBannerSway, new Vector2(35.8f, 33.5f), 0.68f, -12, Color.white);
             AddWindowWithGodray(artRoot, "Art_L_Window", mat, unlitMat, pal, new Vector2(30.5f, 35.2f));
             AddFloorJunkCluster(artRoot, "Art_L_Junk", pal, mat, 24.5f, 24f, 8);
+            AddFloorJunkCluster(artRoot, "Art_L_JunkMid", pal, mat, 29.8f, 24f, 3);
+            AddFloorJunkCluster(artRoot, "Art_L_JunkEast", pal, mat, 35.2f, 24f, 5);
 
             // Room F Exit Arch + Grounded PortalBackOut_0_00 Emissive HDR Glow + Warm Beacon Light2D (A08 compatible)
             AddGroundedPrisonSprite(artRoot, "Art_F_ExitArch", pal.ExitDoor, mat, 5f, 32f, 0.80f, -5, Color.white);
@@ -849,17 +862,19 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             AddVerticalRoomBanner(artRoot, "Art_F_Banner", pal, mat, 12.5f, 37.2f, -12);
             AddShelfWithFioles(artRoot, "Art_F_Shelf", pal, mat, 18.2f, 34.6f, -11);
+            AddFloorJunkCluster(artRoot, "Art_F_JunkMid", pal, mat, 11.5f, 32f, 2);
+            AddFloorJunkCluster(artRoot, "Art_F_JunkEast", pal, mat, 18.5f, 32f, 7);
 
             // 11/11 Room Lighting — Room E (3), Room L (3, ceiling lantern anchored to Ceiling_L 38.5f), Room F (ExitGlow + 1 torch)
             var warmAmber = new Color(1f, 0.80f, 0.48f, 1f);
             var warmGold = new Color(1f, 0.86f, 0.56f, 1f);
-            AddStandingTorchBeacon(artRoot, "Art_E_TorchWest", mat, -6.8f, 24f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_E_TorchCenter", mat, 3f, 24f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_E_TorchEast", mat, 18.6f, 24f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_L_TorchLow", mat, 35f, 26f, warmAmber, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_L_TorchMid", mat, 27f, 30f, warmGold, 6.0f, 1.25f);
-            AddCeilingLanternBeacon(artRoot, "Art_L_LanternCeiling", mat, 26.5f, 38.5f, warmGold, 6.0f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_F_TorchEast", mat, 15f, 32f, warmGold, 6.0f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_E_TorchWest", mat, -6.8f, 24f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_E_TorchCenter", mat, 3f, 24f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_E_TorchEast", mat, 18.6f, 24f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_L_TorchLow", mat, 35f, 26f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_L_TorchMid", mat, 27f, 30f, warmGold, 8.8f, 1.25f);
+            AddCeilingLanternBeacon(artRoot, "Art_L_LanternCeiling", mat, 26.5f, 38.5f, warmGold, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_F_TorchEast", mat, 15f, 32f, warmGold, 8.8f, 1.25f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -969,6 +984,11 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_M_Bed2", pal.WallBed, mat, 138.0f, 0f, 0.90f, -11, Color.white);
             AddFloorJunkCluster(artRoot, "Art_M_Junk1", pal, mat, 86.0f, 0f, 1);
             AddFloorJunkCluster(artRoot, "Art_M_Junk2", pal, mat, 131.5f, 0f, 4);
+            AddFloorJunkCluster(artRoot, "Art_M_JunkWest2", pal, mat, 95.0f, 0f, 3);
+            AddFloorJunkCluster(artRoot, "Art_M_JunkMid", pal, mat, 104.5f, 0f, 6);
+            AddFloorJunkCluster(artRoot, "Art_M_JunkMid2", pal, mat, 122.2f, 0f, 8);
+            AddFloorJunkCluster(artRoot, "Art_M_JunkEast2", pal, mat, 125.5f, 0f, 2);
+            AddFloorJunkCluster(artRoot, "Art_M_JunkEast3", pal, mat, 147.5f, 0f, 9);
 
             AddWindowWithGodray(artRoot, "Art_N_Window1", mat, unlitMat, pal, new Vector2(80.5f, 18.2f));
             AddWindowWithGodray(artRoot, "Art_N_Window2", mat, unlitMat, pal, new Vector2(99.5f, 18.2f));
@@ -979,6 +999,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddShelfWithFioles(artRoot, "Art_N_Shelf1", pal, mat, 113.0f, 10.6f, -11);
             AddFloorJunkCluster(artRoot, "Art_N_Junk1", pal, mat, 78.5f, 8f, 2);
             AddFloorJunkCluster(artRoot, "Art_N_Junk2", pal, mat, 129.0f, 8f, 5);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkWest2", pal, mat, 85.0f, 8f, 1);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkMid1", pal, mat, 93.0f, 8f, 4);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkShaftEdge", pal, mat, 99.5f, 8f, 5);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkMid2", pal, mat, 115.5f, 8f, 3);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkMid3", pal, mat, 122.5f, 8f, 8);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkEast1", pal, mat, 142.5f, 8f, 2);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkEast2", pal, mat, 150.5f, 8f, 6);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkEast3", pal, mat, 158.5f, 8f, 9);
 
             // Phase 3 (P2-04): Structural timber trusses, ornate iron cage, chained wall silhouettes & floor-lip foliage
             var trussTint = new Color(0.88f, 0.86f, 0.84f, 1f);
@@ -998,15 +1026,15 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             float[] mFloorXs = { 84.5f, 96.2f, 123.0f, 146.5f, 162.8f };
             for (int i = 0; i < mFloorXs.Length; i++)
-                AddStandingTorchBeacon(artRoot, $"Art_M_Torch_{i}", mat, mFloorXs[i], 0f, (i % 2 == 0) ? warmAmber : deepEmber, 9.5f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_M_Torch_{i}", mat, mFloorXs[i], 0f, (i % 2 == 0) ? warmAmber : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
 
             float[] nFloorXs = { 84f, 102f, 120f, 138f, 156f };
             for (int i = 0; i < nFloorXs.Length; i++)
-                AddStandingTorchBeacon(artRoot, $"Art_N_Torch_{i}", mat, nFloorXs[i], 8f, (i % 2 == 0) ? warmAmber : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_N_Torch_{i}", mat, nFloorXs[i], 8f, (i % 2 == 0) ? warmAmber : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
 
             float[] nCeilXs = { 90f, 112f, 134f, 154f };
             for (int i = 0; i < nCeilXs.Length; i++)
-                AddCeilingLanternBeacon(artRoot, $"Art_N_Lantern_{i}", mat, nCeilXs[i], 22.5f, (i % 2 == 0) ? warmGold : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddCeilingLanternBeacon(artRoot, $"Art_N_Lantern_{i}", mat, nCeilXs[i], 22.5f, (i % 2 == 0) ? warmGold : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -1118,7 +1146,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_O_Bed1", pal.WallBed, mat, 84.5f, -16f, 0.90f, -11, Color.white);
             AddShelfWithFioles(artRoot, "Art_O_Shelf1", pal, mat, 143.5f, -13.5f, -11);
             AddFloorJunkCluster(artRoot, "Art_O_Junk1", pal, mat, 95.0f, -16f, 3);
+            AddFloorJunkCluster(artRoot, "Art_O_JunkMid1", pal, mat, 96.0f, -16f, 2);
+            AddFloorJunkCluster(artRoot, "Art_O_JunkMid3", pal, mat, 103.0f, -16f, 5);
+            AddFloorJunkCluster(artRoot, "Art_O_JunkMid2", pal, mat, 116.5f, -16f, 8);
+            AddFloorJunkCluster(artRoot, "Art_O_JunkEast4", pal, mat, 130.5f, -16f, 1);
+            AddFloorJunkCluster(artRoot, "Art_O_JunkEast2", pal, mat, 146.5f, -16f, 4);
             AddFloorJunkCluster(artRoot, "Art_O_Junk2", pal, mat, 148.0f, -16f, 6);
+            AddFloorJunkCluster(artRoot, "Art_O_JunkEast3", pal, mat, 160.0f, -16f, 7);
 
             AddWindowWithGodray(artRoot, "Art_P_Window1", mat, unlitMat, pal, new Vector2(173.5f, -6.5f));
             AddWindowWithGodray(artRoot, "Art_P_Window2", mat, unlitMat, pal, new Vector2(207.0f, -6.5f));
@@ -1126,8 +1160,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddScaledCeilingProp(artRoot, "Art_P_Cage1", pal.SuspendedCage, mat, 186.0f, -1.5f, 1.0f, -7, Color.white);
             AddScaledCeilingProp(artRoot, "Art_P_Cage2", pal.SuspendedCage, mat, 206.0f, -1.5f, 1.0f, -7, Color.white);
             AddShelfWithFioles(artRoot, "Art_P_Shelf1", pal, mat, 189.5f, -13.5f, -11);
+            AddFloorJunkCluster(artRoot, "Art_P_JunkWest2", pal, mat, 168.0f, -16f, 3);
             AddFloorJunkCluster(artRoot, "Art_P_Junk1", pal, mat, 176.5f, -16f, 1);
+            AddFloorJunkCluster(artRoot, "Art_P_JunkMid1", pal, mat, 188.5f, -16f, 6);
+            AddFloorJunkCluster(artRoot, "Art_P_JunkMid2", pal, mat, 195.0f, -16f, 9);
             AddFloorJunkCluster(artRoot, "Art_P_Junk2", pal, mat, 213.5f, -16f, 8);
+            AddFloorJunkCluster(artRoot, "Art_P_JunkEast2", pal, mat, 221.0f, -16f, 2);
+            AddFloorJunkCluster(artRoot, "Art_P_JunkEast3", pal, mat, 229.0f, -16f, 5);
 
             // Phase 3 (P2-04): Structural timber trusses, ornate iron cages, chained silhouettes & damp sewer floor-lip foliage
             var trussTint = new Color(0.88f, 0.86f, 0.84f, 1f);
@@ -1152,19 +1191,19 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             float[] oFloorXs = { 81.5f, 108.5f, 121.5f, 136.8f, 158.5f };
             for (int i = 0; i < oFloorXs.Length; i++)
-                AddStandingTorchBeacon(artRoot, $"Art_O_Torch_{i}", mat, oFloorXs[i], -16f, (i % 2 == 0) ? warmAmber : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_O_Torch_{i}", mat, oFloorXs[i], -16f, (i % 2 == 0) ? warmAmber : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
 
             float[] oCeilXs = { 90f, 112f, 134f, 154f };
             for (int i = 0; i < oCeilXs.Length; i++)
-                AddCeilingLanternBeacon(artRoot, $"Art_O_Lantern_{i}", mat, oCeilXs[i], -1f, (i % 2 == 0) ? warmGold : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddCeilingLanternBeacon(artRoot, $"Art_O_Lantern_{i}", mat, oCeilXs[i], -1f, (i % 2 == 0) ? warmGold : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
 
             float[] pFloorXs = { 169.5f, 182.0f, 202.0f, 218.0f };
             for (int i = 0; i < pFloorXs.Length; i++)
-                AddStandingTorchBeacon(artRoot, $"Art_P_Torch_{i}", mat, pFloorXs[i], -16f, (i % 2 == 0) ? warmAmber : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_P_Torch_{i}", mat, pFloorXs[i], -16f, (i % 2 == 0) ? warmAmber : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
 
             float[] pCeilXs = { 178f, 198f, 218f };
             for (int i = 0; i < pCeilXs.Length; i++)
-                AddCeilingLanternBeacon(artRoot, $"Art_P_Lantern_{i}", mat, pCeilXs[i], -1.5f, (i % 2 == 0) ? warmGold : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddCeilingLanternBeacon(artRoot, $"Art_P_Lantern_{i}", mat, pCeilXs[i], -1.5f, (i % 2 == 0) ? warmGold : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -1243,6 +1282,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // Room Q Hero Landmarks
             AddGroundedPrisonSprite(artRoot, "Art_Q_JudasSeat", pal.JudasSeat, mat, -38.0f, 16f, 0.85f, -11, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_Q_Billot", pal.Billot, mat, -61.0f, 16f, 0.85f, -11, Color.white);
+            AddGroundedPrisonSprite(artRoot, "Art_Q_SkeletonPier", pal.SpawnerPillar, mat, -51.88f, 16f, 0.92f, -12, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_Q_SkeletonSpawn", pal.SkeletonSpawn, mat, -49.0f, 16f, 0.48f, -13, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_Q_SnakeLandmark", pal.SnakeLandmark, mat, -91.8f, 16f, 0.28f, -14, Color.white);
 
@@ -1257,14 +1297,23 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddShelfWithFioles(artRoot, "Art_Q_Shelf1", pal, mat, -84.5f, 17.3f, -11);
             AddGroundedPrisonSprite(artRoot, "Art_Q_Bed1", pal.WallBed, mat, -80.0f, 16f, 0.85f, -11, Color.white);
             AddFloorJunkCluster(artRoot, "Art_Q_Junk1", pal, mat, -86.5f, 16f, 2);
+            AddFloorJunkCluster(artRoot, "Art_Q_JunkMid1", pal, mat, -73.0f, 16f, 4);
+            AddFloorJunkCluster(artRoot, "Art_Q_JunkMid2", pal, mat, -65.5f, 16f, 8);
             AddFloorJunkCluster(artRoot, "Art_Q_Junk2", pal, mat, -44.0f, 16f, 7);
+            AddFloorJunkCluster(artRoot, "Art_Q_JunkEast2", pal, mat, -36.0f, 16f, 1);
 
             AddWindowWithGodray(artRoot, "Art_R_Window1", mat, unlitMat, pal, new Vector2(-73.5f, 33.5f));
             AddWindowWithGodray(artRoot, "Art_R_Window2", mat, unlitMat, pal, new Vector2(-33.5f, 33.5f));
             AddPrisonSpriteProp(artRoot, "Art_R_BannerBig1", pal.BannerBig, pal.MatBannerSway, new Vector2(-80.0f, 34.0f), 0.65f, -12, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_R_Pillar1", pal.SpawnerPillar, mat, -38.5f, 24f, 0.90f, -13, Color.white);
             AddShelfWithFioles(artRoot, "Art_R_Shelf1", pal, mat, -49.0f, 25.8f, -11);
+            AddFloorJunkCluster(artRoot, "Art_R_JunkWest2", pal, mat, -98.0f, 24f, 2);
+            AddFloorJunkCluster(artRoot, "Art_R_JunkWest3", pal, mat, -90.0f, 24f, 6);
             AddFloorJunkCluster(artRoot, "Art_R_Junk1", pal, mat, -84.5f, 24f, 4);
+            AddFloorJunkCluster(artRoot, "Art_R_JunkMid1", pal, mat, -76.5f, 24f, 9);
+            AddFloorJunkCluster(artRoot, "Art_R_JunkMid2", pal, mat, -70.2f, 24f, 3);
+            AddFloorJunkCluster(artRoot, "Art_R_JunkShaftEdge", pal, mat, -61.8f, 24f, 5);
+            AddFloorJunkCluster(artRoot, "Art_R_JunkEast2", pal, mat, -52.5f, 24f, 8);
             AddFloorJunkCluster(artRoot, "Art_R_Junk2", pal, mat, -45.0f, 24f, 9);
 
             // Phase 3 (P2-04): Structural timber truss, ornate iron cage, chained silhouettes & floor-lip foliage
@@ -1284,15 +1333,15 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             float[] qFloorXs = { -98.5f, -76.2f, -56.0f, -34.0f };
             for (int i = 0; i < qFloorXs.Length; i++)
-                AddStandingTorchBeacon(artRoot, $"Art_Q_Torch_{i}", mat, qFloorXs[i], 16f, (i % 2 == 0) ? warmAmber : deepEmber, 9.5f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_Q_Torch_{i}", mat, qFloorXs[i], 16f, (i % 2 == 0) ? warmAmber : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
 
             float[] rFloorXs = { -90.0f, -76.0f, -55.5f, -35.0f };
             for (int i = 0; i < rFloorXs.Length; i++)
-                AddStandingTorchBeacon(artRoot, $"Art_R_Torch_{i}", mat, rFloorXs[i], 24f, (i % 2 == 0) ? warmAmber : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_R_Torch_{i}", mat, rFloorXs[i], 24f, (i % 2 == 0) ? warmAmber : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
 
             float[] rCeilXs = { -86f, -66f, -46f };
             for (int i = 0; i < rCeilXs.Length; i++)
-                AddCeilingLanternBeacon(artRoot, $"Art_R_Lantern_{i}", mat, rCeilXs[i], 38.5f, (i % 2 == 0) ? warmGold : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddCeilingLanternBeacon(artRoot, $"Art_R_Lantern_{i}", mat, rCeilXs[i], 38.5f, (i % 2 == 0) ? warmGold : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -1401,7 +1450,11 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddShelfWithFioles(artRoot, "Art_S_Shelf2", pal, mat, 54.0f, 25.8f, -11);
             AddScaledCeilingProp(artRoot, "Art_S_Cage1", pal.SuspendedCage, mat, 58.0f, 39f, 1.0f, -7, Color.white);
             AddFloorJunkCluster(artRoot, "Art_S_Junk1", pal, mat, 45.0f, 24f, 3);
+            AddFloorJunkCluster(artRoot, "Art_S_JunkMid1", pal, mat, 52.0f, 24f, 1);
+            AddFloorJunkCluster(artRoot, "Art_S_JunkMid2", pal, mat, 60.0f, 24f, 4);
+            AddFloorJunkCluster(artRoot, "Art_S_JunkMid3", pal, mat, 68.0f, 24f, 7);
             AddFloorJunkCluster(artRoot, "Art_S_Junk2", pal, mat, 78.0f, 24f, 6);
+            AddFloorJunkCluster(artRoot, "Art_S_JunkEast2", pal, mat, 86.5f, 24f, 9);
 
             AddWindowWithGodray(artRoot, "Art_T_Window1", mat, unlitMat, pal, new Vector2(55.0f, 56.5f));
             AddWindowWithGodray(artRoot, "Art_T_Window2", mat, unlitMat, pal, new Vector2(82.0f, 56.5f));
@@ -1415,9 +1468,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddScaledCeilingProp(artRoot, "Art_T_Cage3", pal.SuspendedCage, mat, 122.0f, 62.5f, 1.0f, -7, Color.white);
             AddShelfWithFioles(artRoot, "Art_T_Shelf1", pal, mat, 56.0f, 41.8f, -11);
             AddShelfWithFioles(artRoot, "Art_T_Shelf2", pal, mat, 99.0f, 41.8f, -11);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkWest2", pal, mat, 43.0f, 40f, 2);
             AddFloorJunkCluster(artRoot, "Art_T_Junk1", pal, mat, 50.0f, 40f, 1);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkMid1", pal, mat, 58.0f, 40f, 6);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkShaft", pal, mat, 75.8f, 40f, 4);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkMid2", pal, mat, 84.8f, 40f, 8);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkMid3", pal, mat, 90.5f, 40f, 3);
             AddFloorJunkCluster(artRoot, "Art_T_Junk2", pal, mat, 96.5f, 40f, 5);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkEast1", pal, mat, 105.5f, 40f, 7);
             AddFloorJunkCluster(artRoot, "Art_T_Junk3", pal, mat, 114.0f, 40f, 9);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkEast3", pal, mat, 128.0f, 40f, 1);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkEast2", pal, mat, 135.5f, 40f, 5);
 
             // Phase 3 (P2-04): Structural timber trusses, ornate iron cages, chained silhouettes & floor-lip foliage
             var trussTint = new Color(0.88f, 0.86f, 0.84f, 1f);
@@ -1443,22 +1504,22 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             float[] sCeilXs = { 46.0f, 65.0f, 84.0f };
             for (int i = 0; i < sFloorXs.Length; i++)
             {
-                AddStandingTorchBeacon(artRoot, $"Art_S_Torch_{i}", mat, sFloorXs[i], 24f, (i % 2 == 0) ? warmAmber : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
-                AddCeilingLanternBeacon(artRoot, $"Art_S_Lantern_{i}", mat, sCeilXs[i], 39f, (i % 2 == 0) ? warmGold : deepEmber, 10.0f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_S_Torch_{i}", mat, sFloorXs[i], 24f, (i % 2 == 0) ? warmAmber : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
+                AddCeilingLanternBeacon(artRoot, $"Art_S_Lantern_{i}", mat, sCeilXs[i], 39f, (i % 2 == 0) ? warmGold : deepEmber, 13.5f, (i % 2 == 0) ? 1.34f : 0.94f);
             }
 
             float[] tFloorXs = { 40.5f, 68.0f, 94.0f, 118.0f, 136.5f };
             float[] tCeilXs = { 48.0f, 68.0f, 93.0f, 112.0f, 130.0f };
             for (int i = 0; i < tFloorXs.Length; i++)
             {
-                AddStandingTorchBeacon(artRoot, $"Art_T_TorchLow_{i}", mat, tFloorXs[i], 40f, (i % 2 == 0) ? warmAmber : deepEmber, 10.5f, (i % 2 == 0) ? 1.34f : 0.88f);
-                AddCeilingLanternBeacon(artRoot, $"Art_T_Lantern_{i}", mat, tCeilXs[i], 62.5f, (i % 2 == 0) ? warmGold : deepEmber, 10.5f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_T_TorchLow_{i}", mat, tFloorXs[i], 40f, (i % 2 == 0) ? warmAmber : deepEmber, 14.5f, (i % 2 == 0) ? 1.34f : 0.94f);
+                AddCeilingLanternBeacon(artRoot, $"Art_T_Lantern_{i}", mat, tCeilXs[i], 62.5f, (i % 2 == 0) ? warmGold : deepEmber, 14.5f, (i % 2 == 0) ? 1.34f : 0.94f);
             }
 
             // 62f mounts on solid brick left of Bay #8 [66..74, 46..52]
             float[] tMidXs = { 48.0f, 62.0f, 84.0f, 108.0f, 134.0f };
             for (int i = 0; i < tMidXs.Length; i++)
-                AddStandingTorchBeacon(artRoot, $"Art_T_TorchMid_{i}", mat, tMidXs[i], 49f, (i % 2 == 0) ? warmGold : deepEmber, 10.5f, (i % 2 == 0) ? 1.34f : 0.88f);
+                AddStandingTorchBeacon(artRoot, $"Art_T_TorchMid_{i}", mat, tMidXs[i], 49f, (i % 2 == 0) ? warmGold : deepEmber, 14.5f, (i % 2 == 0) ? 1.34f : 0.94f);
             ScrubRoomVisualClutter(artRoot, decalTm);
         }
 
@@ -1679,9 +1740,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             globalVol.weight = 1f;
             globalVol.sharedProfile = postProfile;
 
-            // 2c. Ambient VFX (Dust Motes + Dripping Water across full 340u x 86u volume)
-            BuildAmbientVfx(particlesUnlit);
-
             // 3. Systems (VfxSpawner, HitStop, ProjectileSpawner, LevelRunController)
             var allVfxPrewarm = LoadAllVfxDefinitions();
             var vfxGo = new GameObject("VfxSpawner");
@@ -1729,6 +1787,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             uacd.renderPostProcessing = true;
             uacd.volumeLayerMask |= 1 << 0;
             var camFollow = camGo.AddComponent<CameraFollow2D>();
+
+            // 4b. Camera-attached Ambient VFX (Dust Motes + Dripping Water following Main Camera)
+            BuildAmbientVfx(particlesUnlit, cam.transform);
 
             // 5. Player instance at (3, 0, 0) facing right
             var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
@@ -2197,6 +2258,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             lockedGo.transform.localPosition = new Vector3(0f, 2.35f, 0f);
             lockedGo.SetActive(false);
 
+            var lightGo = CreateChild(root, "TeleportLight");
+            lightGo.transform.localPosition = new Vector3(0f, 1.35f, 0f);
+            var tpLight = lightGo.AddComponent<Light2D>();
+            tpLight.lightType = Light2D.LightType.Point;
+            tpLight.color = new Color(0.38f, 0.88f, 1.0f, 1f);
+            tpLight.intensity = 0.85f;
+            tpLight.pointLightInnerRadius = 0.8f;
+            tpLight.pointLightOuterRadius = 4.5f;
+            tpLight.falloffIntensity = 0.58f;
+            ConfigureGameplayPointLight(tpLight, enableVolumetric: false, volumeIntensity: 0f, addFlicker: false, phaseSeed: 0f);
+
             var gate = root.AddComponent<TeleportGate>();
             var so = new SerializedObject(gate);
             so.FindProperty("_gateId").stringValue = name;
@@ -2330,12 +2402,28 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             EnemyController[] allEnemies,
             VfxSpawner vfxSpawner)
         {
-            var mainLevelScene = EditorSceneManager.OpenScene(MainLevelScenePath, OpenSceneMode.Additive);
-            if (!mainLevelScene.IsValid() || !mainLevelScene.isLoaded)
-                throw new InvalidOperationException("Failed to open Main_Level.unity additively: " + MainLevelScenePath);
+            Light2D disabledTargetGlobalLight = null;
+            foreach (var rootGo in targetScene.GetRootGameObjects())
+            {
+                foreach (var light in rootGo.GetComponentsInChildren<Light2D>(true))
+                {
+                    if (light != null && light.lightType == Light2D.LightType.Global && light.enabled)
+                    {
+                        light.enabled = false;
+                        disabledTargetGlobalLight = light;
+                        break;
+                    }
+                }
+                if (disabledTargetGlobalLight != null)
+                    break;
+            }
 
+            Scene mainLevelScene = default;
             try
             {
+                mainLevelScene = EditorSceneManager.OpenScene(MainLevelScenePath, OpenSceneMode.Additive);
+                if (!mainLevelScene.IsValid() || !mainLevelScene.isLoaded)
+                    throw new InvalidOperationException("Failed to open Main_Level.unity additively: " + MainLevelScenePath);
                 var srcScroll = FindInSceneByName(mainLevelScene, "Scroll of Power - Entrance");
                 var srcPowerScrollHud = FindInSceneByName(mainLevelScene, "Power Scroll HUD");
                 var srcScrollCinematic = FindInSceneByName(mainLevelScene, "Scroll cinematic");
@@ -2528,6 +2616,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 EditorSceneManager.SetActiveScene(targetScene);
                 if (mainLevelScene.IsValid() && mainLevelScene.isLoaded)
                     EditorSceneManager.CloseScene(mainLevelScene, true);
+                if (disabledTargetGlobalLight != null)
+                    disabledTargetGlobalLight.enabled = true;
             }
         }
 
@@ -2689,13 +2779,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             return mapped;
         }
 
-        private static void BuildAmbientVfx(Material particlesUnlitMat)
+        private static void BuildAmbientVfx(Material particlesUnlitMat, Transform camTransform)
         {
             var container = new GameObject("AmbientVFX");
 
-            // 1. AmbientDustMotes across full 340u x 86u dungeon volume
+            // 1. AmbientDustMotes attached to camera viewport (28u x 16u crisp visible box)
             var dustGo = CreateChild(container, "AmbientDustMotes");
-            dustGo.transform.position = new Vector3(66f, 23f, 0f);
+            dustGo.transform.position = new Vector3(camTransform.position.x, camTransform.position.y, 0f);
             var dustPs = dustGo.AddComponent<ParticleSystem>();
             var dustMain = dustPs.main;
             dustMain.loop = true;
@@ -2710,12 +2800,12 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             var dustEmission = dustPs.emission;
             dustEmission.enabled = true;
-            dustEmission.rateOverTime = 10f;
+            dustEmission.rateOverTime = 18f;
 
             var dustShape = dustPs.shape;
             dustShape.enabled = true;
             dustShape.shapeType = ParticleSystemShapeType.Box;
-            dustShape.scale = new Vector3(336f, 80f, 0.1f);
+            dustShape.scale = new Vector3(28f, 16f, 0.1f);
 
             var dustVel = dustPs.velocityOverLifetime;
             dustVel.enabled = true;
@@ -2740,9 +2830,16 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 dustRenderer.sortingOrder = 12;
             }
 
-            // 2. AmbientDrippingWater across full 340u x 86u dungeon volume
+            var dustFollow = dustGo.AddComponent<CameraFollowEmitter2D>();
+            dustFollow.Configure(camTransform, Vector2.zero);
+            var soDustFollow = new SerializedObject(dustFollow);
+            soDustFollow.FindProperty("_cameraTransform").objectReferenceValue = camTransform;
+            soDustFollow.FindProperty("_offset").vector2Value = Vector2.zero;
+            soDustFollow.ApplyModifiedPropertiesWithoutUndo();
+
+            // 2. AmbientDrippingWater attached to top of camera viewport (26u x 1.5u ceiling strip)
             var dripGo = CreateChild(container, "AmbientDrippingWater");
-            dripGo.transform.position = new Vector3(66f, 23f, 0f);
+            dripGo.transform.position = new Vector3(camTransform.position.x, camTransform.position.y + 6.0f, 0f);
             var dripPs = dripGo.AddComponent<ParticleSystem>();
             var dripMain = dripPs.main;
             dripMain.loop = true;
@@ -2758,12 +2855,12 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             var dripEmission = dripPs.emission;
             dripEmission.enabled = true;
-            dripEmission.rateOverTime = 12f;
+            dripEmission.rateOverTime = 7f;
 
             var dripShape = dripPs.shape;
             dripShape.enabled = true;
             dripShape.shapeType = ParticleSystemShapeType.Box;
-            dripShape.scale = new Vector3(320f, 76f, 0.1f);
+            dripShape.scale = new Vector3(26f, 1.5f, 0.1f);
 
             var dripRenderer = dripGo.GetComponent<ParticleSystemRenderer>();
             if (dripRenderer != null)
@@ -2772,6 +2869,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 dripRenderer.sortingLayerID = SortingLayerSetup.GetSortingLayerId("VFX");
                 dripRenderer.sortingOrder = 11;
             }
+
+            var dripFollow = dripGo.AddComponent<CameraFollowEmitter2D>();
+            var dripOffset = new Vector2(0f, 6.0f);
+            dripFollow.Configure(camTransform, dripOffset);
+            var soDripFollow = new SerializedObject(dripFollow);
+            soDripFollow.FindProperty("_cameraTransform").objectReferenceValue = camTransform;
+            soDripFollow.FindProperty("_offset").vector2Value = dripOffset;
+            soDripFollow.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void BindUiInputModuleActions(InputSystemUIInputModule uiModule, InputActionAsset actions)
@@ -3573,14 +3678,19 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 (6, 9, 16),
             };
 
+            var flipX = Matrix4x4.Scale(new Vector3(-1f, 1f, 1f));
             foreach (var (xMin, xMax, topY) in steps)
             {
                 PaintPrisonSolidFloor(solidTm, rimTm, pal, xMin, xMax, 7f, topY);
+            }
+            foreach (var (xMin, xMax, topY) in steps)
+            {
                 if (topY > 8)
                 {
-                    // Vertical riser edge facing east at x = xMax
-                    SetTileWithMatrix(rimTm, new Vector3Int(xMax, topY - 1, 0), pal.Stairs0, Matrix4x4.identity);
-                    SetTileWithMatrix(rimTm, new Vector3Int(xMax, topY - 2, 0), pal.Stairs1, Matrix4x4.identity);
+                    // Place flipped diagonal step nose on the upper step's east corner cell (xMax - 1, topY - 1)
+                    // and mid-riser bevel at (xMax - 1, topY - 2), preserving lower tread caps at x >= xMax.
+                    SetTileWithMatrix(rimTm, new Vector3Int(xMax - 1, topY - 1, 0), pal.Stairs0, flipX);
+                    SetTileWithMatrix(rimTm, new Vector3Int(xMax - 1, topY - 2, 0), pal.Stairs1, flipX);
                 }
             }
 
@@ -4174,6 +4284,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             raySr.sortingLayerID = SortingLayerSetup.GetSortingLayerId("VFX");
             raySr.sortingOrder = 10;
             raySr.color = Color.white;
+
+            var moonGo = CreateChild(winGo, "WindowMoonLight");
+            moonGo.transform.localPosition = Vector3.zero;
+            var moonLight = moonGo.AddComponent<Light2D>();
+            moonLight.lightType = Light2D.LightType.Point;
+            moonLight.color = new Color(0.55f, 0.74f, 0.96f, 1f);
+            moonLight.intensity = 0.72f;
+            moonLight.pointLightInnerRadius = 1.2f;
+            moonLight.pointLightOuterRadius = 9.5f;
+            moonLight.falloffIntensity = 0.58f;
+            ConfigureGameplayPointLight(moonLight, enableVolumetric: false, volumeIntensity: 0f, addFlicker: false, phaseSeed: 0f);
         }
 
         private static void AddVerticalRoomBanner(GameObject parent, string name, PrisonPalette pal, Material mat, float x, float topY, int sortingOrder)
@@ -4442,7 +4563,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             fgParallax.ConfigureVerticalCameraLock(true, 1.5f);
             var unlitMat = LoadMaterialAtPath(SpriteUnlitMatPath);
             var fgTint = new Color(6f / 255f, 10f / 255f, 16f / 255f, 0.96f);
-            float[] fgAnchorXs = { -20f, -12f, -4f, 4f, 12f, 20f, 28f, 36f };
+            float[] fgAnchorXs = { -32f, -24f, -16f, -8f, 0f, 8f, 16f, 24f, 32f };
             for (int i = 0; i < fgAnchorXs.Length; i++)
             {
                 float x = fgAnchorXs[i];
@@ -4451,7 +4572,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 bGo.transform.localPosition = new Vector3(x, 9.85f, 0f);
 
                 var cGo = CreateArchFrameSprite(fgGo, $"FgChain_{i}", pal.CageChain, Vector3.zero, fgLayerId, 19, unlitMat, fgTint);
-                cGo.transform.localPosition = new Vector3(x + 2.2f, 8.70f, 0f);
+                cGo.transform.localPosition = new Vector3(x + 2.0f, 8.70f, 0f);
                 cGo.transform.localScale = new Vector3(1.1f, 2.0f, 1f);
             }
 
@@ -4505,13 +4626,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 ("Mist_RoomP", new Vector3(198f, -15.0f, 0f), new Vector3(70f * 24f, 2.0f * 24f, 1f)),
                 ("Mist_RoomQ", new Vector3(-66f, 17.0f, 0f), new Vector3(72f * 24f, 2.0f * 24f, 1f)),
             };
+            var mistTint = new Color(0.755f, 0.722f, 0.794f, 0.632f);
             foreach (var spec in mistSpecs)
             {
-                var strip = CreateArchFrameSprite(mistRoot, spec.name, pal.WhitePixel, spec.pos, vfxLayerId, -1, pal.MatGroundMist, Color.white);
+                var strip = CreateArchFrameSprite(mistRoot, spec.name, pal.WhitePixel, spec.pos, vfxLayerId, -1, pal.MatGroundMist, mistTint);
                 strip.transform.localScale = spec.scale;
             }
 
-            // 4. 6 ShadowCasters_R5 on [Background, Ground] (Spec §5.5 #4)
+            // 4. 12 ShadowCasters_R5 on [Background, Ground] (Spec §5.5 #4 + Round 8 cross-room light containment)
             var castersRoot = new GameObject("ShadowCasters_R5");
             int[] shadowTargetLayers = { bgLayerId, groundLayerId };
             CreateBoxShadowCaster(castersRoot.transform, "Caster_StairsH", new Vector3(15f, 11f, 0f), 6f, 6f, shadowTargetLayers);
@@ -4520,6 +4642,12 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorN_West", new Vector3(88.5f, 7.5f, 0f), 25f, 1f, shadowTargetLayers);
             CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorR_East", new Vector3(-46.5f, 23.5f, 0f), 33f, 1f, shadowTargetLayers);
             CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorT_West", new Vector3(57.5f, 39.5f, 0f), 39f, 1f, shadowTargetLayers);
+            CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorM_CeilingO", new Vector3(95.0f, -0.5f, 0f), 38f, 1f, shadowTargetLayers);
+            CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorM_East_CeilingO", new Vector3(142.5f, -0.5f, 0f), 43f, 1f, shadowTargetLayers);
+            CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorR_West_CeilingQ", new Vector3(-85.5f, 23.5f, 0f), 33f, 1f, shadowTargetLayers);
+            CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorD_CeilingB", new Vector3(32.0f, 7.5f, 0f), 20f, 1f, shadowTargetLayers);
+            CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorJ_West", new Vector3(-5.0f, 15.5f, 0f), 22f, 1f, shadowTargetLayers);
+            CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorT_East_CeilingS", new Vector3(111.5f, 39.5f, 0f), 57f, 1f, shadowTargetLayers);
 
             // 5. Ensure all scene lights (Global + Point, including cloned Scroll glow & Flash light) have strict sorting-layer masks and Fast NormalMapQuality
             foreach (var light in UnityEngine.Object.FindObjectsByType<Light2D>(FindObjectsInactive.Include))
@@ -4734,7 +4862,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             rt.antiAliasing = 1;
             rt.Create();
             var readTex = new Texture2D(width, height, TextureFormat.RGBAFloat, false, linear: true);
-            var outTex = new Texture2D(width, height, TextureFormat.RGB24, false, linear: false);
 
             var gateFailures = new List<string>();
             if (shaderErrors != 0)
@@ -4769,7 +4896,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
                     RenderTexture.active = rt;
                     readTex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                    readTex.Apply(false, false);
                     RenderTexture.active = null;
 
                     Color[] linearPixels = readTex.GetPixels();
@@ -4787,15 +4913,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                         if (cr >= 240 || cg >= 240 || cb >= 240)
                             clipCount++;
                     }
-                    outTex.SetPixels32(srgbPixels);
-                    outTex.Apply(false, false);
-
                     double meanLum = sumLum / Math.Max(1, linearPixels.Length);
                     double clipPct = (clipCount * 100.0) / Math.Max(1, linearPixels.Length);
                     if (clipPct > maxClipPct)
                         maxClipPct = clipPct;
 
-                    File.WriteAllBytes(Path.Combine(outDir, shot.file), outTex.EncodeToPNG());
+                    byte[] pngBytes = ImageConversion.EncodeArrayToPNG(
+                        srgbPixels,
+                        UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm,
+                        (uint)width,
+                        (uint)height);
+                    File.WriteAllBytes(Path.Combine(outDir, shot.file), pngBytes);
                     Debug.Log($"[{logTag}] Captured {shot.file} ({width}x{height}) at cam={shot.pos} ortho={shot.orthoSize} meanLum={meanLum:F2} clip>=240={clipPct:F3}%");
 
                     if (clipPct > MaxClipPct)
@@ -4810,7 +4938,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 cam.orthographicSize = origOrtho;
                 for (int i = 0; i < parallaxLayers.Length; i++)
                     if (parallaxLayers[i] != null) parallaxLayers[i].transform.position = origParallaxPositions[i];
-                UnityEngine.Object.DestroyImmediate(outTex);
                 UnityEngine.Object.DestroyImmediate(readTex);
                 rt.Release();
                 UnityEngine.Object.DestroyImmediate(rt);

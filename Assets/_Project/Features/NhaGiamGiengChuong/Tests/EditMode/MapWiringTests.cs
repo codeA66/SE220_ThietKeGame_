@@ -838,7 +838,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
 
             var castersRoot = GameObject.Find("ShadowCasters_R5");
             Assert.IsNotNull(castersRoot, "[A11/ShadowCastersRoot]");
-            Assert.AreEqual(6, castersRoot.GetComponentsInChildren<ShadowCaster2D>(true).Length, "[A11/ShadowCastersCount] Expected 6 ShadowCasters_R5 casters.");
+            Assert.AreEqual(12, castersRoot.GetComponentsInChildren<ShadowCaster2D>(true).Length, "[A11/ShadowCastersCount] Expected 12 ShadowCasters_R5 casters.");
         }
 
         [Test]
@@ -1744,6 +1744,210 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(playerVfx, "[A17/PlayerVfx]");
             Assert.IsNotNull(new SerializedObject(playerVfx).FindProperty("_dodgeGlintVfx")?.objectReferenceValue,
                 "[A17/DodgeGlintVfx] PlayerVfx._dodgeGlintVfx must be wired.");
+        }
+
+        [Test]
+        public void A18_Round8Phase3_StairsMistPropsLightingAndAtmosphere()
+        {
+            EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
+
+            // 1. M-01: Stairs_H diagonal riser tiles flipped horizontally (m00 < 0f) & lower tread caps preserved
+            var hjkGo = GameObject.Find("Room_HJK");
+            Assert.IsNotNull(hjkGo, "[A18/Room_HJK]");
+            var hjkTms = hjkGo.GetComponentsInChildren<Tilemap>(true);
+            var hjkRimTm = hjkTms.SingleOrDefault(t => t.name == "TM_SolidRim");
+            var hjkSolidTm = hjkTms.SingleOrDefault(t => t.name == "TM_SolidVisual");
+            Assert.IsNotNull(hjkRimTm, "[A18/HJK_Rim]");
+            Assert.IsNotNull(hjkSolidTm, "[A18/HJK_Solid]");
+
+            int flippedStairTiles = 0;
+            var rimBounds = hjkRimTm.cellBounds;
+            for (int x = rimBounds.xMin; x < rimBounds.xMax; x++)
+            {
+                for (int y = rimBounds.yMin; y < rimBounds.yMax; y++)
+                {
+                    var cell = new Vector3Int(x, y, 0);
+                    var sp = hjkRimTm.GetSprite(cell);
+                    if (sp == null)
+                        continue;
+                    if (sp.name == "stairs_0_00" || sp.name == "stairs_1_00")
+                    {
+                        flippedStairTiles++;
+                        var mat = hjkRimTm.GetTransformMatrix(cell);
+                        Assert.Less(mat.m00, 0f, $"[A18/StairsFlip] '{sp.name}' at {cell} must have negative scale X (m00 < 0f), got {mat.m00}.");
+                    }
+                }
+            }
+            Assert.AreEqual(8, flippedStairTiles, "[A18/StairsTileCount] Expected 8 Stairs_H riser tiles (4 steps x 2 tiles).");
+
+            Vector3Int[] lowerTreadVisualCells =
+            {
+                new Vector3Int(18, 7, 0),
+                new Vector3Int(15, 9, 0),
+                new Vector3Int(12, 11, 0),
+                new Vector3Int(9, 13, 0),
+            };
+            foreach (var cell in lowerTreadVisualCells)
+            {
+                var solidSp = hjkSolidTm.GetSprite(cell);
+                Assert.IsNotNull(solidSp, $"[A18/StairTreadVisual/{cell}] Missing solid floorStamp sprite.");
+                StringAssert.StartsWith("floorStamp_", solidSp.name, $"[A18/StairTreadVisual/{cell}]");
+                var rimSp = hjkRimTm.GetSprite(cell + Vector3Int.up);
+                Assert.IsNotNull(rimSp, $"[A18/StairTreadRim/{cell + Vector3Int.up}] Missing lower tread rim sprite.");
+                StringAssert.StartsWith("ground_", rimSp.name, $"[A18/StairTreadRim/{cell + Vector3Int.up}] Lower tread cap rim must remain ground_*, not overwritten.");
+            }
+
+            // 2. M-02: GroundMist2D world-space shader & 6 GroundMist_R5 strips
+            string mistShaderSrc = System.IO.File.ReadAllText("Assets/_Project/Art/Shaders/GroundMist2D.shader");
+            StringAssert.Contains("TransformObjectToWorld", mistShaderSrc, "[A18/MistWorldSpace]");
+            StringAssert.Contains("Blend SrcAlpha OneMinusSrcAlpha", mistShaderSrc, "[A18/MistBlendMode]");
+            var mistRoot = GameObject.Find("GroundMist_R5");
+            Assert.IsNotNull(mistRoot, "[A18/GroundMistRoot]");
+            var mistRenderers = mistRoot.GetComponentsInChildren<SpriteRenderer>(true);
+            Assert.AreEqual(6, mistRenderers.Length, "[A18/GroundMistCount]");
+            foreach (var mr in mistRenderers)
+                Assert.AreEqual("DeadCells/GroundMist2D", mr.sharedMaterial.shader.name, $"[A18/MistShader/{mr.name}]");
+
+            // 3. M-03 & M-04: Art_Q_SkeletonPier sockets Art_Q_SkeletonSpawn left edge + grounded floor props clash-free
+            var skelPierSr = GameObject.Find("Art_Q_SkeletonPier")?.GetComponent<SpriteRenderer>();
+            var skelSpawnSr = GameObject.Find("Art_Q_SkeletonSpawn")?.GetComponent<SpriteRenderer>();
+            Assert.IsNotNull(skelPierSr, "[A18/SkeletonPier]");
+            Assert.IsNotNull(skelSpawnSr, "[A18/SkeletonSpawn]");
+            Assert.AreEqual("Background", skelPierSr.sortingLayerName, "[A18/SkeletonPierLayer]");
+            Assert.AreEqual(-12, skelPierSr.sortingOrder, "[A18/SkeletonPierOrder]");
+            Assert.AreEqual(-51.88f, skelSpawnSr.bounds.min.x, 0.15f, "[A18/SkeletonSpawnMinX]");
+            Assert.LessOrEqual(skelPierSr.bounds.min.x, skelSpawnSr.bounds.min.x + 0.05f, "[A18/SkeletonPierCoversLeft]");
+            Assert.GreaterOrEqual(skelPierSr.bounds.max.x, skelSpawnSr.bounds.min.x - 0.05f, "[A18/SkeletonPierCoversRight]");
+
+            string[] newJunkClusters =
+            {
+                "Art_A_JunkEast",
+                "Art_D_JunkWest", "Art_D_JunkEast2",
+                "Art_H_LandingJunk", "Art_H_StepJunkMid", "Art_H_StepJunkTop",
+                "Art_K_JunkMid",
+                "Art_E_JunkWest", "Art_E_JunkMid", "Art_E_JunkEast",
+                "Art_L_JunkMid", "Art_L_JunkEast",
+                "Art_F_JunkMid", "Art_F_JunkEast",
+                "Art_M_JunkWest2", "Art_M_JunkMid", "Art_M_JunkMid2", "Art_M_JunkEast2", "Art_M_JunkEast3",
+                "Art_N_JunkWest2", "Art_N_JunkMid1", "Art_N_JunkShaftEdge", "Art_N_JunkMid2", "Art_N_JunkMid3", "Art_N_JunkEast1", "Art_N_JunkEast2", "Art_N_JunkEast3",
+                "Art_O_JunkMid1", "Art_O_JunkMid3", "Art_O_JunkMid2", "Art_O_JunkEast4", "Art_O_JunkEast2", "Art_O_JunkEast3",
+                "Art_P_JunkWest2", "Art_P_JunkMid1", "Art_P_JunkMid2", "Art_P_JunkEast2", "Art_P_JunkEast3",
+                "Art_Q_JunkMid1", "Art_Q_JunkMid2", "Art_Q_JunkEast2",
+                "Art_R_JunkWest2", "Art_R_JunkWest3", "Art_R_JunkMid1", "Art_R_JunkMid2", "Art_R_JunkShaftEdge", "Art_R_JunkEast2",
+                "Art_S_JunkMid1", "Art_S_JunkMid2", "Art_S_JunkMid3", "Art_S_JunkEast2",
+                "Art_T_JunkWest2", "Art_T_JunkMid1", "Art_T_JunkShaft", "Art_T_JunkMid2", "Art_T_JunkMid3", "Art_T_JunkEast1", "Art_T_JunkEast3", "Art_T_JunkEast2",
+            };
+            var newFloorPropObjects = new List<GameObject>();
+            var bedGo = GameObject.Find("Art_D_Bed1");
+            Assert.IsNotNull(bedGo, "[A18/FloorProp/Art_D_Bed1]");
+            newFloorPropObjects.Add(bedGo);
+            foreach (string cluster in newJunkClusters)
+            {
+                var aGo = GameObject.Find(cluster + "_A");
+                var bGo = GameObject.Find(cluster + "_B");
+                Assert.IsNotNull(aGo, $"[A18/FloorProp/{cluster}_A]");
+                Assert.IsNotNull(bGo, $"[A18/FloorProp/{cluster}_B]");
+                newFloorPropObjects.Add(aGo);
+                newFloorPropObjects.Add(bGo);
+            }
+
+            var allRenderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include);
+            var bayFrames = allRenderers
+                .Where(sr => sr.gameObject.name.StartsWith("ArchSill_", StringComparison.Ordinal) ||
+                             sr.gameObject.name.StartsWith("ArchJamb_", StringComparison.Ordinal))
+                .ToArray();
+            var oneWayBoxes = Object.FindObjectsByType<BoxCollider2D>(FindObjectsInactive.Include)
+                .Where(box => box.gameObject.layer == GeometryAuditHelper.LayerOneWay &&
+                              box.gameObject.name.StartsWith("OneWay_", StringComparison.Ordinal))
+                .ToArray();
+
+            foreach (var propGo in newFloorPropObjects)
+            {
+                Bounds pb = GetVisualSpriteBounds(propGo);
+                foreach (var frame in bayFrames)
+                {
+                    bool ox = frame.bounds.max.x > pb.min.x + 0.05f && frame.bounds.min.x < pb.max.x - 0.05f;
+                    bool oy = frame.bounds.max.y > pb.min.y + 0.05f && frame.bounds.min.y < pb.max.y - 0.05f;
+                    Assert.IsFalse(ox && oy, $"[A18/FloorPropBayClash] '{propGo.name}' overlaps bay frame '{frame.name}'.");
+                }
+                foreach (var ow in oneWayBoxes)
+                {
+                    Bounds ob = GeometryAuditHelper.GetWorldBounds(ow);
+                    bool ox = pb.min.x < ob.max.x - 0.05f && pb.max.x > ob.min.x + 0.05f;
+                    bool oy = pb.min.y < ob.max.y + 0.10f && pb.max.y > ob.min.y - 0.35f;
+                    Assert.IsFalse(ox && oy, $"[A18/FloorPropOneWayClash] '{propGo.name}' overlaps OneWay '{ow.name}'.");
+                }
+            }
+
+            // 4. M-05 & A-17: Effective point-light coverage (<= 0.85 * outerRadius) >= 80% in all 19 rooms + 12 ShadowCasters
+            var pointLights = Object.FindObjectsByType<Light2D>()
+                .Where(l => l.enabled && l.lightType == Light2D.LightType.Point && l.intensity > 0.01f && l.pointLightOuterRadius > 0.1f)
+                .ToArray();
+            (string roomId, Rect rect)[] rooms =
+            {
+                ("A", new Rect(0f, 0f, 18f, 5.5f)),
+                ("B", new Rect(18f, 0f, 24f, 6f)),
+                ("C", new Rect(42f, 0f, 14f, 18.5f)),
+                ("D", new Rect(22f, 8f, 20f, 5.5f)),
+                ("G", new Rect(56f, 0f, 20f, 14.5f)),
+                ("H", new Rect(6f, 8f, 16f, 14.5f)),
+                ("J", new Rect(-16f, 16f, 22f, 6.5f)),
+                ("K", new Rect(-30f, 16f, 14f, 14.5f)),
+                ("E", new Rect(-16f, 24f, 38f, 7f)),
+                ("L", new Rect(22f, 24f, 16f, 14.5f)),
+                ("F", new Rect(0f, 32f, 22f, 6f)),
+                ("M", new Rect(76f, 0f, 88f, 7f)),
+                ("N", new Rect(76f, 8f, 88f, 14.5f)),
+                ("O", new Rect(76f, -16f, 88f, 15f)),
+                ("P", new Rect(164f, -16f, 70f, 14.5f)),
+                ("Q", new Rect(-102f, 16f, 72f, 7f)),
+                ("R", new Rect(-102f, 24f, 72f, 14.5f)),
+                ("S", new Rect(38f, 24f, 54f, 15f)),
+                ("T", new Rect(38f, 40f, 102f, 22.5f)),
+            };
+            foreach (var (roomId, rect) in rooms)
+            {
+                int roomSamples = 0;
+                int roomLit = 0;
+                for (float x = rect.xMin + 0.5f; x < rect.xMax; x += 1f)
+                {
+                    for (float y = rect.yMin + 0.5f; y < rect.yMax; y += 1f)
+                    {
+                        var pt = new Vector2(x, y);
+                        roomSamples++;
+                        if (pointLights.Any(l => Vector2.Distance(pt, l.transform.position) <= 0.85f * l.pointLightOuterRadius))
+                            roomLit++;
+                    }
+                }
+                float ratio = roomSamples > 0 ? (float)roomLit / roomSamples : 0f;
+                Assert.GreaterOrEqual(ratio, 0.80f,
+                    $"[A18/EffectiveLight/{roomId}] Room {roomId} effective point-light coverage (<=0.85*R) is {ratio:P1} ({roomLit}/{roomSamples}), expected >= 80%.");
+            }
+
+            var castersRoot = GameObject.Find("ShadowCasters_R5");
+            Assert.IsNotNull(castersRoot, "[A18/ShadowCastersRoot]");
+            Assert.AreEqual(12, castersRoot.GetComponentsInChildren<ShadowCaster2D>(true).Length, "[A18/ShadowCastersCount]");
+
+            // 5. A-13 & A-14: Foreground_Silhouettes span [-32..+32] + camera-attached ambient ParticleSystems
+            var fgSilhouettes = GameObject.Find("Foreground_Silhouettes");
+            Assert.IsNotNull(fgSilhouettes, "[A18/ForegroundSilhouettes]");
+            var fgRenderers = fgSilhouettes.GetComponentsInChildren<SpriteRenderer>(true);
+            Assert.IsNotEmpty(fgRenderers, "[A18/FgRenderers]");
+            Bounds fgBounds = fgRenderers[0].bounds;
+            for (int i = 1; i < fgRenderers.Length; i++)
+                fgBounds.Encapsulate(fgRenderers[i].bounds);
+            Assert.LessOrEqual(fgBounds.min.x, -32.0f, $"[A18/FgMinX] min.x={fgBounds.min.x:F2} must be <= -32.0f.");
+            Assert.GreaterOrEqual(fgBounds.max.x, 32.0f, $"[A18/FgMaxX] max.x={fgBounds.max.x:F2} must be >= 32.0f.");
+
+            foreach (string psName in new[] { "AmbientDustMotes", "AmbientDrippingWater" })
+            {
+                var psGo = GameObject.Find(psName);
+                Assert.IsNotNull(psGo, $"[A18/{psName}]");
+                Assert.IsNotNull(psGo.GetComponent<CameraFollowEmitter2D>(), $"[A18/{psName}/CameraFollowEmitter2D]");
+                var ps = psGo.GetComponent<ParticleSystem>();
+                Assert.IsNotNull(ps, $"[A18/{psName}/ParticleSystem]");
+                Assert.LessOrEqual(ps.shape.scale.x, 32f, $"[A18/{psName}/ShapeWidth]");
+            }
         }
 
         private static Bounds GetVisualSpriteBounds(GameObject go)
