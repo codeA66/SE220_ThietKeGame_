@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using DeadCells.VFX;
 using UnityEngine;
 
@@ -140,7 +141,10 @@ namespace DeadCells.Enemies
         private void OnCollisionEnter2D(Collision2D collision)
         {
             if (_live && _mode == Mode.Lob && (_ground.value & (1 << collision.gameObject.layer)) != 0)
+            {
                 _landed = true;
+                CombatAudioHub.Play(SfxId.GrenadeBounce, 0.65f);
+            }
         }
 
         private void FixedUpdate()
@@ -190,6 +194,7 @@ namespace DeadCells.Enemies
             }
             if (_vfx != null)
                 _vfx.Play(_blastVfx, center);
+            CombatAudioHub.Play(SfxId.GrenadeExplode, 0.90f);
             Finish();
         }
 

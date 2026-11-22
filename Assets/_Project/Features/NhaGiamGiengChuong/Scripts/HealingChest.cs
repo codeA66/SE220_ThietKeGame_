@@ -1,5 +1,6 @@
 using System;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using DeadCells.Player;
 using DeadCells.VFX;
 using UnityEngine;
@@ -210,6 +211,7 @@ namespace DeadCells.NhaGiamGiengChuong
                     _fullHealthFeedback.SetActive(false);
                 if (_vfx != null && _healVfx != null)
                     _vfx.Play(_healVfx, transform.position + Vector3.up * 0.8f);
+                CombatAudioHub.Play(SfxId.ChestHeal);
                 RefreshVisualState();
                 Healed?.Invoke();
                 return true;

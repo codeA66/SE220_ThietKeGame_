@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -59,6 +60,7 @@ namespace DeadCells.Player
         {
             if (Time.time > _comboExpiresAt)
                 _nextShot = 0;
+            CombatAudioHub.Play(SfxId.BowDraw, 0.55f);
             return _data.GetShot(_nextShot);
         }
 
@@ -78,6 +80,7 @@ namespace DeadCells.Player
             _readyAt = Time.time + shot.Cooldown;
             int damage = _stats.ScaleDamage(shot.Damage, _data.ScalingStat);
             arrow.Launch(origin, aimDir, _data, damage, _targets, _ground, gameObject);
+            CombatAudioHub.Play(SfxId.BowRelease, 0.80f);
             AmmoChanged?.Invoke(Ammo, _data.AmmoCapacity);
             return true;
         }

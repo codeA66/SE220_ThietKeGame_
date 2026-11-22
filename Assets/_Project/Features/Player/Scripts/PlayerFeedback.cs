@@ -1,5 +1,6 @@
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using UnityEngine;
 
 namespace DeadCells.Player
@@ -101,6 +102,7 @@ namespace DeadCells.Player
             float hitStop = damage.IsCritical ? ArrowCritHitStop : ArrowHitStop;
             int dir = damage.Direction != 0 ? damage.Direction : (_context != null ? _context.FacingDirection : 1);
             TriggerCameraAndStop(hitStop, new Vector2(dir, 0f), 0.10f, 0.07f, 0f, 0f);
+            CombatAudioHub.Play(SfxId.ArrowHit, 0.75f);
         }
 
         private void OnDamageTaken(DamageInfo info)
@@ -110,6 +112,8 @@ namespace DeadCells.Player
             if (_camera != null)
                 _camera.Shake(0.24f, 0.18f);
             TriggerFlash(0.10f);
+            bool dead = _health != null && !_health.IsAlive;
+            CombatAudioHub.Play(dead ? SfxId.PlayerDeath : SfxId.PlayerHurt, 0.85f);
         }
 
         private void OnStaggered(int direction)
@@ -117,6 +121,7 @@ namespace DeadCells.Player
             Vector2 punchDir = direction != 0 ? new Vector2(direction, 0f) : Vector2.left;
             TriggerCameraAndStop(StaggerHitStop, punchDir, 0.18f, 0.10f, 0.10f, 0.10f);
             TriggerFlash(0.08f);
+            CombatAudioHub.Play(SfxId.ShieldClang, 0.85f);
         }
 
         private void OnPerfectDodged()

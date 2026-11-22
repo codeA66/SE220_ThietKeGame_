@@ -1,6 +1,7 @@
 using System;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using DeadCells.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -215,6 +216,7 @@ namespace DeadCells.NhaGiamGiengChuong
                 _camera = UnityEngine.Object.FindAnyObjectByType<CameraFollow2D>();
             if (_camera != null)
                 _camera.SnapToTarget();
+            CombatAudioHub.Play(SfxId.TeleportWarp);
 
             float cooldownUntil = currentTime + TeleportCooldownSeconds;
             _cooldownUntilTime = cooldownUntil;

@@ -1,6 +1,7 @@
 using System;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using DeadCells.Player;
 using DeadCells.VFX;
 using UnityEngine;
@@ -160,6 +161,7 @@ namespace DeadCells.NhaGiamGiengChuong
                 _camera.Shake(0.10f, 0.14f);
             if (_vfx != null && _openVfx != null && _doorBarrierRoot != null)
                 _vfx.Play(_openVfx, _doorBarrierRoot.transform.position);
+            CombatAudioHub.Play(SfxId.SwitchDoorOpen);
             Opened?.Invoke(this);
             return true;
         }
