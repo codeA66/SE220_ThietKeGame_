@@ -18,8 +18,8 @@ namespace DeadCells.HUD
         [SerializeField] private Vector2 _panelSize = new Vector2(320f, 180f);
         [Tooltip("Distance from the top-right corner, in reference pixels. The gold counter sits at the top.")]
         [SerializeField] private Vector2 _cornerOffset = new Vector2(-32f, -84f);
-        [SerializeField] private Color _backdrop = new Color(0.03f, 0.04f, 0.07f, 1f);
-        [SerializeField] private Color _border = new Color(0.82f, 0.86f, 0.95f, 0.9f);
+        [SerializeField] private Color _backdrop = new Color(0.05f, 0.04f, 0.06f, 1f);
+        [SerializeField] private Color _border = new Color(0.69f, 0.54f, 0.25f, 1f);
 
         private Transform _target;
         private Camera _camera;
@@ -115,7 +115,7 @@ namespace DeadCells.HUD
 
             // The player is always at the centre of the map.
             RectTransform marker = NewRect("PlayerMarker", map, new Vector2(10f, 10f));
-            marker.gameObject.AddComponent<Image>().color = new Color(1f, 0.93f, 0.55f, 1f);
+            marker.gameObject.AddComponent<Image>().color = new Color(0.93f, 0.75f, 0.34f, 1f);
             marker.anchorMin = marker.anchorMax = marker.pivot = new Vector2(0.5f, 0.5f);
             marker.anchoredPosition = Vector2.zero;
         }
