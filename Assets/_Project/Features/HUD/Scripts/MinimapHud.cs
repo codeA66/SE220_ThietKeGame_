@@ -38,6 +38,9 @@ namespace DeadCells.HUD
         private bool[] _oneWay;
         private Collider2D[] _hits;
         private Health[] _healths = new Health[0];
+        // The probe is a touch smaller than a cell so ground in the next cell over is not picked up by its edge.
+        private static readonly Vector2 CellProbe = new Vector2(0.9f, 0.9f);
+
         private float _nextRefresh;
         private float _nextHealthScan;
         private LayerMask _groundLayers;
@@ -71,7 +74,7 @@ namespace DeadCells.HUD
             _pixels = new Color32[_cells.x * _cells.y];
             _solid = new bool[_pixels.Length];
             _oneWay = new bool[_pixels.Length];
-            _hits = new Collider2D[4];
+            _hits = new Collider2D[8];
             BuildPanel();
             Refresh();
         }
@@ -106,10 +109,18 @@ namespace DeadCells.HUD
                 for (int x = 0; x < _cells.x; x++)
                 {
                     var centre = new Vector2(originX + x + 0.5f, originY + y + 0.5f);
-                    int count = Physics2D.OverlapPoint(centre, filter, _hits);
+                    // A box the size of the cell, not a single point, so thin platforms that never cross a cell's
+                    // centre still register. A cell counts as one-way only if everything in it is a one-way platform.
+                    int count = Physics2D.OverlapBox(centre, CellProbe, 0f, filter, _hits);
                     int index = y * _cells.x + x;
+                    bool anySolid = false;
+                    for (int h = 0; h < count; h++)
+                    {
+                        if (!_hits[h].usedByEffector)
+                            anySolid = true;
+                    }
                     _solid[index] = count > 0;
-                    _oneWay[index] = count > 0 && _hits[0].usedByEffector;
+                    _oneWay[index] = count > 0 && !anySolid;
                 }
             }
 
