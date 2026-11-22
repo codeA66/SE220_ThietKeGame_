@@ -40,6 +40,7 @@ namespace DeadCells.HUD
         private Health[] _healths = new Health[0];
         private float _nextRefresh;
         private float _nextHealthScan;
+        private LayerMask _groundLayers;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateInScene()
@@ -60,6 +61,7 @@ namespace DeadCells.HUD
             }
 
             _target = _player.transform;
+            _groundLayers = LayerMask.GetMask("Ground", "OneWayPlatform");
             _texture = new Texture2D(_cells.x, _cells.y, TextureFormat.RGBA32, false)
             {
                 name = "MinimapMosaic",
@@ -91,9 +93,7 @@ namespace DeadCells.HUD
         // Redraws the whole mosaic around the player's current cell.
         private void Refresh()
         {
-            if (_player.Context == null)
-                return;
-            LayerMask ground = _player.Context.GroundMask;
+            LayerMask ground = _groundLayers;
             Vector2 position = _target.position;
             // Whole-cell origin so the map steps from cell to cell instead of shimmering.
             int originX = Mathf.FloorToInt(position.x) - _cells.x / 2;
