@@ -52,14 +52,16 @@ namespace DeadCells.Core.Tests
         private const float TopDismountFeetY = ChainTriggerMaxY - 0.06f; // 8.02
 
         /// <summary>
-        /// The chain geometry now shipped in <c>CD.prefab</c> after Task 2.2 trimmed it: box 0.5 x 8.28
-        /// centred at y = 3.94, so the trigger spans [-0.20 .. 8.08] — floorY - 0.20 to deckTopY + 0.08.
-        /// The top dismount therefore snaps the feet to 8.02, which is 0.02u above the 8.00 deck and
-        /// well inside the trigger, so a held W can no longer re-grab across an air overhang.
+        /// Pre-trim chain geometry — the overhang the Task 1.2 latch exists to survive. Box 0.5 x 9.0
+        /// centred at y = 4.0, so the trigger spans [-0.50 .. 8.50] over the same 8.00 deck.
+        /// The mandated -0.06 top dismount therefore puts the feet at 8.44, which is 0.44u of air above
+        /// the deck and far outside the reach of the 0.05u feet probe, so a fixture built on this trigger
+        /// exercises the <b>no footing</b> branch of <c>PlayerClimbState</c>'s top dismount.
         /// </summary>
-        private const float ShippedChainCenterY = 3.94f;
-        private const float ShippedChainHeight = 8.28f;
-        private const float ShippedChainMaxY = ShippedChainCenterY + ShippedChainHeight * 0.5f; // 8.08
+        private const float OverhangChainCenterY = 4f;
+        private const float OverhangChainHeight = 9f;
+        private const float OverhangChainMaxY = OverhangChainCenterY + OverhangChainHeight * 0.5f; // 8.50
+        private const float OverhangDismountFeetY = OverhangChainMaxY - 0.06f; // 8.44
 
         /// <summary>Simulated frame length for the multi-frame climb/fall runs (120 Hz).</summary>
         private const float FrameDeltaTime = 1f / 120f;
@@ -252,30 +254,40 @@ namespace DeadCells.Core.Tests
         }
 
         /// <summary>
-        /// P0-02 regression on the geometry that is still shipped (trigger top 8.50 over the 8.00
-        /// deck). The mandated -0.06 snap puts the feet at 8.44, which is 0.44u above the deck, so
-        /// handing the player to Idle there made a held <c>W</c> loop Climb -> Idle -> Fall -> Climb
-        /// roughly every 0.1s: Fall 8.44 -> 8.27, grab allowed (8.27 &lt; 8.50 - 0.22), Climb, dismount
-        /// snap back to 8.44, Idle, not grounded, Fall. The hand-off must not depend on Task 2.2
-        /// trimming the trigger, so a top dismount with no footing under the feet has to stay off the
-        /// chain it just left instead of handing it straight back.
+        /// P0-02 regression on an overhanging chain (trigger top 8.50 over the 8.00 deck — the shape
+        /// every untrimmed chain still has, and the shape the Task 1.2 latch was written against).
+        /// The mandated -0.06 snap puts the feet at 8.44, which is 0.44u above the deck and beyond the
+        /// reach of the 0.05u feet probe, so the top dismount finds <b>no footing</b>. Handing the
+        /// player to Idle there made a held <c>W</c> loop Climb -> Idle -> Fall -> Climb roughly every
+        /// 0.1s: Fall 8.44 -> 8.27, grab allowed (8.27 &lt; 8.50 - 0.22), Climb, dismount snap back to
+        /// 8.44, Idle, not grounded, Fall. The hand-off must not depend on Task 2.2 trimming the
+        /// trigger, so a top dismount with no footing under the feet has to stay off the chain it just
+        /// left instead of handing it straight back.
         /// </summary>
         [Test]
         public void T02b_ClimbState_TopDismountWithoutFootingDoesNotOscillateWithUpHeld()
         {
-            var root = new GameObject("__Round9T02bShippedChainTop");
+            var root = new GameObject("__Round9T02bOverhangChainTop");
             try
             {
-                CreateShippedChain(root.transform);
+                CreateOverhangChain(root.transform);
                 CreateOneWayDeck(root.transform);
-                // Exactly where the -0.06 snap lands on the trimmed trigger: 8.08 - 0.06 = 8.02.
-                var harness = CreatePlayerHarness(root.transform, new Vector2(ChainX, ShippedChainMaxY - 0.06f));
+                // Exactly where the -0.06 snap lands on the overhanging trigger: 8.50 - 0.06 = 8.44.
+                var harness = CreatePlayerHarness(root.transform, new Vector2(ChainX, OverhangDismountFeetY));
                 Physics2D.SyncTransforms();
 
-                Assert.AreEqual(TopDismountFeetY, ShippedChainMaxY - 0.06f, 0.001f,
-                    "Precondition: the trimmed trigger dismounts the feet at 8.02, 0.02u above the 8.00 deck.");
+                Assert.AreEqual(0.44f, OverhangDismountFeetY - DeckTopY, 0.001f,
+                    "Precondition: the overhanging trigger dismounts the feet at 8.44, 0.44u above the 8.00 deck.");
+
+                // Pin the branch this test owns. If the fixture geometry ever drifts back inside the
+                // feet probe this fails loudly, instead of the guard quietly sliding onto T02c's
+                // footed path and leaving the Climb -> Fall oscillation untested.
+                Assert.IsFalse(harness.Context.TryGetFootingAt(new Vector2(ChainX, OverhangDismountFeetY), out _),
+                    "T02b must run the no-footing branch: with the feet at 8.44 the 0.05u feet probe cannot reach the " +
+                    "8.00 deck. It reported a surface, so this fixture is no longer a top dismount with no footing.");
+
                 Assert.IsTrue(harness.Context.TryFindClimbable(),
-                    "Precondition: the dismount point still overlaps the trimmed chain trigger.");
+                    "Precondition: the dismount point still overlaps the overhanging chain trigger.");
 
                 SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
                 SetInput(harness.Input, nameof(PlayerInputReader.MoveY), 1f); // W held for the whole run
@@ -320,6 +332,119 @@ namespace DeadCells.Core.Tests
                 {
                     Assert.AreEqual(DeckTopY, harness.Context.Position.y, 0.3f,
                         "A top dismount with no footing must fall onto the deck the chain serves, not hang in mid air.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
+        /// The other side of the same dismount: on the geometry Task 2.2 actually ships (trigger top
+        /// 8.08 over the 8.00 deck) the -0.06 snap lands the feet at 8.02, which is inside the 0.05u
+        /// feet probe, so <c>PlayerClimbState</c> takes the <b>footed</b> branch — it snaps onto the
+        /// surface it found, a release gap above it, and hands the player to Fall so the drop resolves
+        /// a real landing. This is the branch that ships, so it gets its own fixture instead of riding
+        /// on T02b's no-footing one.
+        /// </summary>
+        [Test]
+        public void T02c_ClimbState_TopDismountOnTrimmedTriggerLandsAndDoesNotRegrab()
+        {
+            var root = new GameObject("__Round9T02cTrimmedChainTop");
+            try
+            {
+                CreateChain(root.transform);
+                CreateOneWayDeck(root.transform);
+                var harness = CreatePlayerHarness(root.transform, new Vector2(ChainX, TopDismountFeetY));
+                Physics2D.SyncTransforms();
+
+                // Pin the branch: the trimmed dismount point is under the deck, inside the probe.
+                Assert.IsTrue(harness.Context.TryGetFootingAt(new Vector2(ChainX, TopDismountFeetY), out float surfaceY),
+                    "On the trimmed trigger the dismount point at 8.02 must find the 8.00 deck under it; if it does " +
+                    "not, this fixture is testing the no-footing branch that T02b already owns.");
+                // The probe reports the contact-offset band rather than the analytic collider top, so this
+                // stays inside a probe-width of the deck instead of pinning a float that is not a contract.
+                Assert.AreEqual(DeckTopY, surfaceY, 0.01f,
+                    "The footing found under the trimmed dismount point must be the deck the chain serves.");
+                Assert.IsTrue(harness.Context.TryFindClimbable(),
+                    "Precondition: the dismount point still overlaps the trimmed chain trigger.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveY), 1f); // W held for the whole run
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), false);
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpHeld), false);
+
+                ForceState(harness.Machine, harness.Machine.Climb);
+
+                harness.Machine.Tick();
+
+                Assert.AreNotSame(harness.Machine.Climb, harness.Machine.Current,
+                    "Holding W at the trimmed chain top must step the player off the chain.");
+                Assert.AreEqual(surfaceY + 0.02f, harness.Context.Position.y, 0.001f,
+                    "The footed dismount must snap the feet to the surface it found plus the 0.02u release gap, " +
+                    "not to a fixed offset below the trigger top.");
+                Assert.AreEqual(0f, harness.Context.Velocity.sqrMagnitude, 0.0001f,
+                    "The footed dismount must zero the velocity so the short drop starts from rest.");
+
+                // Hold W through the drop: the footed dismount must land on the deck and never climb again.
+                int climbEntries = 1;
+                bool landed = false;
+                Vector2 landingPosition = harness.Context.Position;
+                IPlayerState previous = harness.Machine.Current;
+                for (int frame = 0; frame < 360 && !landed; frame++)
+                {
+                    harness.Context.RefreshFrame();
+                    harness.Machine.Tick();
+                    harness.Machine.FixedTick();
+
+                    IPlayerState current = harness.Machine.Current;
+                    if (!ReferenceEquals(current, previous))
+                    {
+                        if (current is PlayerClimbState)
+                            climbEntries++;
+                        previous = current;
+                    }
+
+                    landed = harness.Context.IsGrounded
+                             && !(current is PlayerClimbState) && !(current is PlayerFallState);
+                    if (landed)
+                        landingPosition = harness.Context.Position;
+                    else
+                    {
+                        AdvanceBody(harness, FrameDeltaTime);
+                        BeginSimulatedFrame(harness.Machine);
+                    }
+                }
+
+                Assert.IsTrue(landed,
+                    "A footed top dismount must land on the deck it found; the player never became grounded in 3s. " +
+                    $"Ended in {harness.Machine.Current?.GetType().Name ?? "None"} at y={harness.Context.Position.y:F2}.");
+                Assert.AreEqual(DeckTopY, landingPosition.y, 0.05f,
+                    $"The footed dismount must land on the 8.00 deck, not at y={landingPosition.y:F2}.");
+                Assert.LessOrEqual(climbEntries, 1,
+                    "A held W must not re-enter PlayerClimbState after a footed top dismount: " +
+                    $"climb was entered {climbEntries} time(s).");
+
+                // Standing on the deck with W held: the chain tops out 0.08u overhead, so the grab must
+                // stay refused for as long as the player stands there. The body is pinned so this only
+                // measures the state machine, not the EditMode integrator's lack of contact resolution.
+                harness.Body.position = new Vector2(ChainX, DeckTopY);
+                harness.Body.linearVelocity = Vector2.zero;
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsGrounded, "Precondition: the pinned body stands on the 8.00 deck.");
+                Assert.IsTrue(harness.Context.TryFindClimbable(),
+                    "Precondition: the body standing on the deck still overlaps the trimmed chain trigger.");
+
+                ForceState(harness.Machine, harness.Machine.Idle);
+                for (int frame = 0; frame < 60; frame++)
+                {
+                    harness.Machine.Tick();
+                    Assert.AreNotSame(harness.Machine.Climb, harness.Machine.Current,
+                        "Holding W while standing on the deck below a trimmed chain must not mount it: " +
+                        $"the grab succeeded on frame {frame}.");
+                    BeginSimulatedFrame(harness.Machine);
                 }
             }
             finally
@@ -1428,33 +1553,35 @@ namespace DeadCells.Core.Tests
         }
 
         /// <summary>
-        /// Chain trigger trimmed to the Task 2.2 shape: y = [0.08 .. 8.08] on x = 46, so it overhangs
-        /// the 8.00 deck it serves by 0.08u.
+        /// A climbable trigger on layer 10 at an explicit geometry. Every fixture that needs a different
+        /// overhang goes through here, so the trigger shape lives in one place instead of a second copy
+        /// of the constants drifting away from the first.
         /// </summary>
-        private static BoxCollider2D CreateChain(Transform parent)
+        private static BoxCollider2D CreateChainAt(Transform parent, string name, float centerY, float height)
         {
-            var go = new GameObject("I1_Chain_C");
+            var go = new GameObject(name);
             go.transform.SetParent(parent);
             go.layer = ClimbableLayer;
-            go.transform.position = new Vector3(ChainX, ChainTriggerCenterY, 0f);
+            go.transform.position = new Vector3(ChainX, centerY, 0f);
             var col = go.AddComponent<BoxCollider2D>();
             col.isTrigger = true;
-            col.size = new Vector2(0.5f, ChainTriggerHeight);
+            col.size = new Vector2(0.5f, height);
             return col;
         }
 
-        /// <summary>Chain trigger as it is still shipped: y = [-0.50 .. 8.50] on x = 46.</summary>
-        private static BoxCollider2D CreateShippedChain(Transform parent)
-        {
-            var go = new GameObject("I1_Chain_C_Shipped");
-            go.transform.SetParent(parent);
-            go.layer = ClimbableLayer;
-            go.transform.position = new Vector3(ChainX, ShippedChainCenterY, 0f);
-            var col = go.AddComponent<BoxCollider2D>();
-            col.isTrigger = true;
-            col.size = new Vector2(0.5f, ShippedChainHeight);
-            return col;
-        }
+        /// <summary>
+        /// Chain trigger in the shape Task 2.2 ships: y = [-0.20 .. 8.08] on x = 46, overhanging the
+        /// 8.00 deck it serves by 0.08u, so a top dismount lands inside the feet probe.
+        /// </summary>
+        private static BoxCollider2D CreateChain(Transform parent) =>
+            CreateChainAt(parent, "I1_Chain_C", ChainTriggerCenterY, ChainTriggerHeight);
+
+        /// <summary>
+        /// Pre-trim chain trigger: y = [-0.50 .. 8.50] on x = 46. Overhangs the same 8.00 deck by
+        /// 0.50u, which is what puts a top dismount 0.44u into the air with no footing to find.
+        /// </summary>
+        private static BoxCollider2D CreateOverhangChain(Transform parent) =>
+            CreateChainAt(parent, "I1_Chain_C_Overhang", OverhangChainCenterY, OverhangChainHeight);
 
         private static GameObject CreateOneWayDeck(Transform parent)
         {
