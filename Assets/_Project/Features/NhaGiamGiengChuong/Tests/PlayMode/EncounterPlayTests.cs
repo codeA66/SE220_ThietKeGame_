@@ -120,6 +120,14 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(zombieE.enabled);
             Assert.IsTrue(archerE.enabled);
 
+            // P0-05b: Zone E1 now hosts the Enemy_Rat_E2 flanker under OneWay_E_Combat. It closes to nibble range
+            // (5 damage) on a stationary Player and would corrupt the isolated dodge measurement below, so retire it first.
+            var ratE2 = enemies.Single(e => e.name == "Enemy_Rat_E2");
+            Assert.IsTrue(ratE2.enabled, "[P02/Flanker] Enemy_Rat_E2 must wake with Zone E1.");
+            Assert.IsTrue(ratE2.GetComponent<Health>().TakeDamage(new DamageInfo(9999, 1, 0f, 0f, false, player.gameObject)),
+                "[P02/Flanker] Enemy_Rat_E2 must be damageable once awake.");
+            yield return null;
+
             // Place Player west of center OneWayPlatform at (-6, 25.0) so chest/hurtbox is at y=25.875 (exact height of OneWay_E_Combat)
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(-6f, 25.0f));
             var playerBody = player.GetComponent<Rigidbody2D>();

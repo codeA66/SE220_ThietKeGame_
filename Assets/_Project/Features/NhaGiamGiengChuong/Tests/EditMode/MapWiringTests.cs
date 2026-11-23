@@ -104,18 +104,22 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsTrue(hasArrow, "[A07/Proj.ArrowPrefab]");
             Assert.IsTrue(hasGrenade, "[A07/Proj.GrenadePrefab]");
 
-            // 5. Thirty enemies wired + exact spawn positions + dormant before tick 0
+            // 5. Thirty-four enemies wired + exact spawn positions + dormant before tick 0
             var enemies = Object.FindObjectsByType<EnemyController>(FindObjectsInactive.Include);
-            Assert.AreEqual(30, enemies.Length, "[A07/EnemyCount] Expected 30 enemies.");
+            Assert.AreEqual(34, enemies.Length, "[A07/EnemyCount] Expected 34 enemies.");
 
             var expectedSpawns = new[]
             {
-                // Core Spine (5)
+                // Core Spine (9)
                 ("Enemy_Zombie_B", new Vector2(29f, 0f)),
+                ("Enemy_Rat_B2", new Vector2(35f, 0f)),
                 ("Enemy_Rat_G", new Vector2(62f, 0f)),
                 ("Enemy_Shield_J", new Vector2(-4f, 16f)),
+                ("Enemy_Rat_J2", new Vector2(-10f, 16f)),
                 ("Enemy_Zombie_E", new Vector2(-9f, 24f)),
                 ("Enemy_Archer_E", new Vector2(10f, 24f)),
+                ("Enemy_Rat_E2", new Vector2(0f, 24f)),
+                ("Enemy_Zombie_D1", new Vector2(31f, 8f)),
                 // Room M (4)
                 ("Enemy_Zombie_M1", new Vector2(86f, 0f)),
                 ("Enemy_Grenadier_M1", new Vector2(92f, 3.5f)),
@@ -164,13 +168,14 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 Assert.AreEqual(vfx, soE.FindProperty("_vfx").objectReferenceValue, $"[A07/Enemy/{name}.Vfx]");
             }
 
-            // 6. Eleven EncounterZones matching Spec §5.3 bounds and members
+            // 6. Twelve EncounterZones matching Spec §5.3 bounds and members
             var zones = Object.FindObjectsByType<EncounterZone>(FindObjectsInactive.Include);
-            Assert.AreEqual(11, zones.Length, "[A07/ZoneCount]");
-            AssertZone(zones, "B1", new Vector2(20f, 0f), new Vector2(42f, 6f), "Enemy_Zombie_B");
+            Assert.AreEqual(12, zones.Length, "[A07/ZoneCount]");
+            AssertZone(zones, "B1", new Vector2(20f, 0f), new Vector2(42f, 6f), "Enemy_Zombie_B", "Enemy_Rat_B2");
+            AssertZone(zones, "D1", new Vector2(23f, 8f), new Vector2(41f, 13.5f), "Enemy_Zombie_D1");
             AssertZone(zones, "G1", new Vector2(58f, 0f), new Vector2(76f, 7.75f), "Enemy_Rat_G");
-            AssertZone(zones, "J1", new Vector2(-16f, 16f), new Vector2(6f, 22.5f), "Enemy_Shield_J");
-            AssertZone(zones, "E1", new Vector2(-16f, 24f), new Vector2(22f, 31f), "Enemy_Zombie_E", "Enemy_Archer_E");
+            AssertZone(zones, "J1", new Vector2(-16f, 16f), new Vector2(6f, 22.5f), "Enemy_Shield_J", "Enemy_Rat_J2");
+            AssertZone(zones, "E1", new Vector2(-16f, 24f), new Vector2(22f, 31f), "Enemy_Zombie_E", "Enemy_Archer_E", "Enemy_Rat_E2");
             AssertZone(zones, "M1", new Vector2(78f, 0f), new Vector2(148f, 6.8f), "Enemy_Zombie_M1", "Enemy_Grenadier_M1", "Enemy_Shield_M1", "Enemy_Archer_M1");
             AssertZone(zones, "N1", new Vector2(78f, 8f), new Vector2(160f, 22f), "Enemy_Zombie_N1", "Enemy_Archer_N1", "Enemy_Grenadier_N1", "Enemy_Shield_N1");
             AssertZone(zones, "O1", new Vector2(78f, -16f), new Vector2(162f, -2f), "Enemy_Rat_O1", "Enemy_Rat_O2", "Enemy_Zombie_O1", "Enemy_Grenadier_O1");
@@ -989,7 +994,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             var player = Object.FindAnyObjectByType<PlayerController>();
             var hitStop = Object.FindAnyObjectByType<HitStop>();
             var enemies = Object.FindObjectsByType<EnemyController>(FindObjectsInactive.Include);
-            Assert.AreEqual(30, enemies.Length);
+            Assert.AreEqual(34, enemies.Length);
             Assert.AreEqual(5, enemies.Count(e => e.name.Contains("Grenadier")), "[A13/GrenadierCount] Expected 5 Enemy_Grenadier instances.");
 
             // 1. 3 Scrolls of Power + ScrollAura_R5_* under _icon + _glow pointing to Scroll glow + PowerScrollInteraction + ScrollUpgradeMenu + ScrollPickupPresentation
@@ -1038,7 +1043,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.AreEqual(3, registeredScrolls.arraySize, "[A13/ScrollRegistered] PowerScrollInteraction._scrolls must register all 3 scrolls.");
             Assert.AreEqual(highBastionScroll, registeredScrolls.GetArrayElementAtIndex(2).objectReferenceValue, "[A13/ScrollRegisteredI17]");
 
-            // 2. GoldWallet + EnemyGoldDrops (all 30 enemies registered) + GoldHud + GoldPickup Vfx sorting
+            // 2. GoldWallet + EnemyGoldDrops (all 34 enemies registered) + GoldHud + GoldPickup Vfx sorting
             var wallet = Object.FindAnyObjectByType<DeadCells.Currency.GoldWallet>();
             var goldDrops = Object.FindAnyObjectByType<DeadCells.Currency.EnemyGoldDrops>();
             var goldHud = Object.FindAnyObjectByType<DeadCells.HUD.GoldHud>();
@@ -1047,7 +1052,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(goldHud, "[A13/GoldHud]");
             var soDrops = new SerializedObject(goldDrops);
             Assert.AreEqual(wallet, soDrops.FindProperty("_wallet").objectReferenceValue);
-            Assert.AreEqual(30, soDrops.FindProperty("_enemies").arraySize, "[A13/GoldDropsEnemies] All 30 enemies must be registered.");
+            Assert.AreEqual(34, soDrops.FindProperty("_enemies").arraySize, "[A13/GoldDropsEnemies] All 34 enemies must be registered.");
             var pickupPrefab = soDrops.FindProperty("_pickupPrefab").objectReferenceValue as DeadCells.Currency.GoldPickup;
             Assert.IsNotNull(pickupPrefab, "[A13/GoldPickupPrefab]");
             Assert.AreEqual("VFX", pickupPrefab.GetComponentInChildren<SpriteRenderer>(true).sortingLayerName, "[A13/GoldPickupSorting]");
@@ -1789,9 +1794,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
         {
             EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
 
-            // 1. 30 EnemyImpactFeedback instances wired to all 30 enemies with VFX-sorted health bars
+            // 1. 34 EnemyImpactFeedback instances wired to all 34 enemies with VFX-sorted health bars
             var feedbacks = Object.FindObjectsByType<DeadCells.HUD.EnemyImpactFeedback>(FindObjectsInactive.Include);
-            Assert.AreEqual(30, feedbacks.Length, "[A17/FeedbackCount] Expected 30 EnemyImpactFeedback instances.");
+            Assert.AreEqual(34, feedbacks.Length, "[A17/FeedbackCount] Expected 34 EnemyImpactFeedback instances.");
 
             string[] requiredProps =
             {
@@ -1821,7 +1826,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                         $"[A17/FeedbackBarSorting/{fb.name}/{sr.name}] Enemy health bar must render on VFX sorting layer.");
                 }
             }
-            Assert.AreEqual(30, coveredTargets.Count, "[A17/DistinctTargets] Expected 30 distinct EnemyImpactFeedback targets.");
+            Assert.AreEqual(34, coveredTargets.Count, "[A17/DistinctTargets] Expected 34 distinct EnemyImpactFeedback targets.");
 
             // 2. VfxSpawner._prewarm contains 11 non-null VfxDefinition assets
             var vfxSpawner = Object.FindAnyObjectByType<VfxSpawner>();

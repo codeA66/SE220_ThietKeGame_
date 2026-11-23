@@ -2064,14 +2064,18 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             soRun.FindProperty("_hitStop").objectReferenceValue = hitStop;
             soRun.ApplyModifiedPropertiesWithoutUndo();
 
-            // 6. Thirty Enemies (5 core + 25 wing enemies, all dormant before tick 0)
+            // 6. Thirty-four Enemies (9 core spine + 25 wing enemies, all dormant before tick 0)
             var enemiesRoot = new GameObject("Enemies");
-            // Core Spine (5)
+            // Core Spine (9) — P0-05b Dead Cells encounter pacing pack
             var zombieB = SpawnDormantEnemy(ZombiePrefabPath, "Enemy_Zombie_B", new Vector3(29f, 0f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
+            var ratB2 = SpawnDormantEnemy(RatPrefabPath, "Enemy_Rat_B2", new Vector3(35f, 0f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
+            var zombieD1 = SpawnDormantEnemy(ZombiePrefabPath, "Enemy_Zombie_D1", new Vector3(31f, 8f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
             var ratG = SpawnDormantEnemy(RatPrefabPath, "Enemy_Rat_G", new Vector3(62f, 0f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
             var shieldJ = SpawnDormantEnemy(ShieldPrefabPath, "Enemy_Shield_J", new Vector3(-4f, 16f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
+            var ratJ2 = SpawnDormantEnemy(RatPrefabPath, "Enemy_Rat_J2", new Vector3(-10f, 16f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
             var zombieE = SpawnDormantEnemy(ZombiePrefabPath, "Enemy_Zombie_E", new Vector3(-9f, 24f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
             var archerE = SpawnDormantEnemy(ArcherPrefabPath, "Enemy_Archer_E", new Vector3(10f, 24f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
+            var ratE2 = SpawnDormantEnemy(RatPrefabPath, "Enemy_Rat_E2", new Vector3(0f, 24f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
 
             // Room M (4)
             var zombieM1 = SpawnDormantEnemy(ZombiePrefabPath, "Enemy_Zombie_M1", new Vector3(86f, 0f, 0f), enemiesRoot.transform, playerGo.transform, projectileSpawner, vfxSpawner);
@@ -2114,7 +2118,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             var allEnemies = new[]
             {
-                zombieB, ratG, shieldJ, zombieE, archerE,
+                zombieB, ratB2, zombieD1, ratG, shieldJ, ratJ2, zombieE, archerE, ratE2,
                 zombieM1, grenadierM1, shieldM1, archerM1,
                 zombieN1, archerN1, grenadierN1, shieldN1,
                 ratO1, ratO2, zombieO1, grenadierO1,
@@ -2124,12 +2128,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 zombieT1, archerT1, shieldT1, grenadierT1,
             };
 
-            // 7. Eleven Encounter Zones (Spec §5.3 exact inclusive bounds and members)
+            // 7. Twelve Encounter Zones (Spec §5.3 exact inclusive bounds and members)
             var zonesRoot = new GameObject("EncounterZones");
-            CreateEncounterZone(zonesRoot.transform, "Zone_B1", "B1", new Vector2(20f, 0f), new Vector2(42f, 6f), runController, playerCtrl, playerHealth, playerCol, new[] { zombieB });
+            CreateEncounterZone(zonesRoot.transform, "Zone_B1", "B1", new Vector2(20f, 0f), new Vector2(42f, 6f), runController, playerCtrl, playerHealth, playerCol, new[] { zombieB, ratB2 });
+            CreateEncounterZone(zonesRoot.transform, "Zone_D1", "D1", new Vector2(23f, 8f), new Vector2(41f, 13.5f), runController, playerCtrl, playerHealth, playerCol, new[] { zombieD1 });
             CreateEncounterZone(zonesRoot.transform, "Zone_G1", "G1", new Vector2(58f, 0f), new Vector2(76f, 7.75f), runController, playerCtrl, playerHealth, playerCol, new[] { ratG });
-            CreateEncounterZone(zonesRoot.transform, "Zone_J1", "J1", new Vector2(-16f, 16f), new Vector2(6f, 22.5f), runController, playerCtrl, playerHealth, playerCol, new[] { shieldJ });
-            CreateEncounterZone(zonesRoot.transform, "Zone_E1", "E1", new Vector2(-16f, 24f), new Vector2(22f, 31f), runController, playerCtrl, playerHealth, playerCol, new[] { zombieE, archerE });
+            CreateEncounterZone(zonesRoot.transform, "Zone_J1", "J1", new Vector2(-16f, 16f), new Vector2(6f, 22.5f), runController, playerCtrl, playerHealth, playerCol, new[] { shieldJ, ratJ2 });
+            CreateEncounterZone(zonesRoot.transform, "Zone_E1", "E1", new Vector2(-16f, 24f), new Vector2(22f, 31f), runController, playerCtrl, playerHealth, playerCol, new[] { zombieE, archerE, ratE2 });
             CreateEncounterZone(zonesRoot.transform, "Zone_M1", "M1", new Vector2(78f, 0f), new Vector2(148f, 6.8f), runController, playerCtrl, playerHealth, playerCol, new[] { zombieM1, grenadierM1, shieldM1, archerM1 });
             CreateEncounterZone(zonesRoot.transform, "Zone_N1", "N1", new Vector2(78f, 8f), new Vector2(160f, 22f), runController, playerCtrl, playerHealth, playerCol, new[] { zombieN1, archerN1, grenadierN1, shieldN1 });
             CreateEncounterZone(zonesRoot.transform, "Zone_O1", "O1", new Vector2(78f, -16f), new Vector2(162f, -2f), runController, playerCtrl, playerHealth, playerCol, new[] { ratO1, ratO2, zombieO1, grenadierO1 });
@@ -2326,7 +2331,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             BindUiInputModuleActions(uiModule, inputActions);
 
             // 9b. Clone Scrolls of Power + Power Scroll HUD + Scroll cinematic + Gold HUD + EnemyImpactFeedback read-only from Main_Level.unity
-            //     and wire Run Gold (GoldWallet + EnemyGoldDrops with all 30 enemies) BEFORE atmosphere/lighting pass.
+            //     and wire Run Gold (GoldWallet + EnemyGoldDrops with all 34 enemies) BEFORE atmosphere/lighting pass.
             CloneMainLevelScrollsAndGoldEconomy(scene, pal, playerGo, playerCtrl, playerHealth, hitStop, playerHudGo, allEnemies, vfxSpawner);
 
             var scrollInteractionRef = UnityEngine.Object.FindAnyObjectByType<PowerScrollInteraction>();
@@ -2748,7 +2753,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 RemapCinematicComponentArray(soSrcPres, soPres, "_stars", srcScrollCinematic.transform, clonedCinematic.transform);
                 soPres.ApplyModifiedPropertiesWithoutUndo();
 
-                // 4. Create Run Gold (GoldWallet + EnemyGoldDrops with all 30 enemies) + clone Gold HUD under PlayerHUD
+                // 4. Create Run Gold (GoldWallet + EnemyGoldDrops with all 34 enemies) + clone Gold HUD under PlayerHUD
                 var runGoldGo = new GameObject("Run Gold");
                 SceneManager.MoveGameObjectToScene(runGoldGo, targetScene);
                 var goldWallet = runGoldGo.AddComponent<GoldWallet>();
@@ -2820,7 +2825,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                     soCoin.ApplyModifiedPropertiesWithoutUndo();
                 }
 
-                // 5. Clone "Enemy_Shield hit feedback" from Main_Level's "Combat and Pickup Feedback" onto all 30 enemies
+                // 5. Clone "Enemy_Shield hit feedback" from Main_Level's "Combat and Pickup Feedback" onto all 34 enemies
                 var srcFeedbackRoot = FindInSceneByName(mainLevelScene, "Combat and Pickup Feedback");
                 if (srcFeedbackRoot == null)
                     throw new InvalidOperationException("Main_Level.unity missing 'Combat and Pickup Feedback'.");

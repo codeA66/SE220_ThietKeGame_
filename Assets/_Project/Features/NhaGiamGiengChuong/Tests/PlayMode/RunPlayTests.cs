@@ -300,7 +300,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(gate2.GateBarrierRoot.activeInHierarchy, $"[P07/{label}/Reset] I4 barrier active.");
 
             var enemies2 = UnityEngine.Object.FindObjectsByType<EnemyController>();
-            Assert.AreEqual(30, enemies2.Length, $"[P07/{label}/Reset] All 30 enemies restored.");
+            Assert.AreEqual(34, enemies2.Length, $"[P07/{label}/Reset] All 34 enemies restored.");
             foreach (var e in enemies2)
             {
                 Assert.IsFalse(e.enabled, $"[P07/{label}/Reset] {e.name} dormant.");
@@ -308,8 +308,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             }
 
             var zones2 = UnityEngine.Object.FindObjectsByType<EncounterZone>();
-            Assert.AreEqual(11, zones2.Length);
-            Assert.IsTrue(zones2.All(z => !z.IsActivated), $"[P07/{label}/Reset] All 11 zones dormant.");
+            Assert.AreEqual(12, zones2.Length);
+            Assert.IsTrue(zones2.All(z => !z.IsActivated), $"[P07/{label}/Reset] All 12 zones dormant.");
 
             // Old projectile from run 1 no longer exists
             Assert.IsTrue(oldArrow == null, $"[P07/{label}/Reset] Old projectile from previous run must be destroyed.");
