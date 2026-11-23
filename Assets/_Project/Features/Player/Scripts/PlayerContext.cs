@@ -223,19 +223,35 @@ namespace DeadCells.Player
         }
 
         /// <summary>
-        /// Would the player find floor with their feet at this body position? Used by the climb top
-        /// dismount before handing the player to Idle/Run. Unlike <see cref="RefreshFrame"/> this
-        /// ignores the rising-velocity guard: the dismount zeroes the velocity right after, so only the
-        /// presence and the slope of the surface matter here.
+        /// The floor under a pair of feet, if there is one: the same <see cref="CastFeet"/> query
+        /// <see cref="HasFootingAt"/> answers with, but reporting where that surface actually is. Used
+        /// by the climb top dismount, which has to put the feet on the deck it found instead of on a
+        /// fixed offset below the climbable trigger (a trigger overhangs its deck by an arbitrary
+        /// amount, so the trigger top is not a height the player can stand at).
         /// </summary>
-        public bool HasFootingAt(Vector2 worldBodyPosition)
+        public bool TryGetFootingAt(Vector2 worldBodyPosition, out float surfaceY)
         {
             var bounds = _collider.bounds;
-            var hit = CastFeet(bounds.center.x + (worldBodyPosition.x - _body.position.x), worldBodyPosition.y);
-            return hit.collider != null
-                   && hit.collider != _droppedPlatform
-                   && hit.normal.y > MinGroundNormalY;
+            float feetY = worldBodyPosition.y;
+            var hit = CastFeet(bounds.center.x + (worldBodyPosition.x - _body.position.x), feetY);
+            bool footing = hit.collider != null
+                           && hit.collider != _droppedPlatform
+                           && hit.normal.y > MinGroundNormalY;
+            // The probe box starts with its bottom face on the requested feet height, so the surface
+            // is exactly `hit.distance` below that. `hit.point` is not used: a shape cast reports the
+            // cast shape's contact point, which is the probe's own bottom face, not the surface under
+            // the body.
+            surfaceY = footing ? feetY - hit.distance : feetY;
+            return footing;
         }
+
+        /// <summary>
+        /// Would the player find floor with their feet at this body position? Used by the climb top
+        /// dismount before handing the player off. Unlike <see cref="RefreshFrame"/> this ignores the
+        /// rising-velocity guard: the dismount zeroes the velocity right after, so only the presence
+        /// and the slope of the surface matter here.
+        /// </summary>
+        public bool HasFootingAt(Vector2 worldBodyPosition) => TryGetFootingAt(worldBodyPosition, out _);
 
         // ---------- Velocity / body ----------
 
