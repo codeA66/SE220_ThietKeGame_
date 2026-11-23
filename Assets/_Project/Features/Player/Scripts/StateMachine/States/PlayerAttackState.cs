@@ -119,11 +119,16 @@ namespace DeadCells.Player.StateMachine.States
                 // swing from a clean slate. The step-in and the air hit-stall belong to the character's
                 // momentum, not to one clip, so they are handed over the transition instead of being wiped
                 // mid fly. A swing that is not a chain continuation still starts clean.
+                //
+                // Only a window that is still live is carried. Handing over a spent window would disarm the
+                // incoming swing instead of helping it: _airStallApplied is only retired on landing, so a
+                // carried `true` with _airStallTimer == 0 makes ApplyAirHitStall bail on every hit of the new
+                // swing, and every chained airborne hit after the first would lose its own lift.
                 int previousPending = Ctx.PendingComboIndex;
-                float lungeSpeed = _lungeSpeed;
+                float lungeSpeed = _lungeTimer > 0f ? _lungeSpeed : 0f;
                 float lungeTimer = _lungeTimer;
                 float airStallTimer = _airStallTimer;
-                bool airStallApplied = _airStallApplied;
+                bool airStallApplied = _airStallTimer > 0f && _airStallApplied;
 
                 // Wrap after the finisher so the chain loops 1 -> 2 -> 3 -> 1 without a dead press.
                 Ctx.PendingComboIndex = (_comboIndex % Weapon.ComboLength) + 1;

@@ -752,6 +752,84 @@ namespace DeadCells.Core.Tests
         }
 
         /// <summary>
+        /// P0-05: a swing that is <em>not</em> a chain continuation is a fresh swing and must start from a
+        /// clean slate. <c>Enter()</c> zeroes the lunge/stall fields, but until now nothing distinguished
+        /// "a new swing starts with zero lunge" from "the previous lunge had already decayed", because the
+        /// only other re-entry (<c>T05</c>'s finisher block) deliberately lets the lunge run out first.
+        /// Here the swing is interrupted while the 0.095s step-in is still live and still pushing the body,
+        /// and the next opener is started from that state: a leaked window would give the fresh swing a
+        /// step the player never earned.
+        /// </summary>
+        [Test]
+        public void T05b_AttackState_FreshSwingAfterInterruptStartsWithZeroLungeWhileTheOldStepIsStillLive()
+        {
+            var root = new GameObject("__Round9T05bFreshSwingStartsClean");
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                var harness = CreatePlayerHarness(root.transform, new Vector2(0f, 0f));
+                CreateRound9EnemyTarget(root.transform, "Zombie", new Vector2(1.1f, 0f));
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsGrounded, "Precondition: the step-in is a grounded move.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+
+                var weapon = harness.Context.Combat.MeleeWeapon;
+                harness.Context.PendingComboIndex = 1;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                var attack = (PlayerAttackState)harness.Machine.Current;
+
+                var strike = weapon.GetStrike(0);
+                float speed = strike.AnimSpeed > 0f ? strike.AnimSpeed : 1f;
+                attack.Tick(strike.HitFrame / 30f / speed + 0.005f); // opens the 0.095s step-in
+
+                float liveLungeTimer = GetPrivateField<float>(attack, "_lungeTimer");
+                Assert.Greater(liveLungeTimer, 0f,
+                    "Precondition: the hit frame must leave the step-in live, or there is nothing to leak.");
+                Assert.AreEqual(7.2f, harness.Body.linearVelocity.x, 0.001f,
+                    "Precondition: the step-in must be pushing the body at 7.2 u/s right now.");
+
+                // Interrupt the swing while that step is still live. Roll's Enter()/Exit() never touches the
+                // attack state's lunge fields, so they are still live when the next swing's Enter() runs —
+                // which is exactly the state the "fresh swing starts clean" guarantee has to survive.
+                ForceState(harness.Machine, harness.Machine.Roll);
+                Assert.AreSame(harness.Machine.Roll, harness.Machine.Current,
+                    "Precondition: the swing must actually be interrupted for this to prove anything.");
+                Assert.AreEqual(liveLungeTimer, GetPrivateField<float>(attack, "_lungeTimer"), 0.0001f,
+                    "Precondition: interrupting the swing must leave its step-in live, so the next Enter() is the " +
+                    "only thing that can clear it.");
+
+                // A fresh opener, not a chain continuation: nothing hands momentum over this transition.
+                harness.Context.PendingComboIndex = 1;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                var fresh = (PlayerAttackState)harness.Machine.Current;
+
+                Assert.AreEqual(0f, GetPrivateField<float>(fresh, "_lungeTimer"), 0.0001f,
+                    "A fresh swing must start with no step-in window: Enter() zeroes _lungeTimer, so a swing that " +
+                    $"is not a chain continuation cannot inherit the previous one. Actual _lungeTimer = {GetPrivateField<float>(fresh, "_lungeTimer"):F4}s.");
+                Assert.AreEqual(0f, GetPrivateField<float>(fresh, "_lungeSpeed"), 0.0001f,
+                    "A fresh swing must start with no carried lunge speed.");
+                Assert.AreEqual(0f, GetPrivateField<float>(fresh, "_airStallTimer"), 0.0001f,
+                    "A fresh swing must start with no carried air hit-stall window.");
+                Assert.IsFalse(GetPrivateField<bool>(fresh, "_airStallApplied"),
+                    "A fresh swing must start without the air hit-stall already marked applied.");
+                Assert.IsFalse(GetPrivateField<bool>(fresh, "_hitDone"),
+                    "A fresh swing must start before its hit frame.");
+
+                harness.Machine.FixedTick();
+                Assert.AreEqual(0f, harness.Body.linearVelocity.x, 0.0001f,
+                    "A fresh swing with no move input must not move the body at all: a carried lunge would push " +
+                    $"it to 7.2 u/s the moment FixedTick runs. Actual vx = {harness.Body.linearVelocity.x:F3}.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
         /// P0-05: the combo buffer was gated on <c>_comboIndex &lt; ComboLength</c>, so a press during the
         /// finisher (hit 3) was dropped and the chain fell back to Idle instead of looping back to hit 1.
         /// An air swing that connects also has to stall the fall long enough to read as a hit, then hand
@@ -955,6 +1033,91 @@ namespace DeadCells.Core.Tests
             finally
             {
                 Object.DestroyImmediate(landingRoot);
+            }
+
+            // ---------- (d) A chained air swing opens its OWN stall once the predecessor's expired ----------
+            var expiredRoot = new GameObject("__Round9T06ExpiredStallCarry");
+            try
+            {
+                var harness = CreatePlayerHarness(expiredRoot.transform, new Vector2(0f, 5f));
+                var target = CreateRound9EnemyTarget(expiredRoot.transform, "Zombie", new Vector2(1.1f, 5f));
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsFalse(harness.Context.IsGrounded, "Precondition: the air hit-stall needs an airborne swing.");
+
+                harness.Body.linearVelocity = new Vector2(0f, -6f);
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+
+                var weapon = harness.Context.Combat.MeleeWeapon;
+                harness.Context.PendingComboIndex = 1;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                var attack = (PlayerAttackState)harness.Machine.Current;
+
+                var strike = weapon.GetStrike(0);
+                float speed = strike.AnimSpeed > 0f ? strike.AnimSpeed : 1f;
+                int healthBefore = target.Current;
+
+                attack.Tick(strike.HitFrame / 30f / speed + 0.005f);
+                Assert.Less(target.Current, healthBefore,
+                    "Precondition: the first airborne swing must connect, or there is no stall to expire.");
+                Assert.GreaterOrEqual(harness.Body.linearVelocity.y, 2.2f - 0.001f,
+                    "Precondition: the first airborne hit must open the lift before it can expire.");
+
+                // Let the whole 0.12s stall run out BEFORE the chain is allowed to fire, and never let the
+                // stall flag be the thing under test here: the point is that the window is dead by the time
+                // the next swing starts.
+                for (int frame = 0; frame < 40 && GetPrivateField<float>(attack, "_airStallTimer") > 0f; frame++)
+                {
+                    attack.Tick(0.01f);
+                    harness.Machine.FixedTick();
+                }
+
+                Assert.AreEqual(0f, GetPrivateField<float>(attack, "_airStallTimer"), 0.0001f,
+                    "Precondition: the predecessor's air hit-stall must be fully expired before the chain fires.");
+                Assert.AreSame(harness.Machine.Attack, harness.Machine.Current,
+                    "Precondition: the combo must still be inside the swing when its stall expires.");
+                Assert.AreEqual(harness.Context.Config.GravityScale, harness.Body.gravityScale, 0.0001f,
+                    "Precondition: with the stall expired the body must already be back on normal air gravity.");
+
+                // Chain into hit 2 now that the predecessor's reduced-gravity window is long gone.
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
+                attack.Tick(0.005f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+
+                bool chained = false;
+                for (int frame = 0; frame < 200 && !chained; frame++)
+                {
+                    attack.Tick(0.01f);
+                    chained = GetPrivateField<int>(attack, "_comboIndex") != 1;
+                }
+
+                Assert.IsTrue(chained,
+                    "Precondition: a buffered air swing must chain into hit 2 for the carry to be exercised.");
+                Assert.AreEqual(2, GetPrivateField<int>(attack, "_comboIndex"),
+                    "Precondition: hit 1 must chain into hit 2 (not straight to the finisher).");
+
+                var hit2 = weapon.GetStrike(1);
+                float hit2Speed = hit2.AnimSpeed > 0f ? hit2.AnimSpeed : 1f;
+                harness.Body.linearVelocity = new Vector2(0f, -6f); // still falling onto the new swing
+                int healthBeforeHit2 = target.Current;
+
+                attack.Tick(hit2.HitFrame / 30f / hit2Speed + 0.005f);
+                Assert.Less(target.Current, healthBeforeHit2,
+                    "Precondition: the chained hit 2 must connect, or the stall path is never reached.");
+                Assert.GreaterOrEqual(harness.Body.linearVelocity.y, 2.2f - 0.001f,
+                    "A chained air swing whose predecessor's stall has already expired must get its OWN lift: " +
+                    "carrying a spent stall flag into the next swing leaves every chained hit after the first " +
+                    $"with zero lift and zero slow-fall. Actual vy = {harness.Body.linearVelocity.y:F3}.");
+
+                harness.Machine.FixedTick();
+                Assert.AreEqual(harness.Context.Config.GravityScale * 0.35f, harness.Body.gravityScale, 0.0001f,
+                    "The chained hit must open its own 0.12s reduced-gravity window, so every chained airborne " +
+                    "swing reads with the same hit-stop as the first.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(expiredRoot);
             }
         }
 
