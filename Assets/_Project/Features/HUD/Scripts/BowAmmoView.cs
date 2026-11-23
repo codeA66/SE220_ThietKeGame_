@@ -10,8 +10,22 @@ namespace DeadCells.HUD
         [SerializeField] private Color _emptyColor;
         [SerializeField] private Color _availableColor;
 
+        private bool _owned;
+        private int _current;
+        private int _max;
+
+        public void ApplyPalette(Color empty, Color available)
+        {
+            _emptyColor = empty;
+            _availableColor = available;
+            Render(_owned, _current, _max);
+        }
+
         public void Render(bool owned, int current, int max)
         {
+            _owned = owned;
+            _current = current;
+            _max = max;
             _label.enabled = owned;
             _label.text = $"{current}/{max}";
             _label.color = current > 0 ? _availableColor : _emptyColor;

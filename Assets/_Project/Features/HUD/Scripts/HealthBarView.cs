@@ -9,6 +9,9 @@ namespace DeadCells.HUD
         [SerializeField] private RectTransform _fill;
         [SerializeField] private Text _value;
 
+        public RectTransform Fill => _fill;
+        public Text Value => _value;
+
         public void Render(int current, int max)
         {
             float fraction = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;
