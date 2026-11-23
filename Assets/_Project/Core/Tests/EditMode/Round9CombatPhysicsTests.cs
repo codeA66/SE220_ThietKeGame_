@@ -713,6 +713,27 @@ namespace DeadCells.Core.Tests
                     "A target hit once must not take damage again while the same swing re-resolves across the " +
                     "active window: HitQuery._alreadyHit must hold for the whole swing.");
 
+                // The lunge must END: it decays to zero inside its 0.095s window and then hands the
+                // horizontal velocity back to the attack walk. A "lunge never ends" regression would
+                // otherwise keep the body sliding at 7.2 u/s for the whole clip and still pass nothing.
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                bool lungeDecayed = false;
+                for (int frame = 0; frame < 10 && !lungeDecayed; frame++)
+                {
+                    harness.Machine.FixedTick();
+                    lungeDecayed = Mathf.Abs(harness.Body.linearVelocity.x) <= 0.0001f;
+                }
+                Assert.IsTrue(lungeDecayed,
+                    "The strike lunge must decay to zero within its 0.095s window; it cannot push the body " +
+                    $"for the whole clip. Actual vx = {harness.Body.linearVelocity.x:F3} after 10 fixed steps.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), -1f);
+                harness.Machine.FixedTick();
+                float handedBackVx = -harness.Context.Config.RunSpeed * harness.Context.Config.AttackMoveSpeedMultiplier;
+                Assert.AreEqual(handedBackVx, harness.Body.linearVelocity.x, 0.001f,
+                    "Once the lunge ends the attack walk must own the horizontal velocity again " +
+                    "(-RunSpeed * AttackMoveSpeedMultiplier), so a dead lunge cannot freeze the body.");
+
                 // ---------- Hit 3 (finisher): the heavier lunge ----------
                 SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
                 harness.Context.PendingComboIndex = harness.Context.Combat.MeleeWeapon.ComboLength;
@@ -745,6 +766,9 @@ namespace DeadCells.Core.Tests
             {
                 CreateFlatGround(comboRoot.transform, new Vector2(0f, -0.5f));
                 var harness = CreatePlayerHarness(comboRoot.transform, new Vector2(0f, 0f));
+                // A live target in front of the player, so the finisher's own damage has to resolve before
+                // the chain hands over to hit 1.
+                var target = CreateRound9EnemyTarget(comboRoot.transform, "Zombie", new Vector2(1.1f, 0f));
                 Physics2D.SyncTransforms();
                 harness.Context.RefreshFrame();
                 Assert.IsTrue(harness.Context.IsGrounded, "Precondition: the combo loop is driven on the ground.");
@@ -759,18 +783,29 @@ namespace DeadCells.Core.Tests
                 Assert.AreEqual(weapon.ComboLength, GetPrivateField<int>(attack, "_comboIndex"),
                     "Precondition: the swing must start on the finisher (hit 3).");
 
+                var finisherStrike = weapon.GetStrike(weapon.ComboLength - 1);
+                float finisherAnimSpeed = finisherStrike.AnimSpeed > 0f ? finisherStrike.AnimSpeed : 1f;
+                float finisherHitTime = finisherStrike.HitFrame / 30f / finisherAnimSpeed;
+                int expectedFinisherDamage = harness.PlayerGo.GetComponent<PlayerController>().RunStats
+                    .ScaleDamage(finisherStrike.Damage, weapon.ScalingStat);
+                int healthBefore = target.Current;
+
                 // Buffer the follow-up during the finisher, then hold it while the swing plays out.
                 SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
                 attack.Tick(0.005f);
                 SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
 
-                bool wrapped = false;
-                for (int frame = 0; frame < 200 && !wrapped; frame++)
+                float elapsed = 0.005f;
+                float elapsedAtWrap = -1f;
+                for (int frame = 0; frame < 200 && elapsedAtWrap < 0f; frame++)
                 {
                     attack.Tick(0.01f);
-                    wrapped = GetPrivateField<int>(attack, "_comboIndex") == 1;
+                    elapsed += 0.01f;
+                    if (GetPrivateField<int>(attack, "_comboIndex") == 1)
+                        elapsedAtWrap = elapsed;
                 }
 
+                bool wrapped = elapsedAtWrap >= 0f;
                 Assert.IsTrue(wrapped,
                     "Pressing attack during the finisher must loop the combo back into hit 1 instead of " +
                     $"ending the chain in {harness.Machine.Current?.GetType().Name ?? "None"}.");
@@ -778,6 +813,32 @@ namespace DeadCells.Core.Tests
                     "A wrapped combo must still be inside the attack state, ready to swing hit 1.");
                 Assert.AreEqual(1, harness.Context.PendingComboIndex,
                     "PendingComboIndex must wrap (comboIndex % ComboLength) + 1, so hit 3 -> hit 1.");
+
+                // The finisher must actually deal its damage before handing the chain over. A regression
+                // that skipped PerformStrike whenever the next swing was already buffered would pass every
+                // other assertion in this test, so the 45 is asserted explicitly - exactly once, not twice
+                // across the finisher's multi-frame active window.
+                Assert.AreEqual(healthBefore - expectedFinisherDamage, target.Current,
+                    $"A buffered finisher must still resolve its scaled {expectedFinisherDamage} damage exactly " +
+                    $"once before the chain wraps. Health went {healthBefore} -> {target.Current}, i.e. " +
+                    $"{healthBefore - target.Current} damage.");
+
+                // The active window must not be cut by the chain: the swing keeps resolving past the hit
+                // frame until ActiveHitWindow closes, and only then may the next swing start.
+                float windowBeforeChain = elapsedAtWrap - finisherHitTime;
+                Assert.GreaterOrEqual(windowBeforeChain, 0.065f - 0.0001f,
+                    "The chained swing may not start before the previous swing's 0.065s active window has " +
+                    $"closed; it was cut to {windowBeforeChain:F4}s.");
+
+                // The finisher's step-in must survive the chain re-entry instead of being wiped by the next
+                // Enter(): hit 1 has not reached its own hit frame yet, so the only thing that can push the
+                // body here is the carried finisher lunge.
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                harness.Machine.FixedTick();
+                float carriedVx = harness.Body.linearVelocity.x;
+                Assert.Greater(carriedVx, 0f,
+                    "The finisher lunge must carry across the chained re-entry: the next FixedTick after the " +
+                    $"wrap must still push the body forward. Actual vx = {carriedVx:F3}.");
             }
             finally
             {
@@ -815,6 +876,28 @@ namespace DeadCells.Core.Tests
                 Assert.AreEqual(harness.Context.Config.GravityScale * 0.35f, harness.Body.gravityScale, 0.0001f,
                     "During the air hit-stall gravity must run at 35% of GravityScale so the body hangs on the hit.");
 
+                // A buffered air swing must keep that stall: the reduced-gravity window belongs to the whole
+                // air sequence, not to one clip. The check runs before the next swing's own hit frame, so the
+                // only thing that can still be holding gravity down here is the carried stall.
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
+                attack.Tick(0.005f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+
+                int comboBefore = GetPrivateField<int>(attack, "_comboIndex");
+                bool chainedInAir = false;
+                for (int frame = 0; frame < 200 && !chainedInAir; frame++)
+                {
+                    attack.Tick(0.01f);
+                    chainedInAir = GetPrivateField<int>(attack, "_comboIndex") != comboBefore;
+                }
+                Assert.IsTrue(chainedInAir,
+                    "Precondition: a buffered air swing must chain into the next hit for the stall carry to matter.");
+
+                harness.Machine.FixedTick();
+                Assert.AreEqual(harness.Context.Config.GravityScale * 0.35f, harness.Body.gravityScale, 0.0001f,
+                    "A chained air swing must keep the hit-stall running: the next swing's Enter() may not wipe " +
+                    "the 0.12s reduced-gravity window the previous hit opened.");
+
                 // The stall must expire and hand normal air gravity back, not stick forever.
                 for (int frame = 0; frame < 10; frame++)
                     harness.Machine.FixedTick();
@@ -825,6 +908,53 @@ namespace DeadCells.Core.Tests
             finally
             {
                 Object.DestroyImmediate(airRoot);
+            }
+
+            // ---------- (c) Landing mid-stall must clear the reduced gravity ----------
+            var landingRoot = new GameObject("__Round9T06LandingClearsStall");
+            try
+            {
+                CreateFlatGround(landingRoot.transform, new Vector2(0f, -0.5f));
+                var harness = CreatePlayerHarness(landingRoot.transform, new Vector2(0f, 5f));
+                var target = CreateRound9EnemyTarget(landingRoot.transform, "Zombie", new Vector2(1.1f, 5f));
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsFalse(harness.Context.IsGrounded, "Precondition: the swing opens the stall in mid air.");
+
+                harness.Body.linearVelocity = new Vector2(0f, -6f);
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+                harness.Context.PendingComboIndex = 1;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                var attack = (PlayerAttackState)harness.Machine.Current;
+
+                var strike = harness.Context.Combat.MeleeWeapon.GetStrike(0);
+                float speed = strike.AnimSpeed > 0f ? strike.AnimSpeed : 1f;
+                attack.Tick(strike.HitFrame / 30f / speed + 0.005f);
+                harness.Machine.FixedTick();
+                Assert.AreEqual(harness.Context.Config.GravityScale * 0.35f, harness.Body.gravityScale, 0.0001f,
+                    "Precondition: the air hit-stall is running at 35% gravity before the landing.");
+
+                // Land while the stall is still running: the stall lifts the body, so it falls back onto the
+                // deck well inside the 0.12s window. Set the fall by hand and put the feet on the deck.
+                harness.Body.linearVelocity = new Vector2(0f, -1f);
+                harness.Body.position = new Vector2(0f, 0f);
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsGrounded,
+                    "Precondition: the body must be standing to prove that the landing clears the stall.");
+
+                harness.Machine.FixedTick();
+                Assert.AreEqual(harness.Context.Config.GravityScale, harness.Body.gravityScale, 0.0001f,
+                    "Landing during the air hit-stall must restore gravity straight away. Leaving 0.35x " +
+                    "GravityScale alive while grounded would make the next walk off the ledge resume the " +
+                    "fall at 35% gravity for the remainder of the stall.");
+                Assert.AreEqual(0f, GetPrivateField<float>(attack, "_airStallTimer"), 0.0001f,
+                    "Landing must clear the air hit-stall timer, so no reduced-gravity window survives it.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(landingRoot);
             }
         }
 

@@ -109,11 +109,36 @@ namespace DeadCells.Player.StateMachine.States
 
             float normalized = _duration > 0f ? _timer / _duration : 1f;
 
-            if (_nextQueued && _hitDone && normalized >= Ctx.Config.ComboChainNormalizedTime)
+            // The chain may only take over once this swing's active window has closed: changing state
+            // re-enters this state and resets the arc, which would otherwise cut the hit box mid swing.
+            bool windowClosed = _hitDone && _timer >= _hitTime + ActiveHitWindow;
+
+            if (_nextQueued && windowClosed && normalized >= Ctx.Config.ComboChainNormalizedTime)
             {
+                // Changing state on this same instance runs Exit() then Enter(), and Enter() starts the next
+                // swing from a clean slate. The step-in and the air hit-stall belong to the character's
+                // momentum, not to one clip, so they are handed over the transition instead of being wiped
+                // mid fly. A swing that is not a chain continuation still starts clean.
+                int previousPending = Ctx.PendingComboIndex;
+                float lungeSpeed = _lungeSpeed;
+                float lungeTimer = _lungeTimer;
+                float airStallTimer = _airStallTimer;
+                bool airStallApplied = _airStallApplied;
+
                 // Wrap after the finisher so the chain loops 1 -> 2 -> 3 -> 1 without a dead press.
                 Ctx.PendingComboIndex = (_comboIndex % Weapon.ComboLength) + 1;
-                Machine.ChangeState(Machine.Attack);
+                if (!Machine.ChangeState(Machine.Attack))
+                {
+                    // The transition was refused for this frame: leave the swing untouched and retry on the
+                    // next tick, so nothing is carried into a state that never started.
+                    Ctx.PendingComboIndex = previousPending;
+                    return;
+                }
+
+                _lungeSpeed = lungeSpeed;
+                _lungeTimer = lungeTimer;
+                _airStallTimer = airStallTimer;
+                _airStallApplied = airStallApplied;
                 return;
             }
 
@@ -155,7 +180,17 @@ namespace DeadCells.Player.StateMachine.States
             }
 
             if (grounded)
+            {
+                // Landing mid-stall must not leave the reduced-gravity window alive: walking off the ledge
+                // afterwards would resume the fall at AirStallGravityMultiplier for the rest of the stall.
+                if (_airStallTimer > 0f || _airStallApplied)
+                {
+                    _airStallTimer = 0f;
+                    _airStallApplied = false;
+                    Ctx.SetGravityScale(Ctx.Config.GravityScale);
+                }
                 return;
+            }
 
             if (_airStallTimer > 0f)
                 _airStallTimer = Mathf.Max(0f, _airStallTimer - Time.fixedDeltaTime);
