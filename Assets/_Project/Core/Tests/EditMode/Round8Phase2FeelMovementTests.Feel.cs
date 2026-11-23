@@ -29,25 +29,30 @@ namespace DeadCells.Core.Tests
             Assert.IsNotNull(weapon, $"Missing WeaponData at {FeelSwordDataPath}");
             Assert.AreEqual(3, weapon.ComboLength, "Weapon_StartSword must have 3 combo strikes.");
 
+            // Round 9 hack-and-slash tuning (P0-05): the same cadence, faster, further and heavier.
             var s0 = weapon.GetStrike(0);
             Assert.AreEqual(25, s0.Damage, "Strike 0 damage.");
             Assert.AreEqual(5, s0.HitFrame, "Strike 0 hitFrame.");
-            Assert.AreEqual(1.25f, s0.AnimSpeed, 0.001f, "Strike 0 AnimSpeed must be 1.25 for 60fps cadence.");
-            Assert.AreEqual(3.5f, s0.Knockback, 0.001f, "Strike 0 Knockback must be 3.5.");
+            Assert.AreEqual(1.40f, s0.AnimSpeed, 0.001f, "Strike 0 AnimSpeed must be 1.40 for the Round 9 fast opener.");
+            Assert.AreEqual(2.9f, s0.RangeWidthCells, 0.001f, "Strike 0 reach must be 2.9 cells.");
+            Assert.AreEqual(5.2f, s0.Knockback, 0.001f, "Strike 0 Knockback must be 5.2.");
             Assert.IsFalse(s0.CanCrit, "Strike 0 must not crit.");
 
             var s1 = weapon.GetStrike(1);
             Assert.AreEqual(30, s1.Damage, "Strike 1 damage.");
             Assert.AreEqual(7, s1.HitFrame, "Strike 1 hitFrame.");
-            Assert.AreEqual(1.35f, s1.AnimSpeed, 0.001f, "Strike 1 AnimSpeed must be 1.35 for 60fps cadence.");
-            Assert.AreEqual(4.5f, s1.Knockback, 0.001f, "Strike 1 Knockback must be 4.5.");
+            Assert.AreEqual(1.48f, s1.AnimSpeed, 0.001f, "Strike 1 AnimSpeed must be 1.48 for the Round 9 fast chain.");
+            Assert.AreEqual(3.0f, s1.RangeWidthCells, 0.001f, "Strike 1 reach must be 3.0 cells.");
+            Assert.AreEqual(6.2f, s1.Knockback, 0.001f, "Strike 1 Knockback must be 6.2.");
             Assert.IsFalse(s1.CanCrit, "Strike 1 must not crit.");
 
             var s2 = weapon.GetStrike(2);
             Assert.AreEqual(45, s2.Damage, "Strike 2 damage.");
             Assert.AreEqual(9, s2.HitFrame, "Strike 2 hitFrame.");
-            Assert.AreEqual(0.95f, s2.AnimSpeed, 0.001f, "Strike 2 AnimSpeed must be 0.95 for heavy finisher weight.");
-            Assert.AreEqual(8.0f, s2.Knockback, 0.001f, "Strike 2 Knockback must be 8.0.");
+            Assert.AreEqual(1.05f, s2.AnimSpeed, 0.001f, "Strike 2 AnimSpeed must be 1.05 for heavy finisher weight.");
+            Assert.AreEqual(3.85f, s2.RangeWidthCells, 0.001f, "Strike 2 finisher reach must be 3.85 cells.");
+            Assert.AreEqual(2.7f, s2.RangeHeightCells, 0.001f, "Strike 2 finisher must sweep 2.7 cells tall.");
+            Assert.AreEqual(10.5f, s2.Knockback, 0.001f, "Strike 2 Knockback must be 10.5.");
             Assert.IsTrue(s2.CanCrit, "Strike 2 finisher must have CanCrit = true.");
         }
 

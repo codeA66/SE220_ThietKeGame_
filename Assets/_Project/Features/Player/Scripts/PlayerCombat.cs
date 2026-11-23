@@ -49,11 +49,15 @@ namespace DeadCells.Player
         /// <summary>
         /// Resolves one combo hit in front of the player. The hit box starts at the player's centre
         /// (closest match to the Dead Cells swing effects; the original anchor is not verified).
+        /// The swing is re-resolved every frame of the multi-frame active window, so the swing event
+        /// (slash VFX + sword whoosh) is opt-out: <c>HitQuery._alreadyHit</c> already stops a target
+        /// taking damage twice, but the event would fire a fresh effect on every active frame.
         /// </summary>
-        public int PerformStrike(in WeaponData.Strike strike, int facing)
+        public int PerformStrike(in WeaponData.Strike strike, int facing, bool emitSwingEvent = true)
         {
             var bounds = _collider.bounds;
-            StrikePerformed?.Invoke(strike, new Vector2(bounds.center.x, bounds.min.y), facing);
+            if (emitSwingEvent)
+                StrikePerformed?.Invoke(strike, new Vector2(bounds.center.x, bounds.min.y), facing);
 
             float height = strike.RangeHeight > 0f ? strike.RangeHeight : bounds.size.y;
             var size = new Vector2(strike.RangeWidth, height);

@@ -641,7 +641,262 @@ namespace DeadCells.Core.Tests
             }
         }
 
+        // ==================== Task 1.3: Dead Cells melee overhaul (P0-05 Part A) ====================
+
+        /// <summary>
+        /// P0-05: the ground strike handed the body a one-frame 3.8 u/s poke that the very next
+        /// <c>FixedTick</c> replaced with the input-only attack walk, so the swing had no forward
+        /// travel. The lunge now starts on the hit frame and survives <c>FixedTick</c> for its whole
+        /// duration, decaying down to (but never below) the player's own attack walk, so walking
+        /// backwards during the swing cannot cancel it. The hit box also re-resolves for the whole
+        /// active window, but the slash VFX / sword whoosh must fire exactly once per swing while
+        /// each enemy still takes damage at most once.
+        /// </summary>
+        [Test]
+        public void T05_AttackState_PreservesLungeAcrossFixedTick_AndEmitsSwingEventOnlyOnceAcrossActiveWindow()
+        {
+            var root = new GameObject("__Round9T05StrikeLunge");
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                var harness = CreatePlayerHarness(root.transform, new Vector2(0f, 0f));
+                var target = CreateRound9EnemyTarget(root.transform, "Zombie", new Vector2(1.1f, 0f));
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsGrounded, "Precondition: the strike lunge is a grounded move.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+
+                int swingEvents = 0;
+                harness.Context.Combat.StrikePerformed += (_, _, _) => swingEvents++;
+
+                // ---------- Hit 1: lunge + one swing event across the whole active window ----------
+                harness.Context.PendingComboIndex = 1;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                var attack = (PlayerAttackState)harness.Machine.Current;
+
+                var strike = harness.Context.Combat.MeleeWeapon.GetStrike(0);
+                float speed = strike.AnimSpeed > 0f ? strike.AnimSpeed : 1f;
+                float hitTime = strike.HitFrame / 30f / speed;
+
+                attack.Tick(Mathf.Max(0.001f, hitTime - 0.01f));
+                Assert.AreEqual(0, swingEvents, "No swing event may fire before the hit frame.");
+                int healthBefore = target.Current;
+
+                attack.Tick(0.015f); // crosses HitFrame
+                Assert.AreEqual(1, swingEvents, "The hit frame must raise StrikePerformed exactly once.");
+                Assert.Less(target.Current, healthBefore,
+                    "Precondition: the hit frame must connect, or the at-most-once check proves nothing.");
+                int healthAfterHit = target.Current;
+                Assert.AreEqual(7.2f, harness.Body.linearVelocity.x, 0.001f,
+                    "The hit frame must immediately apply the hit-1 forward lunge (7.2 u/s).");
+
+                // Walking backwards must not wipe the lunge: the blend takes the greater magnitude.
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), -1f);
+                harness.Machine.FixedTick();
+                float lungeVx = harness.Body.linearVelocity.x;
+                Assert.Greater(lungeVx, 0f,
+                    "FixedTick must preserve the strike lunge: the next fixed step may not replace it with the " +
+                    $"input-only attack walk when the player holds backwards. Actual vx = {lungeVx:F3}.");
+                Assert.LessOrEqual(lungeVx, 7.2f + 0.001f,
+                    "The lunge must never exceed its configured speed.");
+
+                // Drive the rest of the active window (0.065s) plus a margin.
+                for (int frame = 0; frame < 12; frame++)
+                    attack.Tick(0.01f);
+
+                Assert.AreEqual(1, swingEvents,
+                    "One swing must raise exactly one StrikePerformed across its whole multi-frame active " +
+                    $"window, or the slash VFX and sword SFX stack. Actual count = {swingEvents}.");
+                Assert.AreEqual(healthAfterHit, target.Current,
+                    "A target hit once must not take damage again while the same swing re-resolves across the " +
+                    "active window: HitQuery._alreadyHit must hold for the whole swing.");
+
+                // ---------- Hit 3 (finisher): the heavier lunge ----------
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                harness.Context.PendingComboIndex = harness.Context.Combat.MeleeWeapon.ComboLength;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                attack = (PlayerAttackState)harness.Machine.Current;
+                var finisher = harness.Context.Combat.MeleeWeapon.GetStrike(harness.Context.Combat.MeleeWeapon.ComboLength - 1);
+                float finisherSpeed = finisher.AnimSpeed > 0f ? finisher.AnimSpeed : 1f;
+                attack.Tick(finisher.HitFrame / 30f / finisherSpeed + 0.005f);
+                Assert.AreEqual(9.5f, harness.Body.linearVelocity.x, 0.001f,
+                    "The combo finisher must lunge harder (9.5 u/s) than the opening hits (7.2 u/s).");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
+        /// P0-05: the combo buffer was gated on <c>_comboIndex &lt; ComboLength</c>, so a press during the
+        /// finisher (hit 3) was dropped and the chain fell back to Idle instead of looping back to hit 1.
+        /// An air swing that connects also has to stall the fall long enough to read as a hit, then hand
+        /// gravity back exactly.
+        /// </summary>
+        [Test]
+        public void T06_AttackState_ChainsHit3BackIntoHit1WhenBuffered_AndAppliesAirHitStall()
+        {
+            // ---------- (a) Hit 3 buffered wraps into hit 1 ----------
+            var comboRoot = new GameObject("__Round9T06ComboLoop");
+            try
+            {
+                CreateFlatGround(comboRoot.transform, new Vector2(0f, -0.5f));
+                var harness = CreatePlayerHarness(comboRoot.transform, new Vector2(0f, 0f));
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsGrounded, "Precondition: the combo loop is driven on the ground.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+
+                var weapon = harness.Context.Combat.MeleeWeapon;
+                harness.Context.PendingComboIndex = weapon.ComboLength;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                var attack = (PlayerAttackState)harness.Machine.Current;
+                Assert.AreEqual(weapon.ComboLength, GetPrivateField<int>(attack, "_comboIndex"),
+                    "Precondition: the swing must start on the finisher (hit 3).");
+
+                // Buffer the follow-up during the finisher, then hold it while the swing plays out.
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
+                attack.Tick(0.005f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+
+                bool wrapped = false;
+                for (int frame = 0; frame < 200 && !wrapped; frame++)
+                {
+                    attack.Tick(0.01f);
+                    wrapped = GetPrivateField<int>(attack, "_comboIndex") == 1;
+                }
+
+                Assert.IsTrue(wrapped,
+                    "Pressing attack during the finisher must loop the combo back into hit 1 instead of " +
+                    $"ending the chain in {harness.Machine.Current?.GetType().Name ?? "None"}.");
+                Assert.AreSame(harness.Machine.Attack, harness.Machine.Current,
+                    "A wrapped combo must still be inside the attack state, ready to swing hit 1.");
+                Assert.AreEqual(1, harness.Context.PendingComboIndex,
+                    "PendingComboIndex must wrap (comboIndex % ComboLength) + 1, so hit 3 -> hit 1.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(comboRoot);
+            }
+
+            // ---------- (b) Air hit-stall ----------
+            var airRoot = new GameObject("__Round9T06AirHitStall");
+            try
+            {
+                var harness = CreatePlayerHarness(airRoot.transform, new Vector2(0f, 5f));
+                var target = CreateRound9EnemyTarget(airRoot.transform, "Zombie", new Vector2(1.1f, 5f));
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsFalse(harness.Context.IsGrounded, "Precondition: the air hit-stall needs an airborne swing.");
+
+                harness.Body.linearVelocity = new Vector2(0f, -6f); // falling fast
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+                harness.Context.PendingComboIndex = 1;
+                ForceState(harness.Machine, harness.Machine.Attack);
+                var attack = (PlayerAttackState)harness.Machine.Current;
+
+                var strike = harness.Context.Combat.MeleeWeapon.GetStrike(0);
+                float speed = strike.AnimSpeed > 0f ? strike.AnimSpeed : 1f;
+                int healthBefore = target.Current;
+
+                attack.Tick(strike.HitFrame / 30f / speed + 0.005f);
+                Assert.Less(target.Current, healthBefore,
+                    "Precondition: the airborne swing must connect, or the stall proves nothing.");
+                Assert.GreaterOrEqual(harness.Body.linearVelocity.y, 2.2f - 0.001f,
+                    "A landed air hit must stall the fall by lifting the vertical velocity to at least 2.2 u/s.");
+
+                harness.Machine.FixedTick();
+                Assert.AreEqual(harness.Context.Config.GravityScale * 0.35f, harness.Body.gravityScale, 0.0001f,
+                    "During the air hit-stall gravity must run at 35% of GravityScale so the body hangs on the hit.");
+
+                // The stall must expire and hand normal air gravity back, not stick forever.
+                for (int frame = 0; frame < 10; frame++)
+                    harness.Machine.FixedTick();
+                Assert.AreEqual(harness.Context.Config.GravityScale, harness.Body.gravityScale, 0.0001f,
+                    "Once the 0.12s air hit-stall expires, gravity must return to GravityScale so the player " +
+                    "resumes falling instead of floating.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(airRoot);
+            }
+        }
+
+        /// <summary>
+        /// P0-05 Part A: the tuning the overhaul depends on. Run speed and the attack walk scale up so
+        /// the swing carries the player, the combo chain point comes in earlier (0.42) for a continuous
+        /// loop, and the start sword gains the Dead Cells hack-and-slash cadence (faster clips, longer
+        /// reach, heavier knockback, one crit finisher).
+        /// </summary>
+        [Test]
+        public void T07_MovementConfigAndSwordAsset_MeetDeadCellsHackAndSlashTargets()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<PlayerMovementConfig>(MovementConfigPath);
+            Assert.IsNotNull(config, $"Missing {MovementConfigPath}");
+            Assert.AreEqual(8.6f, config.RunSpeed, 0.001f, "Round 9 run speed must be 8.6 u/s.");
+            Assert.AreEqual(7.4f, config.AirSpeed, 0.001f, "Round 9 air speed must be 7.4 u/s.");
+            Assert.AreEqual(0.42f, config.ComboChainNormalizedTime, 0.001f,
+                "The combo must chain at 0.42 of the clip so the 3-hit loop stays continuous.");
+            Assert.AreEqual(0.5f, config.AttackMoveSpeedMultiplier, 0.001f,
+                "The attack walk must keep half of the run speed.");
+
+            var sword = AssetDatabase.LoadAssetAtPath<WeaponData>(SwordDataPath);
+            Assert.IsNotNull(sword, $"Missing {SwordDataPath}");
+            Assert.AreEqual(3, sword.ComboLength, "Weapon_StartSword must keep a 3-hit combo.");
+
+            var hit1 = sword.GetStrike(0);
+            Assert.AreEqual(25, hit1.Damage, "Hit 1 damage.");
+            Assert.AreEqual(5, hit1.HitFrame, "Hit 1 hit frame.");
+            Assert.AreEqual(1.40f, hit1.AnimSpeed, 0.001f, "Hit 1 must play at 1.40x for a fast opener.");
+            Assert.AreEqual(2.9f, hit1.RangeWidthCells, 0.001f, "Hit 1 reach must be 2.9 cells.");
+            Assert.AreEqual(5.2f, hit1.Knockback, 0.001f, "Hit 1 knockback must be 5.2.");
+            Assert.IsFalse(hit1.CanCrit, "Hit 1 must not crit.");
+
+            var hit2 = sword.GetStrike(1);
+            Assert.AreEqual(30, hit2.Damage, "Hit 2 damage.");
+            Assert.AreEqual(7, hit2.HitFrame, "Hit 2 hit frame.");
+            Assert.AreEqual(1.48f, hit2.AnimSpeed, 0.001f, "Hit 2 must play at 1.48x.");
+            Assert.AreEqual(3.0f, hit2.RangeWidthCells, 0.001f, "Hit 2 reach must be 3.0 cells.");
+            Assert.AreEqual(6.2f, hit2.Knockback, 0.001f, "Hit 2 knockback must be 6.2.");
+            Assert.IsFalse(hit2.CanCrit, "Hit 2 must not crit.");
+
+            var hit3 = sword.GetStrike(2);
+            Assert.AreEqual(45, hit3.Damage, "Hit 3 damage.");
+            Assert.AreEqual(9, hit3.HitFrame, "Hit 3 hit frame.");
+            Assert.AreEqual(1.05f, hit3.AnimSpeed, 0.001f, "Hit 3 must play at 1.05x so the finisher has weight.");
+            Assert.AreEqual(3.85f, hit3.RangeWidthCells, 0.001f, "The finisher reach must be 3.85 cells.");
+            Assert.AreEqual(2.7f, hit3.RangeHeightCells, 0.001f, "The finisher must sweep 2.7 cells tall.");
+            Assert.AreEqual(10.5f, hit3.Knockback, 0.001f, "The finisher knockback must be 10.5.");
+            Assert.IsTrue(hit3.CanCrit, "Hit 3 is the crit finisher.");
+        }
+
         // ==================== Fixtures & helpers ====================
+
+        /// <summary>A hittable dummy on the Enemy layer with a live Health (0s invulnerability).</summary>
+        private static Health CreateRound9EnemyTarget(Transform parent, string name, Vector2 position)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent);
+            go.layer = EnemyLayer;
+            go.transform.position = position;
+
+            var col = go.AddComponent<BoxCollider2D>();
+            col.offset = new Vector2(0f, 0.75f);
+            col.size = new Vector2(0.8f, 1.5f);
+
+            var health = go.AddComponent<Health>();
+            health.Initialize(100, 0f);
+
+            var hurtbox = go.AddComponent<Hurtbox>();
+            SetPrivateField(hurtbox, "_health", health);
+            return health;
+        }
 
         private readonly struct PlayerHarness
         {

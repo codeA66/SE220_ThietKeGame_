@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e5b5ade96624cda4abba317c5abe074f, type: 3}
   m_Name: PlayerMovementConfig
   m_EditorClassIdentifier: Player::DeadCells.Player.PlayerMovementConfig
-  _runSpeed: 7
-  _airSpeed: 6.5
+  _runSpeed: 8.6
+  _airSpeed: 7.4
   _jumpBaseVelocity: 7.6
   _jumpHoldBoost: 6.4
   _jumpHoldTime: 0.05
@@ -33,8 +33,8 @@ MonoBehaviour:
   _allowAirRoll: 1
   _maxAirRolls: 1
   _airRollKeepsGravity: 0
-  _comboChainNormalizedTime: 0.6
-  _attackMoveSpeedMultiplier: 0.4
+  _comboChainNormalizedTime: 0.42
+  _attackMoveSpeedMultiplier: 0.5
   _attackLockFacing: 1
   _allowAirAttack: 1
   _comboCarryWindow: 0.3
