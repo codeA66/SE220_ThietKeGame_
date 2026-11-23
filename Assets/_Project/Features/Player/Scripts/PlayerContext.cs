@@ -51,6 +51,7 @@ namespace DeadCells.Player
         private int _comboCarryIndex;
         private Collider2D _groundCollider;
         private Collider2D _droppedPlatform;
+        private Collider2D _dismountedClimbable;
         private Collider2D _ledgeIgnoredPlatform;
         private float _dropRestoreTime;
         private float _lastAirborneVelocityY;
@@ -163,19 +164,17 @@ namespace DeadCells.Player
             // Thin strip under the feet; only up-facing surfaces count, so touching a wall is not "ground".
             // Rising through a one-way platform is not "ground" either.
             var bounds = _collider.bounds;
+            // A chain the player just stepped off keeps its grab blocked only while the body is still
+            // inside it; falling or walking clear of the trigger retires the guard.
+            if (_dismountedClimbable != null && !_dismountedClimbable.bounds.Intersects(bounds))
+                _dismountedClimbable = null;
             if (_ledgeIgnoredPlatform != null)
             {
                 var platformBounds = _ledgeIgnoredPlatform.bounds;
                 if (bounds.max.y < platformBounds.min.y || bounds.max.x < platformBounds.min.x || bounds.min.x > platformBounds.max.x)
                     _ledgeIgnoredPlatform = null;
             }
-            var origin = new Vector2(bounds.center.x, bounds.min.y + FeetProbeHeight * 0.5f);
-            var size = new Vector2(bounds.size.x * FeetProbeWidthRatio, FeetProbeHeight);
-            // On a slope the box only has to re-acquire the surface it is already standing on.
-            float probeDist = _wasOnSlope
-                ? Mathf.Max(Config.GroundCheckDistance, SlopeProbeDistance)
-                : Config.GroundCheckDistance;
-            var hit = Physics2D.BoxCast(origin, size, 0f, Vector2.down, probeDist, _groundMask);
+            var hit = CastFeet(bounds.center.x, bounds.min.y);
 
             bool grounded = hit.collider != null
                             && hit.collider != _droppedPlatform
@@ -205,6 +204,37 @@ namespace DeadCells.Player
             }
             if (Input.JumpPressed)
                 _lastJumpPressedTime = Time.time;
+        }
+
+        /// <summary>
+        /// The feet probe: a thin up-facing box just under a pair of feet. Shared by
+        /// <see cref="RefreshFrame"/> and the climb top-dismount footing test, so "is there floor
+        /// under these feet" is answered by exactly one query shape.
+        /// </summary>
+        private RaycastHit2D CastFeet(float centerX, float feetY)
+        {
+            var size = new Vector2(_collider.bounds.size.x * FeetProbeWidthRatio, FeetProbeHeight);
+            var origin = new Vector2(centerX, feetY + FeetProbeHeight * 0.5f);
+            // On a slope the box only has to re-acquire the surface it is already standing on.
+            float probeDist = _wasOnSlope
+                ? Mathf.Max(Config.GroundCheckDistance, SlopeProbeDistance)
+                : Config.GroundCheckDistance;
+            return Physics2D.BoxCast(origin, size, 0f, Vector2.down, probeDist, _groundMask);
+        }
+
+        /// <summary>
+        /// Would the player find floor with their feet at this body position? Used by the climb top
+        /// dismount before handing the player to Idle/Run. Unlike <see cref="RefreshFrame"/> this
+        /// ignores the rising-velocity guard: the dismount zeroes the velocity right after, so only the
+        /// presence and the slope of the surface matter here.
+        /// </summary>
+        public bool HasFootingAt(Vector2 worldBodyPosition)
+        {
+            var bounds = _collider.bounds;
+            var hit = CastFeet(bounds.center.x + (worldBodyPosition.x - _body.position.x), worldBodyPosition.y);
+            return hit.collider != null
+                   && hit.collider != _droppedPlatform
+                   && hit.normal.y > MinGroundNormalY;
         }
 
         // ---------- Velocity / body ----------
@@ -430,12 +460,28 @@ namespace DeadCells.Player
         {
             if (!TryFindClimbable())
                 return false;
+
+            // The chain this player just stepped off at its top must not take them straight back.
+            if (_dismountedClimbable == ClimbTarget)
+            {
+                ClimbTarget = null;
+                return false;
+            }
+
             if (Position.y < ClimbTarget.bounds.max.y - ClimbTopGrabMargin)
                 return true;
 
             ClimbTarget = null;
             return false;
         }
+
+        /// <summary>
+        /// Remembers the chain a top dismount just handed the player off from, for as long as the body
+        /// still overlaps it. A trigger that overhangs its deck (every untrimmed chain does) leaves the
+        /// dismount point above the floor, and without this the next Up grab would loop
+        /// Climb -> Idle -> Fall -> Climb for as long as Up is held.
+        /// </summary>
+        public void LatchDismountedClimbable(Collider2D climbable) => _dismountedClimbable = climbable;
 
         /// <summary>
         /// Looks for a chain directly under a one-way deck slot the player is standing on, which is

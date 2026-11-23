@@ -53,7 +53,15 @@ namespace DeadCells.Player.StateMachine.States
             // feet inside GroundCheckDistance of the deck, so the next frame is already grounded.
             if (Ctx.IsUpHeld && y >= bounds.max.y - TopDismountTrigger)
             {
-                Ctx.SnapPosition(new Vector2(Ctx.Position.x, bounds.max.y - TopDismountInset));
+                var dismountFeet = new Vector2(Ctx.Position.x, bounds.max.y - TopDismountInset);
+                // Hand the player off only where their feet would actually find floor. A trigger that
+                // overhangs its deck by more than the grab margin (every chain until Task 2.2 trims
+                // them) snaps the feet into mid air; the chain is then latched off so the next Up grab
+                // cannot take it straight back and restart the climb every frame.
+                if (!Ctx.HasFootingAt(dismountFeet))
+                    Ctx.LatchDismountedClimbable(target);
+
+                Ctx.SnapPosition(dismountFeet);
                 Machine.ChangeState(Ctx.HasMoveInput ? Machine.Run : Machine.Idle);
                 return;
             }

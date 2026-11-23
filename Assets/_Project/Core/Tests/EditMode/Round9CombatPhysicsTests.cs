@@ -43,6 +43,18 @@ namespace DeadCells.Core.Tests
         private const float DeckThickness = 0.25f;
         private const float TopDismountFeetY = ChainTriggerMaxY - 0.06f; // 8.02
 
+        /// <summary>
+        /// The chain geometry that is still shipped in <c>CD.prefab</c> before Task 2.2 trims it:
+        /// box 0.5 x 9 at y = 4, so the trigger tops out at 8.50 — 0.50u above the 8.00 deck it
+        /// serves. The top dismount therefore snaps the feet to 8.44, which has no floor under it.
+        /// </summary>
+        private const float ShippedChainCenterY = 4f;
+        private const float ShippedChainHeight = 9f;
+        private const float ShippedChainMaxY = ShippedChainCenterY + ShippedChainHeight * 0.5f; // 8.50
+
+        /// <summary>Simulated frame length for the multi-frame climb/fall runs (120 Hz).</summary>
+        private const float FrameDeltaTime = 1f / 120f;
+
         private static readonly LayerMask ClimbProbeMask = 1 << ClimbableLayer;
 
         private static readonly string[] EnemyPrefabPaths =
@@ -231,6 +243,83 @@ namespace DeadCells.Core.Tests
         }
 
         /// <summary>
+        /// P0-02 regression on the geometry that is still shipped (trigger top 8.50 over the 8.00
+        /// deck). The mandated -0.06 snap puts the feet at 8.44, which is 0.44u above the deck, so
+        /// handing the player to Idle there made a held <c>W</c> loop Climb -> Idle -> Fall -> Climb
+        /// roughly every 0.1s: Fall 8.44 -> 8.27, grab allowed (8.27 &lt; 8.50 - 0.22), Climb, dismount
+        /// snap back to 8.44, Idle, not grounded, Fall. The hand-off must not depend on Task 2.2
+        /// trimming the trigger, so a top dismount with no footing under the feet has to stay off the
+        /// chain it just left instead of handing it straight back.
+        /// </summary>
+        [Test]
+        public void T02b_ClimbState_TopDismountWithoutFootingDoesNotOscillateWithUpHeld()
+        {
+            var root = new GameObject("__Round9T02bShippedChainTop");
+            try
+            {
+                CreateShippedChain(root.transform);
+                CreateOneWayDeck(root.transform);
+                // Exactly where the -0.06 snap lands on the untrimmed trigger: 8.50 - 0.06 = 8.44.
+                var harness = CreatePlayerHarness(root.transform, new Vector2(ChainX, ShippedChainMaxY - 0.06f));
+                Physics2D.SyncTransforms();
+
+                Assert.AreEqual(8.44f, ShippedChainMaxY - 0.06f, 0.001f,
+                    "Precondition: the shipped trigger dismounts the feet at 8.44.");
+                Assert.IsTrue(harness.Context.TryFindClimbable(),
+                    "Precondition: the dismount point still overlaps the overhanging chain trigger.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveY), 1f); // W held for the whole run
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), false);
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpHeld), false);
+
+                ForceState(harness.Machine, harness.Machine.Climb);
+
+                int climbEntries = 1;
+                bool landed = false;
+                IPlayerState previous = harness.Machine.Current;
+                for (int frame = 0; frame < 360 && !landed; frame++)
+                {
+                    harness.Context.RefreshFrame();
+                    harness.Machine.Tick();
+                    harness.Machine.FixedTick();
+
+                    IPlayerState current = harness.Machine.Current;
+                    if (!ReferenceEquals(current, previous))
+                    {
+                        if (current is PlayerClimbState)
+                            climbEntries++;
+                        previous = current;
+                    }
+
+                    landed = harness.Context.IsGrounded
+                             && !(current is PlayerClimbState) && !(current is PlayerFallState);
+                    if (landed)
+                        break;
+
+                    AdvanceBody(harness, FrameDeltaTime);
+                    BeginSimulatedFrame(harness.Machine);
+                }
+
+                Assert.LessOrEqual(climbEntries, 2,
+                    "Holding W at the top of an overhanging chain must not re-enter PlayerClimbState over and over: " +
+                    $"a Climb -> Idle -> Fall -> Climb cycle was counted {climbEntries} times in 3s.");
+                Assert.IsTrue(landed || harness.Machine.Current is PlayerClimbState,
+                    "Holding W at the top must settle either on the chain or on the deck, not in a per-frame loop. " +
+                    $"Ended in {harness.Machine.Current?.GetType().Name ?? "None"} at y={harness.Context.Position.y:F2}.");
+                if (landed)
+                {
+                    Assert.AreEqual(DeckTopY, harness.Context.Position.y, 0.3f,
+                        "A top dismount with no footing must fall onto the deck the chain serves, not hang in mid air.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>
         /// P0-02: climbing past the top of a chain must step the feet onto the deck (trigger top - 0.06)
         /// instead of letting go while still 0.50u above the deck in mid air.
         /// </summary>
@@ -348,6 +437,74 @@ namespace DeadCells.Core.Tests
             }
         }
 
+        /// <summary>
+        /// P0-02: "block mid-air chain catch while dropping through" was a named requirement with no
+        /// test on it. <c>S</c> grips a chain while falling, but not while the player is inside the
+        /// deliberately-suspended drop-through window — that one has to stay a drop. Everything else
+        /// about the input and the geometry is identical in the two halves, so the guard is the only
+        /// thing that can flip the result.
+        /// </summary>
+        [Test]
+        public void T04c_FallState_BlocksMidAirChainCatchWhileDroppingThrough()
+        {
+            var root = new GameObject("__Round9T04cDropThroughCatch");
+            try
+            {
+                CreateChain(root.transform);
+                CreateOneWayDeck(root.transform);
+                var harness = CreatePlayerHarness(root.transform, new Vector2(ChainX, DeckTopY));
+                Physics2D.SyncTransforms();
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveY), -1f); // S held
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), true);
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpHeld), false);
+
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsGrounded, "Precondition: grounded on the one-way deck.");
+                Assert.IsTrue(harness.Context.TryDropThrough(),
+                    "Precondition: Down + Jump on a one-way deck must open the drop-through window.");
+                Assert.IsTrue(harness.Context.IsDroppingThrough,
+                    "Precondition: IsDroppingThrough must report the suspended deck collision.");
+
+                // Falling mid-chain, well clear of the 0.25u descend-grab margin, with the
+                // drop-through window still open.
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), false);
+                harness.Body.position = new Vector2(ChainX, ChainTriggerMaxY - 0.48f);
+                harness.Body.linearVelocity = Vector2.zero;
+                Physics2D.SyncTransforms();
+                Assert.IsTrue(harness.Context.TryFindClimbable(),
+                    "Precondition: the falling body must overlap the chain, or the guard proves nothing.");
+                Assert.Less(harness.Context.Position.y, ChainTriggerMaxY - 0.25f,
+                    "Precondition: the fall must be inside the descend-grab vertically, or the guard proves nothing.");
+
+                ForceState(harness.Machine, harness.Machine.Fall);
+                harness.Machine.Tick();
+
+                Assert.AreNotSame(harness.Machine.Climb, harness.Machine.Current,
+                    "While a drop-through is in flight the same S input must not catch the chain: the player asked to drop.");
+                Assert.AreSame(harness.Machine.Fall, harness.Machine.Current,
+                    "A blocked mid-air catch must leave the player falling.");
+
+                // Close the window. The duration is real-time (DropThroughDuration), which an EditMode
+                // test cannot wait out, so the suspended platform is cleared directly — this is fixture
+                // setup, and IsDroppingThrough is asserted right after to prove the state really flipped.
+                SetPrivateField(harness.Context, "_droppedPlatform", null);
+                Assert.IsFalse(harness.Context.IsDroppingThrough,
+                    "Precondition: the drop-through window must be closed for the control half.");
+
+                BeginSimulatedFrame(harness.Machine);
+                harness.Machine.Tick();
+
+                Assert.AreSame(harness.Machine.Climb, harness.Machine.Current,
+                    "With the drop-through window closed, the same S input must grip the chain.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         // ==================== Task 1.2: 45° Slope Grounding & Walk Support (P0-01) ====================
 
         /// <summary>
@@ -436,6 +593,47 @@ namespace DeadCells.Core.Tests
                 {
                     Object.DestroyImmediate(flatRoot);
                 }
+
+                // 6. Leaving slope-idle must hand gravity back. Slope idle switches gravity off, so a
+                //    state that inherited gravityScale == 0 would float — the one property this design
+                //    makes fragile. The probe target is a GROUNDED roll, whose Enter() deliberately does
+                //    not touch gravity (only the air-roll branch does), so a restored gravityScale can
+                //    only have come from the Exit() of the slope state being left.
+                harness.Body.position = new Vector2(0f, surface.point.y + 0.03f);
+                Physics2D.SyncTransforms();
+                harness.Body.linearVelocity = tangent * harness.Context.Config.RunSpeed;
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsOnSlope, "Precondition: back on the 45° ramp for the gravity-restore probes.");
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
+
+                // (a) Idle on the slope -> grounded roll.
+                ForceState(harness.Machine, harness.Machine.Idle);
+                harness.Machine.FixedTick();
+                Assert.AreEqual(0f, harness.Body.gravityScale, 0.0001f,
+                    "Precondition: slope idle must be the zero-gravity state being left.");
+                ForceState(harness.Machine, harness.Machine.Roll);
+                Assert.AreSame(harness.Machine.Roll, harness.Machine.Current, "Precondition: rolling from slope idle.");
+                Assert.AreEqual(harness.Context.Config.GravityScale, harness.Body.gravityScale, 0.0001f,
+                    "Leaving slope idle must restore gravity to Config.GravityScale; a grounded roll never sets it, " +
+                    "so only Idle.Exit() can explain a non-zero value here.");
+
+                // (b) Run standing still on the slope -> grounded roll.
+                ForceState(harness.Machine, harness.Machine.Run);
+                harness.Machine.FixedTick();
+                Assert.AreEqual(0f, harness.Body.gravityScale, 0.0001f,
+                    "Precondition: a stationary Run on the slope is the same zero-gravity state.");
+                ForceState(harness.Machine, harness.Machine.Roll);
+                Assert.AreEqual(harness.Context.Config.GravityScale, harness.Body.gravityScale, 0.0001f,
+                    "Leaving slope idle in Run must restore gravity through Run.Exit().");
+
+                // (c) Crouch on the slope -> grounded roll.
+                ForceState(harness.Machine, harness.Machine.Crouch);
+                harness.Machine.FixedTick();
+                Assert.AreEqual(0f, harness.Body.gravityScale, 0.0001f,
+                    "Precondition: slope crouch is the same zero-gravity state.");
+                ForceState(harness.Machine, harness.Machine.Roll);
+                Assert.AreEqual(harness.Context.Config.GravityScale, harness.Body.gravityScale, 0.0001f,
+                    "Leaving slope crouch must restore gravity through Crouch.Exit() as well.");
             }
             finally
             {
@@ -477,6 +675,19 @@ namespace DeadCells.Core.Tests
             var col = go.AddComponent<BoxCollider2D>();
             col.isTrigger = true;
             col.size = new Vector2(0.5f, ChainTriggerHeight);
+            return col;
+        }
+
+        /// <summary>Chain trigger as it is still shipped: y = [-0.50 .. 8.50] on x = 46.</summary>
+        private static BoxCollider2D CreateShippedChain(Transform parent)
+        {
+            var go = new GameObject("I1_Chain_C_Shipped");
+            go.transform.SetParent(parent);
+            go.layer = ClimbableLayer;
+            go.transform.position = new Vector3(ChainX, ShippedChainCenterY, 0f);
+            var col = go.AddComponent<BoxCollider2D>();
+            col.isTrigger = true;
+            col.size = new Vector2(0.5f, ShippedChainHeight);
             return col;
         }
 
@@ -597,6 +808,27 @@ namespace DeadCells.Core.Tests
                 "PlayerCrouchState must expose a public Tick(float deltaTime) overload so the S-hold descend window is testable.");
             method.Invoke(crouch, new object[] { deltaTime });
         }
+
+        /// <summary>
+        /// EditMode never runs a physics step of its own, and a synchronous test body does not advance
+        /// <c>Time.frameCount</c> either. These two helpers model exactly what the engine would do
+        /// between two <c>Update</c> calls: integrate the body under the gravity scale the current
+        /// state set, then open a fresh transition slot for the next frame. Without them a multi-frame
+        /// climb / fall hand-off cannot be observed at all.
+        /// </summary>
+        private static void AdvanceBody(PlayerHarness harness, float deltaTime)
+        {
+            var body = harness.Body;
+            var velocity = body.linearVelocity;
+            velocity.y += Physics2D.gravity.y * body.gravityScale * deltaTime;
+            body.linearVelocity = velocity;
+            body.position += velocity * deltaTime;
+            Physics2D.SyncTransforms();
+        }
+
+        /// <summary>Opens the one-transition-per-frame slot that a real frame boundary provides.</summary>
+        private static void BeginSimulatedFrame(PlayerStateMachine machine) =>
+            SetPrivateField(machine, "_lastTransitionFrame", -1);
 
         private static void ForceState(PlayerStateMachine machine, IPlayerState state)
         {
