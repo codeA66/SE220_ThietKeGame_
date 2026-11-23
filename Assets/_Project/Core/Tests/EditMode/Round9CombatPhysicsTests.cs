@@ -1,6 +1,7 @@
 using System.Reflection;
 using DeadCells.Combat;
 using DeadCells.Enemies;
+using DeadCells.Enemies.States;
 using DeadCells.Player;
 using DeadCells.Player.StateMachine;
 using DeadCells.Player.StateMachine.States;
@@ -30,6 +31,7 @@ namespace DeadCells.Core.Tests
         private const string BowDataPath = "Assets/_Project/Features/Combat/Data/Bow_StartBow.asset";
         private const string PlayerArrowPrefabPath = "Assets/_Project/Features/Player/Prefabs/Projectile_PlayerArrow.prefab";
         private const string PlayerAnimatorPath = "Assets/_Project/Features/Player/Animations/Player.controller";
+        private const string EnemyAnimatorPath = "Assets/_Project/Features/Enemies/Animations/zombie/zombie.controller";
 
         /// <summary>
         /// Chain geometry as Task 2.2 trims it: the trigger tops out 0.08u above the deck it serves,
@@ -1169,6 +1171,134 @@ namespace DeadCells.Core.Tests
             Assert.IsTrue(hit3.CanCrit, "Hit 3 is the crit finisher.");
         }
 
+        /// <summary>
+        /// P0-05 Part B: a grounded hit with weight pops the enemy upward so the hit registers on the
+        /// body itself, the pop is a floor on the vertical arc (never a cut), light hits stay flat,
+        /// knockback resistance scales the push before the 3.5 gate, and the horizontal carry bleeds
+        /// at 18 u/s² instead of 30 so the slide is still readable after the hit-stop ends.
+        /// </summary>
+        [Test]
+        public void T08_EnemyStunState_AppliesUpwardPopAnd18uSlideDamping()
+        {
+            var root = new GameObject("__Round9T08EnemyPop");
+            EnemyStunHarness harness = default;
+            try
+            {
+                // Flat floor whose top face is y = 0, so an enemy with feet at y = 0 is grounded.
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                harness = CreateEnemyStunHarness(root.transform, Vector2.zero);
+                var ctx = harness.Context;
+                var stun = harness.Stun;
+
+                void Arm(Vector2 position, Vector2 velocity, float resistance)
+                {
+                    harness.Go.transform.position = position;
+                    harness.Body.position = position;
+                    harness.Body.linearVelocity = velocity;
+                    Physics2D.SyncTransforms();
+                    ctx.RefreshFrame();
+                    SetPrivateField(harness.Data, "_knockbackResistance", resistance);
+                }
+
+                // 1. Hit 1 of Weapon_StartSword (knockback 5.2, no crit) on the ground: slide + a 2.2 pop.
+                Arm(Vector2.zero, Vector2.zero, 0f);
+                Assert.IsTrue(ctx.IsGrounded, "Precondition: the enemy must stand on the floor.");
+                ctx.LastDamage = new DamageInfo(25, 1, 5.2f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(5.2f, ctx.Velocity.x, 0.001f,
+                    "A grounded hit must slide at the full reduced knockback (5.2).");
+                Assert.AreEqual(2.2f, ctx.Velocity.y, 0.001f,
+                    "A grounded non-crit 5.2 hit must pop the enemy to 2.2 u/s.");
+                Assert.AreEqual(-1, ctx.Facing, "The enemy must turn to face the attacker (opposite the push).");
+
+                // 2. The crit finisher (knockback 10.5, crit) gets the finisher's pop.
+                Arm(Vector2.zero, Vector2.zero, 0f);
+                ctx.LastDamage = new DamageInfo(45, 1, 10.5f, 0.25f, true, null);
+                stun.Enter();
+                Assert.AreEqual(10.5f, ctx.Velocity.x, 0.001f, "The finisher must slide at 10.5.");
+                Assert.AreEqual(3.8f, ctx.Velocity.y, 0.001f, "A grounded crit hit must pop to 3.8 u/s.");
+                Assert.AreEqual(-1, ctx.Facing, "A +1 push must leave the enemy facing -1, toward the attacker.");
+
+                // 3. Under the 3.5 gate: no pop, just the slide.
+                Arm(Vector2.zero, Vector2.zero, 0f);
+                ctx.LastDamage = new DamageInfo(10, 1, 3.0f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(3.0f, ctx.Velocity.x, 0.001f, "A light hit must still slide.");
+                Assert.AreEqual(0f, ctx.Velocity.y, 0.001f, "A 3.0 push is under the gate and must not pop.");
+
+                // 3b. The gate is inclusive: exactly 3.5 pops.
+                Arm(Vector2.zero, Vector2.zero, 0f);
+                ctx.LastDamage = new DamageInfo(10, -1, 3.5f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(2.2f, ctx.Velocity.y, 0.001f, "The gate is `push >= 3.5`, so exactly 3.5 must pop.");
+                Assert.AreEqual(1, ctx.Facing, "A -1 push must turn the enemy toward +1.");
+
+                // 4. Airborne: no pop, and the existing vertical arc is left alone.
+                Arm(new Vector2(0f, 3f), new Vector2(0f, -1f), 0f);
+                Assert.IsFalse(ctx.IsGrounded, "Precondition: the enemy is airborne above the floor.");
+                ctx.LastDamage = new DamageInfo(30, 1, 6.2f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(6.2f, ctx.Velocity.x, 0.001f, "An airborne hit still slides.");
+                Assert.AreEqual(-1f, ctx.Velocity.y, 0.001f, "An airborne hit must not rewrite the vertical arc.");
+
+                // 5. Already rising faster than the pop floor: the floor never cuts the arc.
+                Arm(Vector2.zero, new Vector2(0f, 5f), 0f);
+                ctx.LastDamage = new DamageInfo(25, 1, 5.2f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(5f, ctx.Velocity.y, 0.001f, "The pop is a floor on Velocity.y, never a clamp down.");
+
+                // 6. Knockback resistance scales the push (Shieldbearer 0.3): 10.5 -> 7.35.
+                Arm(Vector2.zero, Vector2.zero, 0.3f);
+                ctx.LastDamage = new DamageInfo(45, 1, 10.5f, 0.25f, true, null);
+                stun.Enter();
+                Assert.AreEqual(7.35f, ctx.Velocity.x, 0.001f,
+                    "Resistance 0.3 must leave 7.35 of a 10.5 knockback.");
+                Assert.AreEqual(3.8f, ctx.Velocity.y, 0.001f, "A resisted 7.35 still clears the pop gate.");
+
+                // 6b. Resistance dropping the push under the gate suppresses the pop: the gate reads
+                // the resisted push, not the raw knockback (raw 4.5 would have cleared 3.5).
+                Arm(Vector2.zero, Vector2.zero, 0.3f);
+                ctx.LastDamage = new DamageInfo(10, 1, 4.5f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(3.15f, ctx.Velocity.x, 0.001f, "4.5 resisted by 0.3 gives a 3.15 slide.");
+                Assert.AreEqual(0f, ctx.Velocity.y, 0.001f,
+                    "A resisted 3.15 is under the gate: the raw 4.5 must not decide the pop.");
+
+                // 7. Directionless hits (blasts, stomps) neither push nor turn.
+                Arm(Vector2.zero, Vector2.zero, 0f);
+                ctx.Face(1);
+                ctx.LastDamage = new DamageInfo(20, 0, 8f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(0f, ctx.Velocity.x, 0.001f, "A directionless hit must not add horizontal velocity.");
+                Assert.AreEqual(0f, ctx.Velocity.y, 0.001f, "A directionless hit must not pop either.");
+                Assert.AreEqual(1, ctx.Facing, "A directionless hit must not turn the enemy.");
+
+                // 8. The carry: 18 u/s² bleeds the slide slower than the old 30 u/s² did.
+                float newBleed = 18f * Time.fixedDeltaTime;
+                float oldBleed = 30f * Time.fixedDeltaTime;
+                Assert.Less(newBleed, oldBleed, "Sanity: 18 u/s² bleeds less per step than 30 u/s².");
+
+                Arm(Vector2.zero, new Vector2(5.2f, 0f), 0f);
+                stun.FixedTick();
+                Assert.AreEqual(5.2f - newBleed, ctx.Velocity.x, 0.001f,
+                    "FixedTick must bleed horizontal recoil at 18 u/s² so the slide survives the hit-stop.");
+
+                Arm(Vector2.zero, new Vector2(5.2f, 0f), 0f);
+                for (int i = 0; i < 3; i++)
+                    stun.FixedTick();
+                Assert.AreEqual(5.2f - newBleed * 3f, ctx.Velocity.x, 0.002f,
+                    "Three FixedTicks must bleed exactly 3 x 18 * fixedDeltaTime.");
+                Assert.Greater(ctx.Velocity.x, 5.2f - oldBleed * 3f,
+                    "After 0.06 s the slide must still carry more speed than the old 30 u/s² decay left.");
+            }
+            finally
+            {
+                if (harness.Data != null)
+                    Object.DestroyImmediate(harness.Data);
+                Object.DestroyImmediate(root);
+            }
+        }
+
         // ==================== Fixtures & helpers ====================
 
         /// <summary>A hittable dummy on the Enemy layer with a live Health (0s invulnerability).</summary>
@@ -1272,6 +1402,70 @@ namespace DeadCells.Core.Tests
             go.transform.position = position;
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(20f, 1f);
+        }
+
+        private readonly struct EnemyStunHarness
+        {
+            public readonly GameObject Go;
+            public readonly Rigidbody2D Body;
+            public readonly EnemyContext Context;
+            public readonly EnemyStunState Stun;
+            public readonly EnemyData Data;
+
+            public EnemyStunHarness(GameObject go, Rigidbody2D body, EnemyContext context, EnemyStunState stun,
+                EnemyData data)
+            {
+                Go = go;
+                Body = body;
+                Context = context;
+                Stun = stun;
+                Data = data;
+            }
+        }
+
+        /// <summary>
+        /// A real <see cref="EnemyContext"/> + <see cref="EnemyStateMachine"/> on a dynamic body with the
+        /// zombie animator and zero gravity, so <c>EnemyStunState</c> runs exactly the code the prefabs run.
+        /// Gravity is 0 on purpose: the pop is asserted as the velocity the state writes, not a trajectory.
+        /// </summary>
+        private static EnemyStunHarness CreateEnemyStunHarness(Transform parent, Vector2 position)
+        {
+            var go = new GameObject("EnemyStunHarness");
+            go.transform.SetParent(parent);
+            go.layer = EnemyLayer;
+            go.transform.position = position;
+
+            var body = go.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Dynamic;
+            body.gravityScale = 0f;
+            body.constraints = RigidbodyConstraints2D.FreezeRotation;
+            body.position = position;
+
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(0.8f, 1.5f);
+            col.offset = new Vector2(0f, 0.75f);
+
+            var sprite = go.AddComponent<SpriteRenderer>();
+            var animator = go.AddComponent<Animator>();
+            var animController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(EnemyAnimatorPath);
+            Assert.IsNotNull(animController, $"Missing {EnemyAnimatorPath}");
+            animator.runtimeAnimatorController = animController;
+            animator.Rebind();
+            animator.Update(0f);
+
+            var enemyAnimator = go.AddComponent<EnemyAnimator>();
+            SetPrivateField(enemyAnimator, "_animator", animator);
+            SetPrivateField(enemyAnimator, "_renderer", sprite);
+            InvokePrivateMethod(enemyAnimator, "Awake");
+
+            var health = go.AddComponent<Health>();
+            health.RestoreFull();
+
+            var data = ScriptableObject.CreateInstance<EnemyData>();
+            var context = new EnemyContext(body, col, enemyAnimator, health, data,
+                (LayerMask)(1 << GroundLayer), (LayerMask)(1 << PlayerLayer));
+            var stun = (EnemyStunState)new EnemyStateMachine(context).Stun;
+            return new EnemyStunHarness(go, body, context, stun, data);
         }
 
         private static PlayerHarness CreatePlayerHarness(Transform parent, Vector2 feetPosition)
