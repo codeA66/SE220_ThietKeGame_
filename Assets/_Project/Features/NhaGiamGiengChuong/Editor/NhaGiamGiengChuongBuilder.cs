@@ -437,9 +437,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Floor_C", 42f, 56f, -1f, 0f);
             AddSolidBox(colRoot, "Floor_D", 22f, 42f, 7f, 8f);
 
-            // One-Way Platforms (v7 exact)
+            // One-Way Platforms (v7 exact) — P0-04 Part A removed the zero-purpose OneWay_C_Rest ledge
             AddOneWayBox(colRoot, "OneWay_C_Top", 42f, 56f, 8f);
-            AddOneWayBox(colRoot, "OneWay_C_Rest", 44f, 49f, 4.5f);
 
             // Ceilings (v7 exact)
             AddSolidBox(colRoot, "Ceiling_C", 42f, 56f, 18.5f, 19f);
@@ -452,8 +451,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Wall_CG_Upper_56", 55.75f, 56.25f, 12f, 19f);
             AddSolidBox(colRoot, "Wall_DH_Header_22", 21.75f, 22.25f, 12f, 13.5f);
 
-            // Climbable Trigger I1 (v7 exact)
-            AddClimbableTrigger(root, "I1_Chain_C", new Vector2(46f, 4f), new Vector2(0.5f, 9f));
+            // Climbable Trigger I1 (P0-02: trimmed to [floorY - 0.20 .. deckTopY + 0.08], no air overhang)
+            AddClimbableTrigger(root, "I1_Chain_C", new Vector2(46f, 3.94f), new Vector2(0.5f, 8.28f));
 
             // Art: 4 visual-only Tilemaps on native 1.0u grid
             CreateRoomVisualGrid(artRoot, mat, out var bgTm, out var decalTm, out var solidTm, out var rimTm);
@@ -481,7 +480,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddPrisonPlankRow(artRoot, "Art_C_TopPlanks", pal, mat, 42f, 56f, 8f, -2);
             AddPlatformCornerBrace(artRoot, "Art_C_TopBraceL", pal.WoodenCornerLeft, mat, 42f, 8f, true);
             AddPlatformCornerBrace(artRoot, "Art_C_TopBraceR", pal.WoodenCornerRight, mat, 56f, 8f, false);
-            AddPrisonPlankRow(artRoot, "Art_C_RestPlanks", pal, mat, 44f, 49f, 4.5f, -2);
 
             // Chain I1 capped cleanly
             AddPrisonChainArt(artRoot, "Art_I1_Chain", pal, mat, 46f, 0f, 8f);
@@ -526,9 +524,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var colRoot = CreateChild(root, "Collision");
             var artRoot = CreateChild(root, "Art");
 
-            // Solid Floor A-B, Practice One-Way, Ceilings, Outer Wall, Seam Header (v7 exact)
+            // Solid Floor A-B, Ceilings, Outer Wall, Seam Header (v7 exact) — P0-04 Part A removed the OneWay_A_Practice ledge
             AddSolidBox(colRoot, "Floor_AB", 0f, 42f, -1f, 0f);
-            AddOneWayBox(colRoot, "OneWay_A_Practice", 9f, 14f, 2f);
             AddSolidBox(colRoot, "Ceiling_A", -0.5f, 18f, 5.5f, 6f);
             AddSolidBox(colRoot, "Ceiling_B", 18f, 42f, 6f, 6.5f);
             AddSolidBox(colRoot, "Wall_A_West", -0.5f, 0f, -1f, 5.5f);
@@ -556,8 +553,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "AB_Sub", 0, 42, -8, -1);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "AB_UpperA", 0, 6, 6, 15);
 
-            // Planks (woodenPlatform_*)
-            AddPrisonPlankRow(artRoot, "Art_A_PracticePlanks", pal, mat, 9f, 14f, 2f, -2);
+            // Planks (woodenPlatform_*) — P0-04 Part A removed Art_A_PracticePlanks together with its ledge
 
             // Corner beams, ceiling stamps, moss & webs
             AddCornerBeamsAndWebs(artRoot, rimTm, mat, pal, "A", 0f, 18f, 5.5f, 0f, isTallRoom: false, hasLeftBottomWall: true, hasRightBottomWall: false);
@@ -600,7 +596,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Ceiling_G", 56f, 76.5f, 14.5f, 15f);
             AddSolidBox(colRoot, "Wall_GM_Mid_76", 76f, 76.5f, 4f, 7f);
             AddSolidBox(colRoot, "Wall_GN_Upper_76", 76f, 76.5f, 12f, 14.5f);
-            AddClimbableTrigger(root, "I2_Chain_G", new Vector2(68f, 4f), new Vector2(0.5f, 9f));
+            AddClimbableTrigger(root, "I2_Chain_G", new Vector2(68f, 3.94f), new Vector2(0.5f, 8.28f));
 
             // Art: 4 visual-only Tilemaps on native 1.0u grid
             CreateRoomVisualGrid(artRoot, mat, out var bgTm, out var decalTm, out var solidTm, out var rimTm);
@@ -630,7 +626,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddCornerBeamsAndWebs(artRoot, rimTm, mat, pal, "G", 56f, 76f, 14.5f, 0f, isTallRoom: true, hasLeftBottomWall: false, hasRightBottomWall: false);
 
             // Normalized hero props (Player = 1.66u): Barrel 0.58x, Crate 0.55x, Winch 0.58x (sort -1)
-            AddScaledGroundedProp(artRoot, "Art_G_Winch", LoadTileSprite("Props/MachineryAndBell_012"), mat, 68f, 8f, 0.58f, -1, new Color(0.86f, 0.86f, 0.90f, 1f));
+            AddScaledGroundedProp(artRoot, "Art_G_Winch", LoadTileSprite("Props/MachineryAndBell_012"), mat, 73.6f, 8f, 0.58f, -1, new Color(0.86f, 0.86f, 0.90f, 1f));
             AddScaledGroundedProp(artRoot, "Art_G_Barrel", LoadTileSprite("Props/StorageAndVessel_014"), mat, 60f, 0f, 0.58f, -5, new Color(0.90f, 0.88f, 0.84f, 1f));
             AddScaledGroundedProp(artRoot, "Art_G_Crate", LoadTileSprite("Props/StorageAndVessel_010"), mat, 64.5f, 0f, 0.55f, -5, new Color(0.90f, 0.88f, 0.84f, 1f));
 
@@ -688,7 +684,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Wall_HJ_Header_6", 5.75f, 6.25f, 20f, 22.5f);
             AddSolidBox(colRoot, "Wall_JK_Mid_Neg16", -16.25f, -15.75f, 20f, 23.75f);
             AddSolidBox(colRoot, "Wall_KE_Header_Neg16", -16.25f, -15.75f, 28f, 31f);
-            AddClimbableTrigger(root, "I6_Chain_K", new Vector2(-24f, 20f), new Vector2(0.5f, 9f));
+            AddClimbableTrigger(root, "I6_Chain_K", new Vector2(-24f, 19.94f), new Vector2(0.5f, 8.28f));
 
             // Art: 4 visual-only Tilemaps on native 1.0u grid
             CreateRoomVisualGrid(artRoot, mat, out var bgTm, out var decalTm, out var solidTm, out var rimTm);
@@ -895,7 +891,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Floor_N_East", 107f, 164f, 7f, 8f);
             AddOneWayBox(colRoot, "OneWay_N_Mid1", 86f, 96f, 12.5f);
             AddOneWayBox(colRoot, "OneWay_N_Mid2", 116f, 128f, 12.5f);
-            AddOneWayBox(colRoot, "OneWay_N_High", 136f, 150f, 16.5f);
             AddSolidBox(colRoot, "Ceiling_N", 76f, 164.5f, 22.5f, 23f);
 
             // Walls & Headers
@@ -904,7 +899,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Wall_M_VaultHeader_150", 149.75f, 150.25f, 4f, 7f);
 
             // Climbable Chain I7 (x=104, y=-0.5..8.5)
-            AddClimbableTrigger(root, "I7_Chain_MN", new Vector2(104f, 4f), new Vector2(0.5f, 9f));
+            AddClimbableTrigger(root, "I7_Chain_MN", new Vector2(104f, 3.94f), new Vector2(0.5f, 8.28f));
 
             // Art: 4 visual-only Tilemaps on native 1.0u grid
             CreateRoomVisualGrid(artRoot, mat, out var bgTm, out var decalTm, out var solidTm, out var rimTm);
@@ -950,7 +945,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddPlatformCornerBrace(artRoot, "Art_N_WellCapBraceR", pal.WoodenCornerRight, mat, 107f, 8f, false);
             AddPrisonPlankRow(artRoot, "Art_N_Mid1Planks", pal, mat, 86f, 96f, 12.5f, -2);
             AddPrisonPlankRow(artRoot, "Art_N_Mid2Planks", pal, mat, 116f, 128f, 12.5f, -2);
-            AddPrisonPlankRow(artRoot, "Art_N_HighPlanks", pal, mat, 136f, 150f, 16.5f, -2);
 
             // Chain I7 art
             AddPrisonChainArt(artRoot, "Art_I7_Chain", pal, mat, 104f, 0f, 8f);
@@ -1047,7 +1041,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Floor_P", 164f, 234f, -17f, -16f);
             AddSolidBox(colRoot, "Ceiling_P", 164f, 234.5f, -1.5f, -1f);
 
-            AddOneWayBox(colRoot, "OneWay_O_West", 84f, 96f, -11.5f);
             AddOneWayBox(colRoot, "OneWay_O_ShaftStep1", 112f, 124f, -11f);
             AddOneWayBox(colRoot, "OneWay_O_ShaftStep2", 112f, 124f, -5.5f);
             AddOneWayBox(colRoot, "OneWay_O_East", 138f, 150f, -11.5f);
@@ -1059,7 +1052,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Wall_P_East", 234f, 234.5f, -17f, -1.5f);
 
             // Climbable Chain I8 (x=118, y=-16.5..0.5)
-            AddClimbableTrigger(root, "I8_Chain_MO", new Vector2(118f, -8f), new Vector2(0.5f, 17f));
+            AddClimbableTrigger(root, "I8_Chain_MO", new Vector2(118f, -8.06f), new Vector2(0.5f, 16.28f));
 
             // Art: 4 visual-only Tilemaps on native 1.0u grid
             CreateRoomVisualGrid(artRoot, mat, out var bgTm, out var decalTm, out var solidTm, out var rimTm);
@@ -1087,8 +1080,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "W2_Sub", 75, 238, -22, -17);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "W2_CeilP", 164, 238, -1, 7);
 
-            // 5 Plank Rows + shaft step corner braces
-            AddPrisonPlankRow(artRoot, "Art_O_WestPlanks", pal, mat, 84f, 96f, -11.5f, -2);
+            // 4 Plank Rows + shaft step corner braces — P0-04 Part A removed Art_O_WestPlanks
             AddPrisonPlankRow(artRoot, "Art_O_ShaftStep1Planks", pal, mat, 112f, 124f, -11f, -2);
             AddPlatformCornerBrace(artRoot, "Art_O_ShaftStep1BraceL", pal.WoodenCornerLeft, mat, 112f, -11f, true);
             AddPlatformCornerBrace(artRoot, "Art_O_ShaftStep1BraceR", pal.WoodenCornerRight, mat, 124f, -11f, false);
@@ -1229,7 +1221,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Wall_R_ArmoryHeader_Neg88", -88.25f, -87.75f, 28f, 38.5f);
 
             // Climbable Chain I9 (x=-66, y=15.5..24.5)
-            AddClimbableTrigger(root, "I9_Chain_QR", new Vector2(-66f, 20f), new Vector2(0.5f, 9f));
+            AddClimbableTrigger(root, "I9_Chain_QR", new Vector2(-66f, 19.94f), new Vector2(0.5f, 8.28f));
 
             // Art: 4 visual-only Tilemaps on native 1.0u grid
             CreateRoomVisualGrid(artRoot, mat, out var bgTm, out var decalTm, out var solidTm, out var rimTm);
@@ -1351,7 +1343,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             // Room S (x=38..92, y=24..39)
             AddSolidBox(colRoot, "Floor_S", 38f, 92f, 23f, 24f);
-            AddOneWayBox(colRoot, "OneWay_S_Gallery", 44f, 58f, 28.5f);
 
             // Room T (x=38..140, y=40..62.5)
             AddSolidBox(colRoot, "Floor_T_West", 38f, 77f, 39f, 40f);
@@ -1359,7 +1350,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Floor_T_East", 83f, 140f, 39f, 40f);
             AddOneWayBox(colRoot, "OneWay_T_Mid1", 52f, 64f, 44.5f);
             AddOneWayBox(colRoot, "OneWay_T_Mid2", 92f, 106f, 44.5f);
-            AddOneWayBox(colRoot, "OneWay_T_High", 112f, 126f, 49f);
             AddSolidBox(colRoot, "Ceiling_T", 37.5f, 140.5f, 62.5f, 63f);
 
             // Walls
@@ -1368,7 +1358,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddSolidBox(colRoot, "Wall_T_East", 140f, 140.5f, 39f, 62.5f);
 
             // Climbable Chain I10 (x=80, y=23.5..40.5)
-            AddClimbableTrigger(root, "I10_Chain_ST", new Vector2(80f, 32f), new Vector2(0.5f, 17f));
+            AddClimbableTrigger(root, "I10_Chain_ST", new Vector2(80f, 31.94f), new Vector2(0.5f, 16.28f));
 
             // Art: 4 visual-only Tilemaps on native 1.0u grid
             CreateRoomVisualGrid(artRoot, mat, out var bgTm, out var decalTm, out var solidTm, out var rimTm);
@@ -1402,10 +1392,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "U1_SubE", 56, 76, 15, 23);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "U1_Overhang", 92, 144, 31, 39);
 
-            // 5 Plank Rows + platform & shaft cap corner braces
-            AddPrisonPlankRow(artRoot, "Art_S_GalleryPlanks", pal, mat, 44f, 58f, 28.5f, -2);
-            AddPlatformCornerBrace(artRoot, "Art_S_GalleryBraceL", pal.WoodenCornerLeft, mat, 44f, 28.5f, true);
-            AddPlatformCornerBrace(artRoot, "Art_S_GalleryBraceR", pal.WoodenCornerRight, mat, 58f, 28.5f, false);
+            // 3 Plank Rows + platform & shaft cap corner braces — P0-04 Part A removed Art_S_GalleryPlanks/braces and Art_T_HighPlanks/braces
             AddPrisonPlankRow(artRoot, "Art_T_ShaftCapPlanks", pal, mat, 77f, 83f, 40f, -2);
             AddPlatformCornerBrace(artRoot, "Art_T_ShaftCapBraceL", pal.WoodenCornerLeft, mat, 77f, 40f, true);
             AddPlatformCornerBrace(artRoot, "Art_T_ShaftCapBraceR", pal.WoodenCornerRight, mat, 83f, 40f, false);
@@ -1415,9 +1402,6 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddPrisonPlankRow(artRoot, "Art_T_Mid2Planks", pal, mat, 92f, 106f, 44.5f, -2);
             AddPlatformCornerBrace(artRoot, "Art_T_Mid2BraceL", pal.WoodenCornerLeft, mat, 92f, 44.5f, true);
             AddPlatformCornerBrace(artRoot, "Art_T_Mid2BraceR", pal.WoodenCornerRight, mat, 106f, 44.5f, false);
-            AddPrisonPlankRow(artRoot, "Art_T_HighPlanks", pal, mat, 112f, 126f, 49f, -2);
-            AddPlatformCornerBrace(artRoot, "Art_T_HighBraceL", pal.WoodenCornerLeft, mat, 112f, 49f, true);
-            AddPlatformCornerBrace(artRoot, "Art_T_HighBraceR", pal.WoodenCornerRight, mat, 126f, 49f, false);
 
             // Chain I10 art
             AddPrisonChainArt(artRoot, "Art_I10_Chain", pal, mat, 80f, 24f, 40f);
@@ -4002,14 +3986,15 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var container = CreateChild(parent, name);
             int groundLayerId = SortingLayerSetup.GetSortingLayerId("Ground");
 
-            // Top anchor hole flush with upper deck
+            // Top anchor hole flush with the upper deck: bounds.max.y == deckTopY so the iron collar sits
+            // directly beneath the planks (Ground/-3, behind the -2 wooden row) and never pokes black horns above bridges.
             var holeGo = CreateChild(container, "AnchorTop");
-            holeGo.transform.position = new Vector3(x, deckTopY, 0f);
+            holeGo.transform.position = new Vector3(x, deckTopY - 0.5f, 0f);
             var holeSr = holeGo.AddComponent<SpriteRenderer>();
             holeSr.sprite = pal.LadderHole;
             holeSr.sharedMaterial = mat;
             holeSr.sortingLayerID = groundLayerId;
-            holeSr.sortingOrder = -1;
+            holeSr.sortingOrder = -3;
 
             // Repeating 1.0u chain links from floorTopY + 1.0 up to deckTopY - 0.5
             int idx = 0;

@@ -514,9 +514,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
 
             string[] plankRowNames =
             {
-                // Core Spine (10)
-                "Art_A_PracticePlanks",
-                "Art_C_RestPlanks",
+                // Core Spine (8) — P0-04 Part A pruned Art_A_PracticePlanks + Art_C_RestPlanks
                 "Art_C_TopPlanks",
                 "Art_G_UpperPlanks",
                 "Art_K_TopPlanks",
@@ -525,16 +523,14 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 "Art_L2_Planks",
                 "Art_L3_Planks",
                 "Art_L4_Planks",
-                // W1_EastCourtyard (7)
+                // W1_EastCourtyard (6) — P0-04 Part A pruned Art_N_HighPlanks
                 "Art_M_WellBridgePlanks",
                 "Art_M_Perch1Planks",
                 "Art_M_Perch2Planks",
                 "Art_N_WellCapPlanks",
                 "Art_N_Mid1Planks",
                 "Art_N_Mid2Planks",
-                "Art_N_HighPlanks",
-                // W2_SewerCistern (5)
-                "Art_O_WestPlanks",
+                // W2_SewerCistern (4) — P0-04 Part A pruned Art_O_WestPlanks
                 "Art_O_ShaftStep1Planks",
                 "Art_O_ShaftStep2Planks",
                 "Art_O_EastPlanks",
@@ -544,14 +540,12 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 "Art_R_WellCapPlanks",
                 "Art_R_Mid1Planks",
                 "Art_R_Mid2Planks",
-                // U1_UpperPromenade (5)
-                "Art_S_GalleryPlanks",
+                // U1_UpperPromenade (3) — P0-04 Part A pruned Art_S_GalleryPlanks + Art_T_HighPlanks
                 "Art_T_ShaftCapPlanks",
                 "Art_T_Mid1Planks",
                 "Art_T_Mid2Planks",
-                "Art_T_HighPlanks",
             };
-            Assert.AreEqual(31, plankRowNames.Length, "[A10/PlankRowCount]");
+            Assert.AreEqual(25, plankRowNames.Length, "[A10/PlankRowCount]");
             foreach (var rowName in plankRowNames)
             {
                 var rowGo = GameObject.Find(rowName);
@@ -564,6 +558,21 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                     StringAssert.StartsWith("woodenPlatform_", piece.sprite.name,
                         $"[A10/Planks/{rowName}/{piece.name}] Expected woodenPlatform_*, got '{piece.sprite.name}'.");
                 }
+            }
+
+            // P0-04 Part A: the six pruned nonsense ledges and their dressing must be gone, not just uncounted
+            string[] prunedPlankRows =
+            {
+                "Art_A_PracticePlanks", "Art_C_RestPlanks", "Art_N_HighPlanks",
+                "Art_O_WestPlanks", "Art_S_GalleryPlanks", "Art_T_HighPlanks",
+            };
+            foreach (string prunedRow in prunedPlankRows)
+            {
+                Assert.IsNull(GameObject.Find(prunedRow), $"[A10/Pruned/{prunedRow}] Pruned plank row must be removed from the scene.");
+            }
+            foreach (string prunedBrace in new[] { "Art_S_GalleryBraceL", "Art_S_GalleryBraceR", "Art_T_HighBraceL", "Art_T_HighBraceR" })
+            {
+                Assert.IsNull(GameObject.Find(prunedBrace), $"[A10/Pruned/{prunedBrace}] Brace of a pruned plank row must be removed from the scene.");
             }
 
             // 4. Full 19/19 Room Point-Light Coverage (>= 75% total, >= 50% in every single room)
@@ -652,9 +661,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
         {
             EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
 
-            // 1. [PM-1] All 31 PlatformEffector2D components across the 9 room prefabs use surfaceArc == 160f
+            // 1. [PM-1] All 25 PlatformEffector2D components across the 9 room prefabs use surfaceArc == 160f
             var effectors = Object.FindObjectsByType<PlatformEffector2D>(FindObjectsInactive.Include);
-            Assert.AreEqual(31, effectors.Length, "[A11/OneWayCount] Expected 31 PlatformEffector2D components in NhaGiamGiengChuong.");
+            Assert.AreEqual(25, effectors.Length, "[A11/OneWayCount] Expected 25 PlatformEffector2D components in NhaGiamGiengChuong.");
             foreach (var eff in effectors)
             {
                 Assert.IsTrue(eff.useOneWay, $"[A11/OneWay/{eff.name}] useOneWay must be true.");
@@ -1155,12 +1164,12 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 }
             }
 
-            // 4. P0-04a: Zero AABB overlaps between any of the 31 OneWay platforms and architectural landmarks/doors/shelves/banners
+            // 4. P0-04a: Zero AABB overlaps between any of the 25 OneWay platforms and architectural landmarks/doors/shelves/banners
             var oneWayBoxes = Object.FindObjectsByType<BoxCollider2D>(FindObjectsInactive.Include)
                 .Where(box => box.gameObject.layer == GeometryAuditHelper.LayerOneWay &&
                               box.gameObject.name.StartsWith("OneWay_", StringComparison.Ordinal))
                 .ToList();
-            Assert.AreEqual(31, oneWayBoxes.Count, "Expected exactly 31 OneWay platforms.");
+            Assert.AreEqual(25, oneWayBoxes.Count, "Expected exactly 25 OneWay platforms.");
 
             string[] platformForbiddenProps =
             {
@@ -1333,7 +1342,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 "Art_R_BannerBig1", "Art_R_Pillar1", "Art_R_Shelf1", "Art_R_Junk1_A", "Art_R_Junk2_A",
                 "Art_S_BannerBig1", "Art_S_Shelf1", "Art_S_Shelf2", "Art_S_Cage1", "Art_S_Junk1_A", "Art_S_Junk2_A",
                 "Art_T_BannerBig1", "Art_T_BannerBig2", "Art_T_Arch1", "Art_T_Cage1", "Art_T_Cage2", "Art_T_Cage3", "Art_T_Shelf1", "Art_T_Shelf2", "Art_T_Junk1_A", "Art_T_Junk2_A", "Art_T_Junk3_A",
-                "Art_O_ShaftStep1BraceL", "Art_O_ShaftStep2BraceL", "Art_S_GalleryBraceL", "Art_T_Mid1BraceL", "Art_T_Mid2BraceL", "Art_T_HighBraceL",
+                "Art_O_ShaftStep1BraceL", "Art_O_ShaftStep2BraceL", "Art_T_Mid1BraceL", "Art_T_Mid2BraceL",
             };
             foreach (string propName in requiredWingStorytellingProps)
             {

@@ -82,8 +82,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             GeometryAuditHelper.AssertSolidBox(cols, "A04/Ceiling_HJ", -16f, 22f, 22.5f, 23f);
             GeometryAuditHelper.AssertSolidBox(cols, "A04/Ceiling_K", -30.5f, -16f, 30.5f, 31f);
 
-            // Chain I6
-            GeometryAuditHelper.AssertClimbableTrigger(cols, "A04/I6", -24f, 15.5f, 24.5f);
+            // Chain I6 (P0-02: trigger trimmed to [floorY - 0.20, deckTopY + 0.08])
+            GeometryAuditHelper.AssertClimbableTrigger(cols, "A04/I6", -24f, 15.80f, 24.08f);
 
             // 3 openings owned by HJK
             GeometryAuditHelper.AssertOpeningClear(cols, "A04/Open_HJ_6", 6f, 16f, 20f);

@@ -115,15 +115,15 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.AreEqual(24f, sd3Bounds.min.y, GeometryAuditHelper.Eps, "[A06/SD3/minY]");
             Assert.AreEqual(28f, sd3Bounds.max.y, GeometryAuditHelper.Eps, "[A06/SD3/maxY]");
 
-            // 5. Verify all 7 climbable chains exist in assembled scene
+            // 5. Verify all 7 climbable chains exist in assembled scene (P0-02: trimmed to [floorY - 0.20, deckTopY + 0.08])
             var allCols = Object.FindObjectsByType<Collider2D>();
-            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I1", 46f, -0.5f, 8.5f);
-            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I2", 68f, -0.5f, 8.5f);
-            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I6", -24f, 15.5f, 24.5f);
-            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I7", 104f, -0.5f, 8.5f);
-            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I8", 118f, -16.5f, 0.5f);
-            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I9", -66f, 15.5f, 24.5f);
-            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I10", 80f, 23.5f, 40.5f);
+            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I1", 46f, -0.20f, 8.08f);
+            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I2", 68f, -0.20f, 8.08f);
+            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I6", -24f, 15.80f, 24.08f);
+            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I7", 104f, -0.20f, 8.08f);
+            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I8", 118f, -16.20f, 0.08f);
+            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I9", -66f, 15.80f, 24.08f);
+            GeometryAuditHelper.AssertClimbableTrigger(allCols, "A06/I10", 80f, 23.80f, 40.08f);
 
             // 6. Verify no duplicate colliders on seam x=22 encroaching across tiers or at E-F x=11 y=31..32
             var efShared = worldCols.Where(c =>

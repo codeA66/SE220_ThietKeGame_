@@ -52,13 +52,14 @@ namespace DeadCells.Core.Tests
         private const float TopDismountFeetY = ChainTriggerMaxY - 0.06f; // 8.02
 
         /// <summary>
-        /// The chain geometry that is still shipped in <c>CD.prefab</c> before Task 2.2 trims it:
-        /// box 0.5 x 9 at y = 4, so the trigger tops out at 8.50 — 0.50u above the 8.00 deck it
-        /// serves. The top dismount therefore snaps the feet to 8.44, which has no floor under it.
+        /// The chain geometry now shipped in <c>CD.prefab</c> after Task 2.2 trimmed it: box 0.5 x 8.28
+        /// centred at y = 3.94, so the trigger spans [-0.20 .. 8.08] — floorY - 0.20 to deckTopY + 0.08.
+        /// The top dismount therefore snaps the feet to 8.02, which is 0.02u above the 8.00 deck and
+        /// well inside the trigger, so a held W can no longer re-grab across an air overhang.
         /// </summary>
-        private const float ShippedChainCenterY = 4f;
-        private const float ShippedChainHeight = 9f;
-        private const float ShippedChainMaxY = ShippedChainCenterY + ShippedChainHeight * 0.5f; // 8.50
+        private const float ShippedChainCenterY = 3.94f;
+        private const float ShippedChainHeight = 8.28f;
+        private const float ShippedChainMaxY = ShippedChainCenterY + ShippedChainHeight * 0.5f; // 8.08
 
         /// <summary>Simulated frame length for the multi-frame climb/fall runs (120 Hz).</summary>
         private const float FrameDeltaTime = 1f / 120f;
@@ -267,14 +268,14 @@ namespace DeadCells.Core.Tests
             {
                 CreateShippedChain(root.transform);
                 CreateOneWayDeck(root.transform);
-                // Exactly where the -0.06 snap lands on the untrimmed trigger: 8.50 - 0.06 = 8.44.
+                // Exactly where the -0.06 snap lands on the trimmed trigger: 8.08 - 0.06 = 8.02.
                 var harness = CreatePlayerHarness(root.transform, new Vector2(ChainX, ShippedChainMaxY - 0.06f));
                 Physics2D.SyncTransforms();
 
-                Assert.AreEqual(8.44f, ShippedChainMaxY - 0.06f, 0.001f,
-                    "Precondition: the shipped trigger dismounts the feet at 8.44.");
+                Assert.AreEqual(TopDismountFeetY, ShippedChainMaxY - 0.06f, 0.001f,
+                    "Precondition: the trimmed trigger dismounts the feet at 8.02, 0.02u above the 8.00 deck.");
                 Assert.IsTrue(harness.Context.TryFindClimbable(),
-                    "Precondition: the dismount point still overlaps the overhanging chain trigger.");
+                    "Precondition: the dismount point still overlaps the trimmed chain trigger.");
 
                 SetInput(harness.Input, nameof(PlayerInputReader.MoveX), 0f);
                 SetInput(harness.Input, nameof(PlayerInputReader.MoveY), 1f); // W held for the whole run
