@@ -54,9 +54,9 @@ namespace DeadCells.Core.Tests
                     $"Actual excludeLayers.value = {body.excludeLayers.value}.");
             }
 
-            // 3. Runtime guard: a fresh EnemyController must enforce the exclusion in Awake,
+            // 3. Runtime behaviour: Awake() on a real enemy instance must enforce the exclusion,
             //    even when its Rigidbody2D starts with no exclusions.
-            AssertDefensiveAwakeGuardAppliesPlayerExclusion();
+            AssertAwakeOnLiveEnemyInstanceAppliesPlayerExclusion();
 
             // 4. Arrow prefab must NOT exclude the Player layer, or it stops hitting the Player.
             var arrowPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ArrowPrefabPath);
@@ -67,65 +67,69 @@ namespace DeadCells.Core.Tests
                 "Projectile_Arrow must not exclude Layer 7: it needs Player trigger contacts. " +
                 $"Actual excludeLayers.value = {arrowBody.excludeLayers.value}.");
 
-            var arrowCollider = arrowPrefab.GetComponent<Collider2D>();
-            Assert.IsNotNull(arrowCollider, "Projectile_Arrow.prefab has no Collider2D.");
-            Assert.IsTrue(arrowCollider.isTrigger, "Projectile_Arrow collider must stay a trigger.");
+            // A prefab may carry several colliders; only one needs to be the damage trigger, so scan
+            // them all instead of trusting GetComponent's arbitrary pick.
+            var arrowColliders = arrowPrefab.GetComponents<Collider2D>();
+            Assert.Greater(arrowColliders.Length, 0, "Projectile_Arrow.prefab has no Collider2D.");
+            bool hasTrigger = false;
+            foreach (var collider in arrowColliders)
+                if (collider.isTrigger)
+                    hasTrigger = true;
+            Assert.IsTrue(hasTrigger,
+                "At least one Projectile_Arrow collider must stay a trigger so OnTriggerEnter2D still fires on the Player.");
             Assert.AreEqual(EnemyLayer, arrowPrefab.layer, "Projectile_Arrow must stay on Layer 8.");
         }
 
-        private static bool AwakeCallsMethod(MethodInfo caller, MethodInfo callee)
+        /// <summary>
+        /// Behavioural version of the Awake wiring assert (brief Step 2): a real enemy prefab instance
+        /// gets its <c>excludeLayers</c> zeroed, then the same <c>Awake()</c> Unity would run is driven
+        /// through reflection. The bit must be back afterwards. EditMode does not invoke Awake on its
+        /// own, but prefab instances already carry <c>_data</c>, <c>_health</c> and <c>_animator</c>, so
+        /// the production Awake body (guard + Health.Initialize + EnemyContext + FSM) executes for real.
+        /// Refactor-agnostic: inlining the guard back into Awake, moving it behind a condition, or
+        /// reordering it are all judged on the resulting Rigidbody2D state instead of on IL.
+        /// </summary>
+        private static void AssertAwakeOnLiveEnemyInstanceAppliesPlayerExclusion()
         {
-            if (caller == null || callee == null)
-                return false;
-            byte[] il = caller.GetMethodBody()?.GetILAsByteArray();
-            if (il == null)
-                return false;
-            byte[] token = System.BitConverter.GetBytes(callee.MetadataToken);
-            for (int i = 0; i + 4 < il.Length; i++)
-            {
-                // call (0x28) / callvirt (0x6F) followed by the 4-byte metadata token.
-                if (il[i] != 0x28 && il[i] != 0x6F)
-                    continue;
-                if (il[i + 1] == token[0] && il[i + 2] == token[1] && il[i + 3] == token[2] && il[i + 4] == token[3])
-                    return true;
-            }
-            return false;
-        }
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPaths[0]);
+            Assert.IsNotNull(prefab, $"Enemy prefab missing at {EnemyPrefabPaths[0]}");
 
-        private static void AssertDefensiveAwakeGuardAppliesPlayerExclusion()
-        {
-            var root = new GameObject("__Round9EnemyControllerAwakeGuard");
+            var instance = Object.Instantiate(prefab);
             try
             {
-                root.layer = EnemyLayer;
-                root.SetActive(false);
+                var body = instance.GetComponent<Rigidbody2D>();
+                Assert.IsNotNull(body, "Instantiated enemy prefab has no Rigidbody2D.");
 
-                var body = root.AddComponent<Rigidbody2D>();
+                // Strip the serialized bit so the only thing that can set it is Awake itself.
                 body.excludeLayers = 0;
-                root.AddComponent<BoxCollider2D>();
-                var controller = root.AddComponent<EnemyController>();
-                controller.enabled = false;
+                Assert.AreEqual(0, body.excludeLayers.value & PlayerLayerMask,
+                    "Test precondition: the instance's excludeLayers must start without Layer 7.");
 
-                MethodInfo guard = typeof(EnemyController).GetMethod("ApplyPlayerLayerExclusion",
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                Assert.IsNotNull(guard,
-                    "EnemyController must expose the Awake() layer guard as ApplyPlayerLayerExclusion().");
+                var controller = instance.GetComponent<EnemyController>();
+                Assert.IsNotNull(controller,
+                    "Enemy prefab must carry an EnemyController so the runtime Awake path can be exercised.");
 
-                // EditMode does not reliably invoke Awake on AddComponent, so prove the wiring in IL
-                // (Awake calls the guard) and then exercise the guard itself.
-                Assert.IsTrue(AwakeCallsMethod(typeof(EnemyController).GetMethod("Awake",
-                        BindingFlags.Instance | BindingFlags.NonPublic), guard),
-                    "EnemyController.Awake must call ApplyPlayerLayerExclusion().");
-                guard.Invoke(controller, null);
+                MethodInfo awake = typeof(EnemyController).GetMethod("Awake",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.IsNotNull(awake, "EnemyController must declare a private Awake().");
 
-                var liveBody = root.GetComponent<Rigidbody2D>();
+                try
+                {
+                    awake.Invoke(controller, null);
+                }
+                catch (TargetInvocationException ex)
+                {
+                    Assert.Fail($"EnemyController.Awake() threw on a live prefab instance: {ex.InnerException}");
+                }
+
+                var liveBody = instance.GetComponent<Rigidbody2D>();
                 Assert.AreNotEqual(0, liveBody.excludeLayers.value & PlayerLayerMask,
-                    "EnemyController's Awake guard must add Layer 7 to Rigidbody2D.excludeLayers at runtime. " +
+                    "EnemyController.Awake() must add Layer 7 to Rigidbody2D.excludeLayers on a live instance. " +
                     $"Actual excludeLayers.value = {liveBody.excludeLayers.value}.");
             }
             finally
             {
-                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(instance);
             }
         }
     }
