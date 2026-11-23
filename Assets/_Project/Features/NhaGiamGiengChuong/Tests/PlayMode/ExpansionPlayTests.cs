@@ -28,8 +28,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             var player = Object.FindAnyObjectByType<PlayerController>();
             var wallet = Object.FindAnyObjectByType<GoldWallet>();
             var panel = Object.FindAnyObjectByType<ResultPanel>();
-            var lore = Object.FindAnyObjectByType<LoreTablet>();
-            var sewerExit = Object.FindAnyObjectByType<SecondaryBiomeExitTrigger>();
+            var lore = Object.FindObjectsByType<LoreTablet>(FindObjectsInactive.Include).Single(t => t.name == "I16_LoreTablet");
+            var sewerExit = Object.FindObjectsByType<SecondaryBiomeExitTrigger>(FindObjectsInactive.Include).Single(e => e.name == "I15_SewerExitTrigger");
             var switchDoors = Object.FindObjectsByType<SwitchDoor>();
             var tpGates = Object.FindObjectsByType<TeleportGate>();
 
@@ -45,6 +45,17 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsFalse(tp1.IsDiscovered);
             Assert.IsFalse(tp0.TryTeleport(), "[P08/UndiscoveredReject] TP_0 must not warp to undiscovered TP_1.");
 
+            // 1b. Room N treasure cache keeps its 4 coins resting at the authored height until the player comes close
+            var staticCache = Object.FindObjectsByType<GoldPickup>(FindObjectsInactive.Include)
+                .Where(c => c.name.StartsWith("GoldCache_N_", System.StringComparison.Ordinal))
+                .ToArray();
+            Assert.AreEqual(4, staticCache.Length, "[P08/StaticGoldCache] Room N must hold 4 statically placed GoldPickup coins.");
+            foreach (var coin in staticCache)
+            {
+                Assert.AreEqual(8.45f, coin.transform.position.y, 0.05f, $"[P08/StaticGoldRest/{coin.name}] Static coin must rest at authored y=8.45.");
+                Assert.AreEqual("VFX", coin.GetComponentInChildren<SpriteRenderer>(true).sortingLayerName, $"[P08/StaticGoldVfx/{coin.name}]");
+            }
+
             // 2. Wake Zone M1, defeat Grenadier_M1 -> verifies GoldPickup drops on VFX sorting layer & credits GoldWallet
             Assert.AreEqual(0, wallet.Balance, "[P08/InitialGold]");
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(82f, 0f));
@@ -54,8 +65,13 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(grenadierM1.enabled, "[P08/ZoneM1] Enemy_Grenadier_M1 must wake in Zone M1.");
             Assert.IsTrue(grenadierM1.GetComponent<Health>().TakeDamage(new DamageInfo(9999, 1, 0f, 0f, false, player.gameObject)));
             yield return null;
-            var droppedCoin = Object.FindAnyObjectByType<GoldPickup>();
+            var coinProbe = new Vector2(92f, 3.5f);
+            var droppedCoin = Object.FindObjectsByType<GoldPickup>(FindObjectsInactive.Include)
+                .OrderBy(c => Vector2.Distance(c.transform.position, coinProbe))
+                .FirstOrDefault();
             Assert.IsNotNull(droppedCoin, "[P08/GoldDrop] Defeating enemy must spawn GoldPickup.");
+            Assert.LessOrEqual(Vector2.Distance(droppedCoin.transform.position, coinProbe), 2.0f,
+                $"[P08/GoldDropNear] Nearest GoldPickup '{droppedCoin.name}' at {droppedCoin.transform.position} must be the Enemy_Grenadier_M1 drop near (92, 3.5), not a static Room N cache coin.");
             Assert.AreEqual("VFX", droppedCoin.GetComponentInChildren<SpriteRenderer>().sortingLayerName, "[P08/CoinVfxLayer]");
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(92f, 3.5f));
             yield return PlayModeTestHelper.WaitUntil(() => wallet.Balance >= 20, 2.5f, "[P08/GoldCollected] GoldPickup must credit GoldWallet.");

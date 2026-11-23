@@ -992,9 +992,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.AreEqual(30, enemies.Length);
             Assert.AreEqual(5, enemies.Count(e => e.name.Contains("Grenadier")), "[A13/GrenadierCount] Expected 5 Enemy_Grenadier instances.");
 
-            // 1. 2 Scrolls of Power + ScrollAura_R5_* under _icon + _glow pointing to Scroll glow + PowerScrollInteraction + ScrollUpgradeMenu + ScrollPickupPresentation
+            // 1. 3 Scrolls of Power + ScrollAura_R5_* under _icon + _glow pointing to Scroll glow + PowerScrollInteraction + ScrollUpgradeMenu + ScrollPickupPresentation
             var scrolls = Object.FindObjectsByType<PowerScrollPickup>(FindObjectsInactive.Include);
-            Assert.AreEqual(2, scrolls.Length, "[A13/ScrollCount] Expected 2 PowerScrollPickup instances.");
+            Assert.AreEqual(3, scrolls.Length, "[A13/ScrollCount] Expected 3 PowerScrollPickup instances.");
             foreach (var scroll in scrolls)
             {
                 var soScroll = new SerializedObject(scroll);
@@ -1029,6 +1029,15 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(soPres.FindProperty("_audio").objectReferenceValue, "[A13/ScrollPres.Audio] Must point to non-null AudioSource on Scroll cinematic.");
             Assert.IsNotNull(soPres.FindProperty("_pose").objectReferenceValue, "[A13/ScrollPres.Pose]");
 
+            // 1b. P0-04 Part B: 3rd High Bastion scroll lives in Room T at (114, 40) and is registered on PowerScrollInteraction
+            var highBastionScroll = scrolls.Single(s => s.name == "I17_Scroll_HighBastion");
+            Assert.AreEqual(114f, highBastionScroll.transform.position.x, GeometryAuditHelper.Eps, "[A13/I17ScrollX]");
+            Assert.AreEqual(40f, highBastionScroll.transform.position.y, GeometryAuditHelper.Eps, "[A13/I17ScrollY]");
+            var soScrollInteraction = new SerializedObject(scrollInteraction);
+            var registeredScrolls = soScrollInteraction.FindProperty("_scrolls");
+            Assert.AreEqual(3, registeredScrolls.arraySize, "[A13/ScrollRegistered] PowerScrollInteraction._scrolls must register all 3 scrolls.");
+            Assert.AreEqual(highBastionScroll, registeredScrolls.GetArrayElementAtIndex(2).objectReferenceValue, "[A13/ScrollRegisteredI17]");
+
             // 2. GoldWallet + EnemyGoldDrops (all 30 enemies registered) + GoldHud + GoldPickup Vfx sorting
             var wallet = Object.FindAnyObjectByType<DeadCells.Currency.GoldWallet>();
             var goldDrops = Object.FindAnyObjectByType<DeadCells.Currency.EnemyGoldDrops>();
@@ -1042,6 +1051,25 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             var pickupPrefab = soDrops.FindProperty("_pickupPrefab").objectReferenceValue as DeadCells.Currency.GoldPickup;
             Assert.IsNotNull(pickupPrefab, "[A13/GoldPickupPrefab]");
             Assert.AreEqual("VFX", pickupPrefab.GetComponentInChildren<SpriteRenderer>(true).sortingLayerName, "[A13/GoldPickupSorting]");
+
+            // 2b. P0-04 Part B: 4 statically placed Room N treasure coins (100 gold) resting on the North Gallery floor
+            var goldCacheCoins = Object.FindObjectsByType<DeadCells.Currency.GoldPickup>(FindObjectsInactive.Include)
+                .Where(c => c.name.StartsWith("GoldCache_N_", StringComparison.Ordinal))
+                .ToArray();
+            Assert.AreEqual(4, goldCacheCoins.Length, "[A13/GoldCacheCount] Expected 4 static Room N GoldPickup coins.");
+            float[] expectedCacheXs = { 158f, 159f, 160f, 161f };
+            for (int i = 0; i < expectedCacheXs.Length; i++)
+            {
+                var coin = goldCacheCoins.Single(c => c.name == $"GoldCache_N_{i}");
+                var soCoin = new SerializedObject(coin);
+                Assert.AreEqual(wallet, soCoin.FindProperty("_wallet").objectReferenceValue, $"[A13/GoldCacheWallet/{coin.name}]");
+                Assert.AreEqual(player.GetComponent<Health>(), soCoin.FindProperty("_player").objectReferenceValue, $"[A13/GoldCachePlayer/{coin.name}]");
+                Assert.AreEqual(25, soCoin.FindProperty("_value").intValue, $"[A13/GoldCacheValue/{coin.name}] 4 coins x 25 must total 100 gold.");
+                Assert.IsTrue(soCoin.FindProperty("_staticPlacement").boolValue, $"[A13/GoldCacheStatic/{coin.name}] Static scene coins must keep _staticPlacement = true.");
+                Assert.AreEqual("VFX", coin.GetComponentInChildren<SpriteRenderer>(true).sortingLayerName, $"[A13/GoldCacheSorting/{coin.name}]");
+                Assert.AreEqual(expectedCacheXs[i], coin.transform.position.x, GeometryAuditHelper.Eps, $"[A13/GoldCacheX/{coin.name}]");
+                Assert.AreEqual(8.45f, coin.transform.position.y, GeometryAuditHelper.Eps, $"[A13/GoldCacheY/{coin.name}]");
+            }
 
             // 3. 3 SwitchDoors (SD_1_EastVault, SD_2_SewerExit, SD_3_WestArmory)
             var switchDoors = Object.FindObjectsByType<SwitchDoor>(FindObjectsInactive.Include);
@@ -1066,18 +1094,81 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsFalse(new SerializedObject(tp1).FindProperty("_startsDiscovered").boolValue, "[A13/TP1StartsUndiscovered]");
             Assert.IsFalse(new SerializedObject(tp3).FindProperty("_startsDiscovered").boolValue, "[A13/TP3StartsUndiscovered]");
 
-            // 5. 1 LoreTablet (I16_LoreTablet in Room S) & 1 SecondaryBiomeExitTrigger (I15_SewerExitTrigger in Room P)
-            var lore = Object.FindAnyObjectByType<LoreTablet>();
-            Assert.IsNotNull(lore, "[A13/LoreTablet]");
-            Assert.IsNotNull(lore.PromptIndicator, "[A13/LoreTabletPrompt]");
-            Assert.GreaterOrEqual(lore.PromptIndicator.GetComponent<RectTransform>().sizeDelta.x, 380f,
-                "[A13/LoreTabletPromptWidth] Prompt badge must be wide enough for 29-char label without vertical clipping.");
-            var sewerExit = Object.FindAnyObjectByType<SecondaryBiomeExitTrigger>();
-            Assert.IsNotNull(sewerExit, "[A13/SewerExit]");
+            // 5. 2 LoreTablets (I16_LoreTablet in Room S + I19_LoreTablet_NorthGallery in Room N) & 2 SecondaryBiomeExitTriggers (I15 Sewers + I18 Promenade)
+            var loreTablets = Object.FindObjectsByType<LoreTablet>(FindObjectsInactive.Include);
+            Assert.AreEqual(2, loreTablets.Length, "[A13/LoreTabletCount] Expected 2 LoreTablet instances.");
+            var lore = loreTablets.Single(t => t.name == "I16_LoreTablet");
+            var northLore = loreTablets.Single(t => t.name == "I19_LoreTablet_NorthGallery");
+            foreach (var tablet in loreTablets)
+            {
+                Assert.IsNotNull(tablet.PromptIndicator, $"[A13/LoreTabletPrompt/{tablet.name}]");
+                Assert.GreaterOrEqual(tablet.PromptIndicator.GetComponent<RectTransform>().sizeDelta.x, 380f,
+                    $"[A13/LoreTabletPromptWidth/{tablet.name}] Prompt badge must be wide enough for the label without vertical clipping.");
+            }
+            Assert.AreEqual(152.5f, northLore.transform.position.x, GeometryAuditHelper.Eps, "[A13/NorthLoreX]");
+            Assert.AreEqual(8f, northLore.transform.position.y, GeometryAuditHelper.Eps, "[A13/NorthLoreY]");
+            Assert.AreEqual("Nhật Ký Cai Ngục", northLore.LoreTitle, "[A13/NorthLoreTitle]");
+
+            var biomeExits = Object.FindObjectsByType<SecondaryBiomeExitTrigger>(FindObjectsInactive.Include);
+            Assert.AreEqual(2, biomeExits.Length, "[A13/BiomeExitCount] Expected 2 SecondaryBiomeExitTrigger instances.");
+            var sewerExit = biomeExits.Single(e => e.name == "I15_SewerExitTrigger");
             Assert.AreEqual("Toxic Sewers", sewerExit.BiomeName);
             Assert.IsNotNull(sewerExit.SwitchDoor);
             Assert.IsNotNull(sewerExit.FirstGuardian);
             Assert.IsNotNull(sewerExit.SecondGuardian);
+
+            var promenadeExit = biomeExits.Single(e => e.name == "I18_PromenadeExitTrigger");
+            Assert.AreEqual("Promenade of the Condemned", promenadeExit.BiomeName, "[A13/PromenadeBiomeName]");
+            Assert.IsNull(promenadeExit.SwitchDoor, "[A13/PromenadeNoSwitchDoor] Promenade exit unlocks on guardians alone.");
+            Assert.IsNotNull(promenadeExit.FirstGuardian, "[A13/PromenadeFirstGuardian]");
+            Assert.IsNotNull(promenadeExit.SecondGuardian, "[A13/PromenadeSecondGuardian]");
+            CollectionAssert.AreEquivalent(
+                new[] { "Enemy_Shield_T1", "Enemy_Grenadier_T1" },
+                new[] { promenadeExit.FirstGuardian.name, promenadeExit.SecondGuardian.name },
+                "[A13/PromenadeGuardians]");
+            var promenadeBounds = GeometryAuditHelper.GetWorldBounds(promenadeExit.GetComponent<BoxCollider2D>());
+            Assert.AreEqual(126f, promenadeBounds.center.x, GeometryAuditHelper.Eps, "[A13/PromenadeCenterX]");
+            Assert.AreEqual(41.2f, promenadeBounds.center.y, GeometryAuditHelper.Eps, "[A13/PromenadeCenterY]");
+            Assert.AreEqual(2.2f, promenadeBounds.size.x, GeometryAuditHelper.Eps, "[A13/PromenadeSizeX]");
+            Assert.AreEqual(2.4f, promenadeBounds.size.y, GeometryAuditHelper.Eps, "[A13/PromenadeSizeY]");
+
+            // 6. P0-04 Part B: new payoffs keep >= 5.0u breathing room from TP_5_HighBastion and relocated floor junk
+            var tp5 = tpGates.Single(t => t.name == "TP_5_HighBastion");
+            Assert.GreaterOrEqual(Vector2.Distance(highBastionScroll.transform.position, tp5.transform.position), 5.0f,
+                "[A13/I17Clearance] I17_Scroll_HighBastion must sit >= 5.0u clear of TP_5_HighBastion.");
+            Assert.GreaterOrEqual(Vector2.Distance(promenadeExit.transform.position, tp5.transform.position), 5.0f,
+                "[A13/I18Clearance] I18_PromenadeExitTrigger must sit >= 5.0u clear of TP_5_HighBastion.");
+            Assert.GreaterOrEqual(Vector2.Distance(promenadeExit.transform.position, highBastionScroll.transform.position), 5.0f,
+                "[A13/I17I18Clearance] The Promenade payoff pair must not stack on one another.");
+            Assert.AreEqual(102f, GameObject.Find("Art_T_Junk3_A").transform.position.x, 0.01f, "[A13/TJunk3Shift]");
+            Assert.AreEqual(136.5f, GameObject.Find("Art_T_JunkEast3_A").transform.position.x, 0.01f, "[A13/TJunkEast3Shift]");
+            Assert.AreEqual(145f, GameObject.Find("Art_N_JunkEast2_A").transform.position.x, 0.01f, "[A13/NJunkEast2Shift]");
+            Assert.AreEqual(139f, GameObject.Find("Art_N_JunkEast3_A").transform.position.x, 0.01f, "[A13/NJunkEast3Shift]");
+
+            // 7. P0-04 Part B: the Room N payoff column (alcove / lore tablet / torch / coins) never self-overlaps
+            var northPayoffProps = new List<(string name, Bounds bounds)>
+            {
+                ("Art_N_Alcove2", GetVisualSpriteBounds(GameObject.Find("Art_N_Alcove2"))),
+                ("I19_LoreTablet_NorthGallery", GeometryAuditHelper.GetWorldBounds(northLore.TriggerZone)),
+                ("Art_N_Torch_4", GetVisualSpriteBounds(GameObject.Find("Art_N_Torch_4"))),
+                ("Art_N_JunkEast2", GetVisualSpriteBounds(GameObject.Find("Art_N_JunkEast2_A"))),
+                ("Art_N_JunkEast3", GetVisualSpriteBounds(GameObject.Find("Art_N_JunkEast3_A"))),
+            };
+            foreach (var coin in goldCacheCoins)
+                northPayoffProps.Add((coin.name, GeometryAuditHelper.GetWorldBounds(coin.GetComponent<Collider2D>())));
+
+            for (int a = 0; a < northPayoffProps.Count; a++)
+            {
+                for (int b = a + 1; b < northPayoffProps.Count; b++)
+                {
+                    Bounds ba = northPayoffProps[a].bounds;
+                    Bounds bb = northPayoffProps[b].bounds;
+                    bool overlapX = ba.min.x < bb.max.x - 0.05f && ba.max.x > bb.min.x + 0.05f;
+                    bool overlapY = ba.min.y < bb.max.y - 0.05f && ba.max.y > bb.min.y + 0.05f;
+                    Assert.IsFalse(overlapX && overlapY,
+                        $"P0-04b: Room N payoff '{northPayoffProps[a].name}' ({ba.min.x:F2}..{ba.max.x:F2}, {ba.min.y:F2}..{ba.max.y:F2}) overlaps '{northPayoffProps[b].name}' ({bb.min.x:F2}..{bb.max.x:F2}, {bb.min.y:F2}..{bb.max.y:F2}).");
+                }
+            }
         }
 
         [Test]

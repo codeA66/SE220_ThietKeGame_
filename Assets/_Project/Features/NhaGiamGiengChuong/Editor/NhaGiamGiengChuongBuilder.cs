@@ -998,8 +998,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddFloorJunkCluster(artRoot, "Art_N_JunkMid2", pal, mat, 115.5f, 8f, 3);
             AddFloorJunkCluster(artRoot, "Art_N_JunkMid3", pal, mat, 122.5f, 8f, 8);
             AddFloorJunkCluster(artRoot, "Art_N_JunkEast1", pal, mat, 142.5f, 8f, 2);
-            AddFloorJunkCluster(artRoot, "Art_N_JunkEast2", pal, mat, 150.5f, 8f, 6);
-            AddFloorJunkCluster(artRoot, "Art_N_JunkEast3", pal, mat, 158.5f, 8f, 9);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkEast2", pal, mat, 145.0f, 8f, 6);
+            AddFloorJunkCluster(artRoot, "Art_N_JunkEast3", pal, mat, 139.0f, 8f, 9);
 
             // Phase 3 (P2-04): Structural timber trusses, ornate iron cage, chained wall silhouettes & floor-lip foliage
             var trussTint = new Color(0.88f, 0.86f, 0.84f, 1f);
@@ -1425,6 +1425,25 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_T_Pillar2", pal.SpawnerPillar, mat, 109.0f, 40f, 0.85f, -13, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_T_CourtyardArch", pal.ExitDoorPrisonCourtyard, mat, 126.0f, 40f, 0.80f, -13, Color.white);
 
+            // P0-04 Part B: the courtyard arch is now a live Promenade biome exit — warm golden emissive glow + beacon in front of it
+            var promenadeGlowGo = CreateChild(artRoot, "Art_T_ExitGlow");
+            const float promenadeGlowScale = 0.55f;
+            promenadeGlowGo.transform.position = new Vector3(126f, 40f - pal.PortalBackOut.bounds.min.y * promenadeGlowScale, 0f);
+            promenadeGlowGo.transform.localScale = new Vector3(promenadeGlowScale, promenadeGlowScale, 1f);
+            var promenadeGlowSr = promenadeGlowGo.AddComponent<SpriteRenderer>();
+            promenadeGlowSr.sprite = pal.PortalBackOut;
+            promenadeGlowSr.sharedMaterial = pal.MatEmissiveExit;
+            promenadeGlowSr.sortingLayerID = SortingLayerSetup.GetSortingLayerId("Ground");
+            promenadeGlowSr.sortingOrder = -4;
+            promenadeGlowSr.color = new Color(1f, 0.92f, 0.65f, 0.45f);
+            var promenadeGlowLight = promenadeGlowGo.AddComponent<Light2D>();
+            promenadeGlowLight.lightType = Light2D.LightType.Point;
+            promenadeGlowLight.color = new Color(1f, 0.92f, 0.65f, 1f);
+            promenadeGlowLight.intensity = 1.40f;
+            promenadeGlowLight.pointLightOuterRadius = 7.2f;
+            promenadeGlowLight.pointLightInnerRadius = 1.4f;
+            ConfigureGameplayPointLight(promenadeGlowLight, enableVolumetric: true, volumeIntensity: 0.09f, addFlicker: true, phaseSeed: 126f);
+
             // Phase 2 (P1-02 & P1-03): Room S & T Windows with GodRays, Banners, Arches, Cages, Shelves & Storytelling Clusters
             AddWindowWithGodray(artRoot, "Art_S_Window1", mat, unlitMat, pal, new Vector2(60.0f, 34.0f));
             AddWindowWithGodray(artRoot, "Art_S_Window2", mat, unlitMat, pal, new Vector2(89.5f, 34.0f));
@@ -1459,8 +1478,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddFloorJunkCluster(artRoot, "Art_T_JunkMid3", pal, mat, 90.5f, 40f, 3);
             AddFloorJunkCluster(artRoot, "Art_T_Junk2", pal, mat, 96.5f, 40f, 5);
             AddFloorJunkCluster(artRoot, "Art_T_JunkEast1", pal, mat, 105.5f, 40f, 7);
-            AddFloorJunkCluster(artRoot, "Art_T_Junk3", pal, mat, 114.0f, 40f, 9);
-            AddFloorJunkCluster(artRoot, "Art_T_JunkEast3", pal, mat, 128.0f, 40f, 1);
+            AddFloorJunkCluster(artRoot, "Art_T_Junk3", pal, mat, 102.0f, 40f, 9);
+            AddFloorJunkCluster(artRoot, "Art_T_JunkEast3", pal, mat, 136.5f, 40f, 1);
             AddFloorJunkCluster(artRoot, "Art_T_JunkEast2", pal, mat, 135.5f, 40f, 5);
 
             // Phase 3 (P2-04): Structural timber trusses, ornate iron cages, chained silhouettes & floor-lip foliage
@@ -2246,10 +2265,22 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PairTeleportGates(tp4WestCatacombs, tp5HighBastion);
 
             // I16: Alchemy Lore Tablet at (72, 24) in Room S (dedicated PromptIndicator VFX/25 + LoreBanner VFX/26)
-            CreateLoreTablet(interactionsRoot, "I16_LoreTablet", new Vector2(72f, 24f), runController, playerCtrl, playerHealth, playerCol, inputActions);
+            CreateLoreTablet(interactionsRoot, "I16_LoreTablet", new Vector2(72f, 24f), runController, playerCtrl, playerHealth, playerCol, inputActions,
+                "Biên Niên Sử Ngục Tối",
+                "Kẻ vượt Ngục Giếng Chuông chọn một trong hai lối thoát:\nHành Lang Tử Tù phía trên hoặc Cống Ngầm Độc Dược phía dưới.",
+                "[E] Đọc biên niên sử Ngục Tối");
 
             // I15: Secondary Biome Exit Trigger ("Toxic Sewers") at (224, -15) in Room P
             CreateSecondaryBiomeExitTrigger(interactionsRoot, "I15_SewerExitTrigger", "Toxic Sewers", new Vector2(224f, -15f), runController, sd2SewerExit, shieldP1, archerP1, playerCtrl, playerHealth, playerCol);
+
+            // P0-04 Part B (Room N): 2nd lore tablet explains the Bell-Well uprising and points at the Promenade exit above Room S/T
+            CreateLoreTablet(interactionsRoot, "I19_LoreTablet_NorthGallery", new Vector2(152.5f, 8f), runController, playerCtrl, playerHealth, playerCol, inputActions,
+                "Nhật Ký Cai Ngục",
+                "Đêm Giếng Chuông, tù nhân đập vỡ chuông để báo hiệu khởi nghĩa;\nnhững kẻ sống sót trèo lên Thượng Thành — lối ra Promenade nằm ngay trên Hành Lang Tử Tù.",
+                "[E] Đọc nhật ký Cai Ngục");
+
+            // P0-04 Part B (Room T): the courtyard arch becomes a live, door-less secondary biome exit guarded by Zone T1
+            CreateSecondaryBiomeExitTrigger(interactionsRoot, "I18_PromenadeExitTrigger", "Promenade of the Condemned", new Vector2(126f, 41.2f), runController, null, shieldT1, grenadierT1, playerCtrl, playerHealth, playerCol, new Vector2(2.2f, 2.4f));
 
             // 9. UI: PlayerHUD.prefab + ResultPanel.prefab + EventSystem (UI action map)
             var playerHudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerHudPrefabPath);
@@ -2508,7 +2539,10 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PlayerController player,
             Health playerHealth,
             BoxCollider2D playerCol,
-            InputActionAsset inputActions)
+            InputActionAsset inputActions,
+            string title,
+            string body,
+            string promptLabel)
         {
             var root = CreateChild(parent, name);
             root.transform.position = new Vector3(floorPos.x, floorPos.y, 0f);
@@ -2519,12 +2553,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             trigger.size = new Vector2(3.0f, 2.2f);
 
             var promptGo = CreateChild(root, "PromptIndicator");
-            BuildWorldPromptBadge(promptGo, "[E] Đọc biên niên sử Ngục Tối", new Color(1f, 0.88f, 0.42f, 1f), 380f);
+            BuildWorldPromptBadge(promptGo, promptLabel, new Color(1f, 0.88f, 0.42f, 1f), 380f);
             promptGo.transform.localPosition = new Vector3(0f, 2.40f, 0f);
             promptGo.SetActive(false);
-
-            const string title = "Biên Niên Sử Ngục Tối";
-            const string body = "Kẻ vượt Ngục Giếng Chuông chọn một trong hai lối thoát:\nHành Lang Tử Tù phía trên hoặc Cống Ngầm Độc Dược phía dưới.";
 
             var bannerGo = CreateChild(root, "LoreBanner");
             var bannerText = BuildWorldLoreBanner(bannerGo, $"{title}\n{body}");
@@ -2559,7 +2590,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             EnemyController secondGuardian,
             PlayerController player,
             Health playerHealth,
-            BoxCollider2D playerCol)
+            BoxCollider2D playerCol,
+            Vector2 triggerSize = default)
         {
             var root = CreateChild(parent, name);
             root.transform.position = new Vector3(centerPos.x, centerPos.y, 0f);
@@ -2567,10 +2599,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var col = root.AddComponent<BoxCollider2D>();
             col.isTrigger = true;
             col.offset = Vector2.zero;
-            col.size = new Vector2(2f, 2f);
+            col.size = triggerSize.sqrMagnitude > 0f ? triggerSize : new Vector2(2f, 2f);
 
+            // A door-less exit (switchDoor == null) unlocks on its guardians alone, so its locked badge must say so.
+            string lockedLabel = switchDoor != null
+                ? "Khóa: Cần mở công tắc & diệt 2 quái canh"
+                : "Khóa: Cần diệt 2 quái canh cổng Promenade";
             var lockedGo = CreateChild(root, "LockedPromptIndicator");
-            BuildWorldPromptBadge(lockedGo, "Khóa: Cần mở công tắc & diệt 2 quái canh", new Color(1f, 0.68f, 0.42f, 1f), 420f);
+            BuildWorldPromptBadge(lockedGo, lockedLabel, new Color(1f, 0.68f, 0.42f, 1f), 420f);
             lockedGo.transform.localPosition = new Vector3(0f, 1.45f, 0f);
             lockedGo.SetActive(false);
 
@@ -2638,19 +2674,21 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
                 EditorSceneManager.SetActiveScene(targetScene);
 
-                // 1. Power Scrolls container + 2 cloned PowerScrollPickups with ScrollAura_R5_0/1 under _icon
+                // 1. Power Scrolls container + 3 cloned PowerScrollPickups with ScrollAura_R5_0/1/2 under _icon
                 var scrollsRoot = new GameObject("Power Scrolls");
                 SceneManager.MoveGameObjectToScene(scrollsRoot, targetScene);
                 var scrollInteraction = scrollsRoot.AddComponent<PowerScrollInteraction>();
 
                 var scrollEast = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I11_Scroll_EastCourtyard", new Vector3(156.5f, 0f, 0f), 0, pal);
                 var scrollWest = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I12_Scroll_WestArmory", new Vector3(-95f, 24f, 0f), 1, pal);
+                var scrollHighBastion = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I17_Scroll_HighBastion", new Vector3(114f, 40f, 0f), 2, pal);
 
                 var soInteraction = new SerializedObject(scrollInteraction);
                 var scrollsProp = soInteraction.FindProperty("_scrolls");
-                scrollsProp.arraySize = 2;
+                scrollsProp.arraySize = 3;
                 scrollsProp.GetArrayElementAtIndex(0).objectReferenceValue = scrollEast;
                 scrollsProp.GetArrayElementAtIndex(1).objectReferenceValue = scrollWest;
+                scrollsProp.GetArrayElementAtIndex(2).objectReferenceValue = scrollHighBastion;
                 soInteraction.ApplyModifiedPropertiesWithoutUndo();
 
                 var soPlayer = new SerializedObject(playerCtrl);
@@ -2754,6 +2792,33 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 var soGoldHud = new SerializedObject(goldHud);
                 soGoldHud.FindProperty("_wallet").objectReferenceValue = goldWallet;
                 soGoldHud.ApplyModifiedPropertiesWithoutUndo();
+
+                // 4b. P0-04 Part B (Room N): 4 statically placed treasure coins (25 each, 100 gold) resting above the gallery floor
+                var goldCacheRoot = new GameObject("Room N Gold Cache");
+                SceneManager.MoveGameObjectToScene(goldCacheRoot, targetScene);
+                int goldCacheVfxLayerId = SortingLayerSetup.GetSortingLayerId("VFX");
+                float[] goldCacheXs = { 158f, 159f, 160f, 161f };
+                for (int i = 0; i < goldCacheXs.Length; i++)
+                {
+                    var coinGo = (GameObject)PrefabUtility.InstantiatePrefab(goldPickupPrefab.gameObject, targetScene);
+                    coinGo.name = $"GoldCache_N_{i}";
+                    coinGo.transform.SetParent(goldCacheRoot.transform, true);
+                    coinGo.transform.position = new Vector3(goldCacheXs[i], 8.45f, 0f);
+
+                    foreach (var coinSr in coinGo.GetComponentsInChildren<SpriteRenderer>(true))
+                    {
+                        coinSr.sortingLayerID = goldCacheVfxLayerId;
+                        if (coinSr.sortingOrder < 5)
+                            coinSr.sortingOrder = 5;
+                    }
+
+                    var soCoin = new SerializedObject(coinGo.GetComponent<GoldPickup>());
+                    soCoin.FindProperty("_wallet").objectReferenceValue = goldWallet;
+                    soCoin.FindProperty("_player").objectReferenceValue = playerHealth;
+                    soCoin.FindProperty("_value").intValue = 25;
+                    soCoin.FindProperty("_staticPlacement").boolValue = true;
+                    soCoin.ApplyModifiedPropertiesWithoutUndo();
+                }
 
                 // 5. Clone "Enemy_Shield hit feedback" from Main_Level's "Combat and Pickup Feedback" onto all 30 enemies
                 var srcFeedbackRoot = FindInSceneByName(mainLevelScene, "Combat and Pickup Feedback");
