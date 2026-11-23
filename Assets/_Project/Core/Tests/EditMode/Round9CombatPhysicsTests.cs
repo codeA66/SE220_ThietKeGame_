@@ -34,6 +34,12 @@ namespace DeadCells.Core.Tests
         private const string EnemyAnimatorPath = "Assets/_Project/Features/Enemies/Animations/zombie/zombie.controller";
 
         /// <summary>
+        /// <c>m_GravityScale</c> carried by every enemy prefab (Zombie, Rat, Shield, Archer, Grenadier).
+        /// With <c>Physics2D.gravity.y = -9.81</c> that is a downward acceleration of 34.335 u/s².
+        /// </summary>
+        private const float PrefabGravityScale = 3.5f;
+
+        /// <summary>
         /// Chain geometry as Task 2.2 trims it: the trigger tops out 0.08u above the deck it serves,
         /// so a flush top dismount lands 0.06u below the trigger top (8.02 on the 8.00 deck).
         /// </summary>
@@ -1182,6 +1188,7 @@ namespace DeadCells.Core.Tests
         {
             var root = new GameObject("__Round9T08EnemyPop");
             EnemyStunHarness harness = default;
+            EnemyStunHarness gravityHarness = default;
             try
             {
                 // Flat floor whose top face is y = 0, so an enemy with feet at y = 0 is grounded.
@@ -1264,6 +1271,19 @@ namespace DeadCells.Core.Tests
                 Assert.AreEqual(0f, ctx.Velocity.y, 0.001f,
                     "A resisted 3.15 is under the gate: the raw 4.5 must not decide the pop.");
 
+                // 6c. The Shieldbearer's hit-1 is the tightest real margin in the game: 5.2 × (1 − 0.3)
+                // = 3.64 against the 3.5 gate — 0.14 u/s, a 4% margin. The other enemies sit at 6.2 and
+                // 10.5, which resist to 4.34 and 7.35 and have room to spare. A resistance retune to
+                // 0.33 or a gate raised to 3.7 would silently stop the Shieldbearer popping on hit 1;
+                // this case pins the 3.64 > 3.5 relationship so that retune cannot land unseen.
+                Arm(Vector2.zero, Vector2.zero, 0.3f);
+                ctx.LastDamage = new DamageInfo(25, 1, 5.2f, 0.25f, false, null);
+                stun.Enter();
+                Assert.AreEqual(3.64f, ctx.Velocity.x, 0.001f,
+                    "5.2 resisted by 0.3 must leave a 3.64 slide (Shieldbearer hit 1).");
+                Assert.AreEqual(2.2f, ctx.Velocity.y, 0.001f,
+                    "3.64 clears the 3.5 pop gate by only 0.14 u/s: the Shieldbearer light hit must still pop.");
+
                 // 7. Directionless hits (blasts, stomps) neither push nor turn.
                 Arm(Vector2.zero, Vector2.zero, 0f);
                 ctx.Face(1);
@@ -1290,11 +1310,77 @@ namespace DeadCells.Core.Tests
                     "Three FixedTicks must bleed exactly 3 x 18 * fixedDeltaTime.");
                 Assert.Greater(ctx.Velocity.x, 5.2f - oldBleed * 3f,
                     "After 0.06 s the slide must still carry more speed than the old 30 u/s² decay left.");
+
+                // 8b. Termination, not just magnitude: the decay must reach exactly 0 and stay there.
+                // A recoil smaller than one step's bleed has to land on the clamp, never on a residue
+                // or a sign flip, otherwise it would creep towards zero forever without arriving.
+                Arm(Vector2.zero, new Vector2(0.1f, 0f), 0f);
+                int ticksToStop = 0;
+                for (; ticksToStop < 10 && ctx.Velocity.x != 0f; ticksToStop++)
+                    stun.FixedTick();
+                Assert.AreEqual(0f, ctx.Velocity.x, 0f,
+                    "A 0.1 recoil must bleed to exactly 0, not to a small residue just above it.");
+                Assert.LessOrEqual(ticksToStop, 10,
+                    "The zero clamp must terminate inside a bounded number of fixed ticks.");
+
+                // 9. Real gravity: how high the pop actually carries the body, so the Phase 4
+                // GPU/playtest gate has a measured number instead of an opinion. Shipped physics are
+                // Physics2D gravity y = -9.81 (ProjectSettings/Physics2DSettings.asset) with
+                // m_GravityScale 3.5 on every enemy prefab, so g = 34.335 u/s². Analytic apex
+                // vy0² / (2g) for the shipped pop speeds:
+                //   non-crit 2.2 u/s -> 0.0705 u = 0.094 cell = 2.3 px @ 32 PPU, airtime 0.128 s
+                //   crit     3.8 u/s -> 0.2103 u = 0.280 cell = 6.7 px @ 32 PPU, airtime 0.221 s
+                // Measured here, one real fixed step per iteration (also recorded in the task report):
+                //   non-crit 0.0496 u (~1.6 px), crit 0.1740 u (~5.6 px). The horizontal slide is what
+                // sells the hit; the vertical pop is a nudge. PopSpeed/CritPopSpeed stay at the plan's
+                // values — their feel is the visual gate's decision, not this fixture's.
+                gravityHarness = CreateEnemyStunHarness(root.transform, new Vector2(6f, 0f), PrefabGravityScale);
+                Rigidbody2D gBody = gravityHarness.Body;
+                EnemyContext gCtx = gravityHarness.Context;
+                EnemyStunState gStun = gravityHarness.Stun;
+
+                void ArmGravity(float resistance)
+                {
+                    gBody.position = new Vector2(6f, 0f);
+                    gBody.linearVelocity = Vector2.zero;
+                    Physics2D.SyncTransforms();
+                    gCtx.RefreshFrame();
+                    SetPrivateField(gravityHarness.Data, "_knockbackResistance", resistance);
+                }
+
+                float gravity = -Physics2D.gravity.y * gBody.gravityScale;
+                Assert.AreEqual(34.335f, gravity, 0.01f,
+                    "Fixture: -9.81 x the prefab's gravityScale 3.5 must give 34.335 u/s².");
+
+                ArmGravity(0f);
+                Assert.IsTrue(gCtx.IsGrounded, "Precondition: the gravity enemy must stand on the floor.");
+                gCtx.LastDamage = new DamageInfo(25, 1, 5.2f, 0.25f, false, null);
+                gStun.Enter();
+                Assert.AreEqual(2.2f, gBody.linearVelocity.y, 0.001f,
+                    "Precondition: the grounded pop launches at 2.2 u/s before gravity gets a vote.");
+                float nonCritApex = MeasurePopApex(gravityHarness);
+
+                ArmGravity(0f);
+                gCtx.LastDamage = new DamageInfo(45, 1, 10.5f, 0.25f, true, null);
+                gStun.Enter();
+                Assert.AreEqual(3.8f, gBody.linearVelocity.y, 0.001f,
+                    "Precondition: the grounded crit pop launches at 3.8 u/s.");
+                float critApex = MeasurePopApex(gravityHarness);
+
+                // The measurement, in the log, for whoever gates the feel later.
+                Debug.Log($"[T08] pop apex under g={gravity:F3} u/s² (fixedDeltaTime {Time.fixedDeltaTime:F5} s): " +
+                          $"non-crit {nonCritApex:F4} u = {nonCritApex * 32f:F2} px @ 32 PPU, " +
+                          $"crit {critApex:F4} u = {critApex * 32f:F2} px @ 32 PPU.");
+
+                AssertPopApex(nonCritApex, 2.2f, gravity, "non-crit");
+                AssertPopApex(critApex, 3.8f, gravity, "crit");
             }
             finally
             {
                 if (harness.Data != null)
                     Object.DestroyImmediate(harness.Data);
+                if (gravityHarness.Data != null)
+                    Object.DestroyImmediate(gravityHarness.Data);
                 Object.DestroyImmediate(root);
             }
         }
@@ -1425,10 +1511,12 @@ namespace DeadCells.Core.Tests
 
         /// <summary>
         /// A real <see cref="EnemyContext"/> + <see cref="EnemyStateMachine"/> on a dynamic body with the
-        /// zombie animator and zero gravity, so <c>EnemyStunState</c> runs exactly the code the prefabs run.
-        /// Gravity is 0 on purpose: the pop is asserted as the velocity the state writes, not a trajectory.
+        /// zombie animator, so <c>EnemyStunState</c> runs exactly the code the prefabs run. Gravity defaults
+        /// to 0 because the velocity assertions care what the state writes, not the arc the body then flies;
+        /// pass <see cref="PrefabGravityScale"/> to measure that arc.
         /// </summary>
-        private static EnemyStunHarness CreateEnemyStunHarness(Transform parent, Vector2 position)
+        private static EnemyStunHarness CreateEnemyStunHarness(Transform parent, Vector2 position,
+            float gravityScale = 0f)
         {
             var go = new GameObject("EnemyStunHarness");
             go.transform.SetParent(parent);
@@ -1437,7 +1525,7 @@ namespace DeadCells.Core.Tests
 
             var body = go.AddComponent<Rigidbody2D>();
             body.bodyType = RigidbodyType2D.Dynamic;
-            body.gravityScale = 0f;
+            body.gravityScale = gravityScale;
             body.constraints = RigidbodyConstraints2D.FreezeRotation;
             body.position = position;
 
@@ -1566,6 +1654,54 @@ namespace DeadCells.Core.Tests
             body.linearVelocity = velocity;
             body.position += velocity * deltaTime;
             Physics2D.SyncTransforms();
+        }
+
+        /// <summary>
+        /// Peak height a launched body reaches above where it started, stepping the body the way the
+        /// engine would between two fixed frames: gravity into velocity first, then position — semi-implicit
+        /// Euler, the same integration <see cref="AdvanceBody"/> models. Stops when the body stops rising and
+        /// never runs past <paramref name="maxSteps"/>, so a pop that never lands cannot hang the suite.
+        /// </summary>
+        private static float MeasurePopApex(EnemyStunHarness harness, int maxSteps = 60)
+        {
+            Rigidbody2D body = harness.Body;
+            float startY = body.position.y;
+            float peak = 0f;
+            for (int step = 0; step < maxSteps; step++)
+            {
+                Vector2 velocity = body.linearVelocity;
+                velocity.y += Physics2D.gravity.y * body.gravityScale * Time.fixedDeltaTime;
+                body.linearVelocity = velocity;
+                body.position += velocity * Time.fixedDeltaTime;
+                Physics2D.SyncTransforms();
+
+                float rise = body.position.y - startY;
+                if (rise > peak)
+                    peak = rise;
+                if (velocity.y <= 0f)
+                    break;
+            }
+
+            return peak;
+        }
+
+        /// <summary>
+        /// The measured apex must match the analytic arc <c>vy0² / (2g)</c> inside the band a real
+        /// fixed step can actually reach.
+        /// </summary>
+        /// <remarks>
+        /// Semi-implicit Euler loses roughly <c>vy0 · dt / 2</c> against the continuous apex — 31% of
+        /// 0.0705 u at 2.2 u/s and 18% of 0.2103 u at 3.8 u/s at dt = 0.02. The floor is 60% of
+        /// analytic: slack for that deficit, still tight enough that a zero or truncated pop fails.
+        /// The ceiling is the continuous apex itself, which no integrator can beat.
+        /// </remarks>
+        private static void AssertPopApex(float measured, float launchSpeed, float gravity, string label)
+        {
+            float predicted = launchSpeed * launchSpeed / (2f * gravity);
+            Assert.Greater(measured, predicted * 0.6f,
+                $"The {label} pop must actually rise: analytic apex {predicted:F4} u, measured {measured:F4} u.");
+            Assert.LessOrEqual(measured, predicted * 1.001f,
+                $"The {label} pop cannot exceed the analytic apex {predicted:F4} u; measured {measured:F4} u.");
         }
 
         /// <summary>Opens the one-transition-per-frame slot that a real frame boundary provides.</summary>
