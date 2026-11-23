@@ -1114,8 +1114,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
 
             Vector3Int[] roomHStairAirCells =
             {
-                new Vector3Int(15, 10, 0),
-                new Vector3Int(12, 12, 0),
+                new Vector3Int(15, 11, 0),
+                new Vector3Int(12, 14, 0),
             };
             foreach (var cell in roomHStairAirCells)
             {
@@ -1754,7 +1754,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
         {
             EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
 
-            // 1. M-01: Stairs_H diagonal riser tiles flipped horizontally (m00 < 0f) & lower tread caps preserved
+            // 1. M-01: Stairs_H is ONE clean 45-degree diagonal row of 8 flipped stair tiles (zero double-stacking)
             var hjkGo = GameObject.Find("Room_HJK");
             Assert.IsNotNull(hjkGo, "[A18/Room_HJK]");
             var hjkTms = hjkGo.GetComponentsInChildren<Tilemap>(true);
@@ -1762,6 +1762,11 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             var hjkSolidTm = hjkTms.SingleOrDefault(t => t.name == "TM_SolidVisual");
             Assert.IsNotNull(hjkRimTm, "[A18/HJK_Rim]");
             Assert.IsNotNull(hjkSolidTm, "[A18/HJK_Solid]");
+
+            (int x, int y)[] diagonalStairCells =
+            {
+                (17, 8), (16, 9), (15, 10), (14, 11), (13, 12), (12, 13), (11, 14), (10, 15),
+            };
 
             int flippedStairTiles = 0;
             var rimBounds = hjkRimTm.cellBounds;
@@ -1781,23 +1786,37 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                     }
                 }
             }
-            Assert.AreEqual(8, flippedStairTiles, "[A18/StairsTileCount] Expected 8 Stairs_H riser tiles (4 steps x 2 tiles).");
+            Assert.AreEqual(8, flippedStairTiles, "[A18/StairsTileCount] Expected exactly 8 single-row 45-degree Stairs_H tiles (no double-stacked diagonals).");
 
-            Vector3Int[] lowerTreadVisualCells =
+            foreach (var (dx, dy) in diagonalStairCells)
+            {
+                var cell = new Vector3Int(dx, dy, 0);
+                var stairSp = hjkRimTm.GetSprite(cell);
+                Assert.IsNotNull(stairSp, $"[A18/DiagonalStair/{cell}] Missing 45-degree stair tile on the diagonal run.");
+                StringAssert.StartsWith("stairs_", stairSp.name, $"[A18/DiagonalStair/{cell}] Diagonal run must use stairs_* tiles.");
+
+                var belowSp = hjkRimTm.GetSprite(new Vector3Int(dx, dy - 1, 0));
+                Assert.IsFalse(belowSp != null && belowSp.name.StartsWith("stairs_", StringComparison.Ordinal),
+                    $"[A18/DoubleStack/{cell}] No stair tile may sit directly below diagonal stair cell (single clean row only).");
+
+                var coreSp = hjkSolidTm.GetSprite(new Vector3Int(dx, dy - 1, 0));
+                Assert.IsNotNull(coreSp, $"[A18/StairCore/{cell}] Diagonal stair cell must rest on solid stone core at y={dy - 1}.");
+                Assert.AreEqual("dirt_00", coreSp.name, $"[A18/StairCore/{cell}] Stone core below diagonal stair must be opaque dirt_00.");
+            }
+
+            Vector3Int[] landingCapCells =
             {
                 new Vector3Int(18, 7, 0),
-                new Vector3Int(15, 9, 0),
-                new Vector3Int(12, 11, 0),
-                new Vector3Int(9, 13, 0),
+                new Vector3Int(7, 15, 0),
             };
-            foreach (var cell in lowerTreadVisualCells)
+            foreach (var cell in landingCapCells)
             {
                 var solidSp = hjkSolidTm.GetSprite(cell);
-                Assert.IsNotNull(solidSp, $"[A18/StairTreadVisual/{cell}] Missing solid floorStamp sprite.");
-                StringAssert.StartsWith("floorStamp_", solidSp.name, $"[A18/StairTreadVisual/{cell}]");
+                Assert.IsNotNull(solidSp, $"[A18/StairLandingVisual/{cell}] Missing solid floorStamp sprite.");
+                StringAssert.StartsWith("floorStamp_", solidSp.name, $"[A18/StairLandingVisual/{cell}]");
                 var rimSp = hjkRimTm.GetSprite(cell + Vector3Int.up);
-                Assert.IsNotNull(rimSp, $"[A18/StairTreadRim/{cell + Vector3Int.up}] Missing lower tread rim sprite.");
-                StringAssert.StartsWith("ground_", rimSp.name, $"[A18/StairTreadRim/{cell + Vector3Int.up}] Lower tread cap rim must remain ground_*, not overwritten.");
+                Assert.IsNotNull(rimSp, $"[A18/StairLandingRim/{cell + Vector3Int.up}] Missing landing rim sprite.");
+                StringAssert.StartsWith("ground_", rimSp.name, $"[A18/StairLandingRim/{cell + Vector3Int.up}] Landing cap rim must use ground_*.");
             }
 
             // 2. M-02: GroundMist2D world-space shader & 6 GroundMist_R5 strips
@@ -1826,7 +1845,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             {
                 "Art_A_JunkEast",
                 "Art_D_JunkWest", "Art_D_JunkEast2",
-                "Art_H_LandingJunk", "Art_H_StepJunkMid", "Art_H_StepJunkTop",
+                "Art_H_LandingJunk", "Art_H_StepJunkTop",
                 "Art_K_JunkMid",
                 "Art_E_JunkWest", "Art_E_JunkMid", "Art_E_JunkEast",
                 "Art_L_JunkMid", "Art_L_JunkEast",
@@ -1841,6 +1860,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 "Art_T_JunkWest2", "Art_T_JunkMid1", "Art_T_JunkShaft", "Art_T_JunkMid2", "Art_T_JunkMid3", "Art_T_JunkEast1", "Art_T_JunkEast3", "Art_T_JunkEast2",
             };
             var newFloorPropObjects = new List<GameObject>();
+            Assert.IsNull(GameObject.Find("Art_H_StepJunkMid_A"),
+                "[A18/FloorProp/Art_H_StepJunkMid] Mid-slope junk cluster must be deleted (it sat on the open 45-degree stair run).");
             var bedGo = GameObject.Find("Art_D_Bed1");
             Assert.IsNotNull(bedGo, "[A18/FloorProp/Art_D_Bed1]");
             newFloorPropObjects.Add(bedGo);
@@ -1930,6 +1951,35 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             var castersRoot = GameObject.Find("ShadowCasters_R5");
             Assert.IsNotNull(castersRoot, "[A18/ShadowCastersRoot]");
             Assert.AreEqual(12, castersRoot.GetComponentsInChildren<ShadowCaster2D>(true).Length, "[A18/ShadowCastersCount]");
+
+            // Caster_StairsH must hug the 45-degree stone mass (zero floating shadow box in mid-air).
+            // Stone top surface: y=8 for x in [18,22], y=26-x for x in [10,18], y=16 for x in [6,10].
+            var stairsCaster = castersRoot.GetComponentsInChildren<ShadowCaster2D>(true)
+                .SingleOrDefault(c => c.name == "Caster_StairsH");
+            Assert.IsNotNull(stairsCaster, "[A18/StairsCaster] Missing fitted Caster_StairsH ShadowCaster2D.");
+            var casterSo = new SerializedObject(stairsCaster);
+            var casterPath = casterSo.FindProperty("m_ShapePath");
+            Assert.IsNotNull(casterPath, "[A18/StairsCasterPath] Caster_StairsH must expose m_ShapePath.");
+            Assert.AreEqual(6, casterPath.arraySize, "[A18/StairsCasterVertexCount] Fitted caster must be the 6-vertex stone-mass polygon.");
+            var casterWorldVerts = new Vector3[casterPath.arraySize];
+            for (int i = 0; i < casterPath.arraySize; i++)
+            {
+                var local = casterPath.GetArrayElementAtIndex(i).vector3Value;
+                casterWorldVerts[i] = stairsCaster.transform.TransformPoint(local);
+            }
+            for (int i = 0; i < casterWorldVerts.Length; i++)
+            {
+                var v = casterWorldVerts[i];
+                float stoneTop = Mathf.Clamp(26f - v.x, 8f, 16f);
+                Assert.LessOrEqual(v.y, stoneTop + 0.05f,
+                    $"[A18/StairsCasterFloating/{i}] Caster vertex ({v.x:F2},{v.y:F2}) floats above the 45-degree stone top y={stoneTop:F2}.");
+                Assert.GreaterOrEqual(v.y, 7f - 0.05f,
+                    $"[A18/StairsCasterBelowFloor/{i}] Caster vertex ({v.x:F2},{v.y:F2}) sinks below the Stairs_H base y=7.");
+            }
+            Assert.AreEqual(6f, casterWorldVerts.Min(v => v.x), 0.05f, "[A18/StairsCasterMinX]");
+            Assert.AreEqual(22f, casterWorldVerts.Max(v => v.x), 0.05f, "[A18/StairsCasterMaxX]");
+            Assert.AreEqual(7f, casterWorldVerts.Min(v => v.y), 0.05f, "[A18/StairsCasterMinY]");
+            Assert.AreEqual(16f, casterWorldVerts.Max(v => v.y), 0.05f, "[A18/StairsCasterMaxY]");
 
             // 5. A-13 & A-14: Foreground_Silhouettes span [-32..+32] + camera-attached ambient ParticleSystems
             var fgSilhouettes = GameObject.Find("Foreground_Silhouettes");

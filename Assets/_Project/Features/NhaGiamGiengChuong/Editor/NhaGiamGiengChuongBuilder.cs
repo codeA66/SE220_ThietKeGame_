@@ -41,6 +41,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
         private const string MainLevelScenePath = "Assets/_Project/Scenes/Main_Level.unity";
         private const string PlayerPrefabPath = "Assets/_Project/Features/Player/Prefabs/Player.prefab";
+        private const string ZeroFrictionPhysicsMaterialPath = "Assets/_Project/Features/Player/Data/Player_NoFriction.physicsMaterial2D";
         private const string PlayerHudPrefabPath = "Assets/_Project/Features/HUD/Prefabs/PlayerHUD.prefab";
         private const string ZombiePrefabPath = "Assets/_Project/Features/Enemies/Prefabs/Enemy_Zombie.prefab";
         private const string RatPrefabPath = "Assets/_Project/Features/Enemies/Prefabs/Enemy_Rat.prefab";
@@ -657,7 +658,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var colRoot = CreateChild(root, "Collision");
             var artRoot = CreateChild(root, "Art");
 
-            // Staircase H PolygonCollider2D (v7 exact)
+            // Staircase H PolygonCollider2D (v9): true 45-degree Dead Cells ramp rising 8u over 8u
+            // flat bottom landing [18,22]@8 -> 45-degree run (18,8)->(10,16) -> flat top landing [6,10]@16, base y=7
             var stairsGo = CreateChild(colRoot, "Stairs_H");
             stairsGo.layer = LayerGround;
             var poly = stairsGo.AddComponent<PolygonCollider2D>();
@@ -668,15 +670,12 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 new Vector2(22f, 7f),
                 new Vector2(22f, 8f),
                 new Vector2(18f, 8f),
-                new Vector2(18f, 10f),
-                new Vector2(15f, 10f),
-                new Vector2(15f, 12f),
-                new Vector2(12f, 12f),
-                new Vector2(12f, 14f),
-                new Vector2(9f, 14f),
-                new Vector2(9f, 16f),
+                new Vector2(10f, 16f),
                 new Vector2(6f, 16f)
             });
+            // Zero-friction surface so Floor_D (y=8) -> ramp -> Floor_KJ (y=16) keeps the Player's normal-velocity
+            // ground check and tangential projection seamless (same material the Player collider uses).
+            poly.sharedMaterial = LoadPhysicsMaterialAtPath(ZeroFrictionPhysicsMaterialPath);
 
             // Floors, OneWay, Ceilings, Walls, Climbable I6 (v7 exact)
             AddSolidBox(colRoot, "Floor_KJ", -30f, 6f, 15f, 16f);
@@ -739,19 +738,18 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddFloorJunkCluster(artRoot, "Art_J_Junk", pal, mat, -12.0f, 16f, 2);
             AddFloorJunkCluster(artRoot, "Art_K_Junk", pal, mat, -18.5f, 16f, 6);
             AddFloorJunkCluster(artRoot, "Art_K_JunkMid", pal, mat, -23.0f, 16f, 6);
-            AddFloorJunkCluster(artRoot, "Art_H_LandingJunk", pal, mat, 19.8f, 8f, 1);
-            AddFloorJunkCluster(artRoot, "Art_H_StepJunkMid", pal, mat, 13.5f, 12f, 4);
-            AddFloorJunkCluster(artRoot, "Art_H_StepJunkTop", pal, mat, 7.5f, 16f, 7);
+            AddFloorJunkCluster(artRoot, "Art_H_LandingJunk", pal, mat, 20.4f, 8f, 1);
+            AddFloorJunkCluster(artRoot, "Art_H_StepJunkTop", pal, mat, 6.8f, 16f, 7);
 
             // Phase 3 (P2-04): Ornate iron hanging cage in Room K
             AddScaledCeilingProp(artRoot, "Art_K_OrnateCage1", pal.OrnateCages[1], mat, -27.5f, 30.5f, 0.90f, -7, Color.white);
 
-            // 11/11 Room Lighting — Room H (3), Room J (2), Room K (3)
+            // 11/11 Room Lighting — Room H (3 lanterns on the backwall above the 45-degree ramp), Room J (2), Room K (3)
             var warmAmber = new Color(1f, 0.80f, 0.48f, 1f);
             var warmGold = new Color(1f, 0.86f, 0.56f, 1f);
-            AddStandingTorchBeacon(artRoot, "Art_H_TorchLanding", mat, 19f, 8f, warmAmber, 8.8f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_H_TorchMid", mat, 12f, 12f, warmAmber, 8.8f, 1.25f);
-            AddStandingTorchBeacon(artRoot, "Art_H_TorchTop", mat, 8f, 16f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_H_TorchLanding", mat, 18.8f, 8f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_H_TorchMid", mat, 13.8f, 12.5f, warmAmber, 8.8f, 1.25f);
+            AddStandingTorchBeacon(artRoot, "Art_H_TorchTop", mat, 8.4f, 16f, warmAmber, 8.8f, 1.25f);
             AddStandingTorchBeacon(artRoot, "Art_J_TorchWest", mat, -8.3f, 16f, warmAmber, 8.8f, 1.25f);
             AddStandingTorchBeacon(artRoot, "Art_J_TorchEast", mat, 0f, 16f, warmAmber, 8.8f, 1.25f);
             AddStandingTorchBeacon(artRoot, "Art_K_TorchLower", mat, -20.5f, 16f, warmAmber, 8.8f, 1.25f);
@@ -3504,6 +3502,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             return mat;
         }
 
+        private static PhysicsMaterial2D LoadPhysicsMaterialAtPath(string path)
+        {
+            var physicsMaterial = AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>(path);
+            if (physicsMaterial == null)
+                throw new InvalidOperationException("Missing PhysicsMaterial2D at path: " + path);
+            return physicsMaterial;
+        }
+
         // ==================== DEAD CELLS PRISON 1.0u TILEMAP PAINTERS ====================
 
         private static void CreateRoomVisualGrid(
@@ -3903,40 +3909,38 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
         private static void PaintPrisonStairsH(Tilemap solidTm, Tilemap rimTm, GameObject artRoot, Material mat, PrisonPalette pal)
         {
-            // Steps: [18,22]@8, [15,18]@10, [12,15]@12, [9,12]@14, [6,9]@16, base y=7
-            (int xMin, int xMax, int topY)[] steps =
-            {
-                (18, 22, 8),
-                (15, 18, 10),
-                (12, 15, 12),
-                (9, 12, 14),
-                (6, 9, 16),
-            };
+            // 45-degree Dead Cells staircase H: flat bottom landing [18,22]@8, continuous 45-degree run
+            // x = 10..17 with stone surface yTop = 25 - x, flat top landing [6,10]@16, common stone base y=7.
+            PaintPrisonSolidFloor(solidTm, rimTm, pal, 18f, 22f, 7f, 8f);
+            PaintPrisonSolidFloor(solidTm, rimTm, pal, 6f, 10f, 7f, 16f);
 
+            // Solid stone core under the ramp: dirt_00 from base y=7 up to one row below the surface.
+            for (int x = 10; x <= 17; x++)
+            {
+                int yTop = 25 - x;
+                for (int cy = 7; cy <= yTop - 1; cy++)
+                    SetTileWithMatrix(solidTm, new Vector3Int(x, cy, 0), pal.Dirt, Matrix4x4.identity);
+            }
+
+            // EXACTLY ONE clean diagonal row of 8 flipped 45-degree stair tiles on the stone surface.
+            // Each diagonal cell rests on dirt_00 core only, so no double-stacked stair tiles exist.
             var flipX = Matrix4x4.Scale(new Vector3(-1f, 1f, 1f));
-            foreach (var (xMin, xMax, topY) in steps)
+            for (int x = 17; x >= 10; x--)
             {
-                PaintPrisonSolidFloor(solidTm, rimTm, pal, xMin, xMax, 7f, topY);
-            }
-            foreach (var (xMin, xMax, topY) in steps)
-            {
-                if (topY > 8)
-                {
-                    // Place flipped diagonal step nose on the upper step's east corner cell (xMax - 1, topY - 1)
-                    // and mid-riser bevel at (xMax - 1, topY - 2), preserving lower tread caps at x >= xMax.
-                    SetTileWithMatrix(rimTm, new Vector3Int(xMax - 1, topY - 1, 0), pal.Stairs0, flipX);
-                    SetTileWithMatrix(rimTm, new Vector3Int(xMax - 1, topY - 2, 0), pal.Stairs1, flipX);
-                }
+                int yTop = 25 - x;
+                var stairTile = ((17 - x) % 2 == 0) ? pal.Stairs0 : pal.Stairs1;
+                SetTileWithMatrix(rimTm, new Vector3Int(x, yTop, 0), stairTile, flipX);
             }
 
-            // Subtle stoneStamp_0_00..5_00 texture detail inside the solid black stair core
+            // Subtle stoneStamp_0_00..5_00 texture detail inside the solid black stair core,
+            // every stamp strictly inside dirt_00 mass (cell center, y <= 24 - x).
             var coreTint = new Color(0.55f, 0.58f, 0.62f, 0.45f);
             Vector2[] stampPositions =
             {
-                new Vector2(8.0f, 9.2f),
-                new Vector2(10.5f, 10.5f),
-                new Vector2(13.5f, 9.0f),
-                new Vector2(7.6f, 13.0f),
+                new Vector2(8.5f, 9.5f),
+                new Vector2(11.5f, 10.5f),
+                new Vector2(13.5f, 9.5f),
+                new Vector2(16.5f, 7.5f),
             };
             for (int i = 0; i < stampPositions.Length; i++)
             {
@@ -4871,7 +4875,15 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // 4. 12 ShadowCasters_R5 on [Background, Ground] (Spec §5.5 #4 + Round 8 cross-room light containment)
             var castersRoot = new GameObject("ShadowCasters_R5");
             int[] shadowTargetLayers = { bgLayerId, groundLayerId };
-            CreateBoxShadowCaster(castersRoot.transform, "Caster_StairsH", new Vector3(15f, 11f, 0f), 6f, 6f, shadowTargetLayers);
+            CreatePolygonShadowCaster(castersRoot.transform, "Caster_StairsH", new[]
+            {
+                new Vector3(6f, 7f, 0f),
+                new Vector3(22f, 7f, 0f),
+                new Vector3(22f, 8f, 0f),
+                new Vector3(18f, 8f, 0f),
+                new Vector3(10f, 16f, 0f),
+                new Vector3(6f, 16f, 0f),
+            }, shadowTargetLayers);
             CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorG_Upper", new Vector3(60.5f, 7.5f, 0f), 9f, 1f, shadowTargetLayers);
             CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorF_CeilingE", new Vector3(11f, 31.5f, 0f), 22f, 1f, shadowTargetLayers);
             CreateBoxShadowCaster(castersRoot.transform, "Caster_FloorN_West", new Vector3(88.5f, 7.5f, 0f), 25f, 1f, shadowTargetLayers);
@@ -4908,23 +4920,41 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
         private static void CreateBoxShadowCaster(Transform parent, string name, Vector3 worldCenter, float width, float height, int[] targetSortingLayerIds)
         {
+            float hw = width * 0.5f;
+            float hh = height * 0.5f;
+            var worldVertices = new[]
+            {
+                worldCenter + new Vector3(-hw, -hh, 0f),
+                worldCenter + new Vector3(-hw, hh, 0f),
+                worldCenter + new Vector3(hw, hh, 0f),
+                worldCenter + new Vector3(hw, -hh, 0f),
+            };
+            CreatePolygonShadowCaster(parent, name, worldVertices, targetSortingLayerIds);
+        }
+
+        private static void CreatePolygonShadowCaster(Transform parent, string name, Vector3[] worldVertices, int[] targetSortingLayerIds)
+        {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
+
+            // Keep m_ShapePath in compact local space: anchor the GameObject at the polygon bounds center.
+            Vector3 min = worldVertices[0];
+            Vector3 max = worldVertices[0];
+            for (int i = 1; i < worldVertices.Length; i++)
+            {
+                min = Vector3.Min(min, worldVertices[i]);
+                max = Vector3.Max(max, worldVertices[i]);
+            }
+            Vector3 worldCenter = (min + max) * 0.5f;
             go.transform.position = worldCenter;
 
             var sc = go.AddComponent<ShadowCaster2D>();
             sc.castsShadows = true;
             sc.selfShadows = false;
 
-            float hw = width * 0.5f;
-            float hh = height * 0.5f;
-            var shape = new[]
-            {
-                new Vector3(-hw, -hh, 0f),
-                new Vector3(-hw, hh, 0f),
-                new Vector3(hw, hh, 0f),
-                new Vector3(hw, -hh, 0f),
-            };
+            var shape = new Vector3[worldVertices.Length];
+            for (int i = 0; i < worldVertices.Length; i++)
+                shape[i] = worldVertices[i] - worldCenter;
 
             int shapeHash;
             unchecked
