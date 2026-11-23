@@ -10,9 +10,26 @@ namespace DeadCells.Player
     public class PlayerContext
     {
         private const float FeetProbeHeight = 0.05f;
-        private const float FeetProbeWidthRatio = 0.9f;
-        private const float MinGroundNormalY = 0.7f;
+        private const float FeetProbeWidthRatio = 0.96f;
+        // ~51.7° of climbable slope. A 45° ramp presents cos(45°) = 0.7071, so this keeps a wide
+        // margin instead of the 0.007f the old 0.7f limit left.
+        private const float MinGroundNormalY = 0.62f;
+        // Flat floors and one-way decks: a rising body has left them (jumps, deck tops).
+        private const float FlatGroundNormalY = 0.98f;
         private const float MaxGroundedRiseSpeed = 0.01f;
+        // Solid slopes: what matters is the rise measured along the normal, so walking up a 45° ramp
+        // (v·n ~ 0) stays grounded while a jump off it (v·n > 4) does not.
+        private const float MaxGroundedSlopeRiseSpeed = 0.15f;
+        // Keeping the feet probe glued to a slope for one frame after leaving it, so a 45° ramp does
+        // not flicker between grounded and airborne while the box slides down the surface.
+        private const float SlopeProbeDistance = 0.22f;
+        private const float MinSlopeMoveSpeed = 0.01f;
+        // Upward grab is refused once the feet are this close to the chain top, because the trigger
+        // overhangs the deck it serves and the grab would hang the player in mid air.
+        private const float ClimbTopGrabMargin = 0.22f;
+        private const float DescendProbeOffsetY = 0.30f;
+        private const float DescendProbeSize = 0.55f;
+        private const float DescendStartInsetY = 0.30f;
         private const float LedgeTopProbeInset = 0.1f;
         private const float LedgeStandInset = 0.05f;
         private const float OneWaySideProbeInset = 0.01f;
@@ -40,6 +57,7 @@ namespace DeadCells.Player
         private float _perfectDodgeUntil = float.NegativeInfinity;
         private float _wallJumpLockUntil = float.NegativeInfinity;
         private float _wallRegrabReadyAt = float.NegativeInfinity;
+        private bool _wasOnSlope;
 
         public PlayerContext(
             Rigidbody2D body,
@@ -92,6 +110,11 @@ namespace DeadCells.Player
         public PlayerAnimatorBridge Animator { get; }
 
         public bool IsGrounded { get; private set; }
+        /// <summary>Surface normal of the ground under the feet while grounded; up otherwise.</summary>
+        public Vector2 GroundNormal { get; private set; } = Vector2.up;
+        /// <summary>Grounded on a surface that is neither flat floor nor un-climbable steepness.</summary>
+        public bool IsOnSlope =>
+            IsGrounded && GroundNormal.y < FlatGroundNormalY && GroundNormal.y >= MinGroundNormalY;
         public int FacingDirection { get; private set; } = 1;
         public bool IsInvulnerable { get; set; }
         /// <summary>Set by PlayerSpawnHead when the crawling head reaches the body during the spawn intro.</summary>
@@ -114,6 +137,8 @@ namespace DeadCells.Player
         public bool IsCrouchHeld => IsDownHeld || Input.CrouchHeld;
         public bool IsUpHeld => Input.MoveY > Config.DownInputThreshold;
         public Collider2D ClimbTarget { get; private set; }
+        /// <summary>Collision with the platform under the feet is currently suspended (drop-through or chain descend).</summary>
+        public bool IsDroppingThrough => _droppedPlatform != null;
         public Vector2 PerfectDodgeGhostPosition { get; private set; }
         public bool IsPerfectDodgeWindowOpen => Time.time <= _perfectDodgeUntil;
 
@@ -146,12 +171,28 @@ namespace DeadCells.Player
             }
             var origin = new Vector2(bounds.center.x, bounds.min.y + FeetProbeHeight * 0.5f);
             var size = new Vector2(bounds.size.x * FeetProbeWidthRatio, FeetProbeHeight);
-            var hit = Physics2D.BoxCast(origin, size, 0f, Vector2.down, Config.GroundCheckDistance, _groundMask);
-            IsGrounded = hit.collider != null
-                         && hit.collider != _droppedPlatform
-                         && hit.normal.y > MinGroundNormalY
-                         && _body.linearVelocity.y <= MaxGroundedRiseSpeed;
+            // On a slope the box only has to re-acquire the surface it is already standing on.
+            float probeDist = _wasOnSlope
+                ? Mathf.Max(Config.GroundCheckDistance, SlopeProbeDistance)
+                : Config.GroundCheckDistance;
+            var hit = Physics2D.BoxCast(origin, size, 0f, Vector2.down, probeDist, _groundMask);
+
+            bool grounded = hit.collider != null
+                            && hit.collider != _droppedPlatform
+                            && hit.normal.y > MinGroundNormalY;
+            if (grounded)
+            {
+                // Flat floors, deck tops and everything one-way keep the plain "not rising" test so a
+                // jump always leaves them. Solid slopes test the rise along the normal instead, which
+                // is what lets the player walk up a 45° ramp without being declared airborne.
+                grounded = IsOneWayPlatform(hit.collider) || hit.normal.y >= FlatGroundNormalY
+                    ? _body.linearVelocity.y <= MaxGroundedRiseSpeed
+                    : Vector2.Dot(_body.linearVelocity, hit.normal) <= MaxGroundedSlopeRiseSpeed;
+            }
+            IsGrounded = grounded;
             _groundCollider = IsGrounded ? hit.collider : null;
+            GroundNormal = IsGrounded ? hit.normal : Vector2.up;
+            _wasOnSlope = IsOnSlope;
 
             if (IsGrounded)
             {
@@ -175,6 +216,32 @@ namespace DeadCells.Player
         public void AddVerticalVelocity(float dy) => SetVerticalVelocity(_body.linearVelocity.y + dy);
 
         public void SetGravityScale(float scale) => _body.gravityScale = scale;
+
+        /// <summary>
+        /// Ground locomotion. Flat floors move horizontally as before; a slope moves along its tangent
+        /// at the same speed (so the player climbs and descends stairs smoothly) and stands perfectly
+        /// still when idle, with gravity switched off so the player does not creep downhill.
+        /// </summary>
+        public void ApplyGroundedMove(float speedX)
+        {
+            if (IsOnSlope)
+            {
+                if (Mathf.Abs(speedX) < MinSlopeMoveSpeed)
+                {
+                    _body.gravityScale = 0f;
+                    _body.linearVelocity = Vector2.zero;
+                    return;
+                }
+
+                _body.gravityScale = Config.GravityScale;
+                var tangent = new Vector2(GroundNormal.y, -GroundNormal.x).normalized;
+                _body.linearVelocity = tangent * speedX;
+                return;
+            }
+
+            _body.gravityScale = Config.GravityScale;
+            SetHorizontalVelocity(speedX);
+        }
 
         public void ClampFallSpeed()
         {
@@ -352,6 +419,72 @@ namespace DeadCells.Player
         {
             if (ClimbTarget != null)
                 _body.position = new Vector2(ClimbTarget.bounds.center.x - FacingDirection * Config.ClimbHandOffsetX, _body.position.y);
+        }
+
+        /// <summary>
+        /// Upward grab check. The climbable trigger overhangs the deck it serves, so grabbing from
+        /// the deck (or from the frame right after a top dismount) would hang the player in mid air.
+        /// Rejection clears ClimbTarget so the next frame re-probes cleanly.
+        /// </summary>
+        public bool CanMountClimbableUpward()
+        {
+            if (!TryFindClimbable())
+                return false;
+            if (Position.y < ClimbTarget.bounds.max.y - ClimbTopGrabMargin)
+                return true;
+
+            ClimbTarget = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Looks for a chain directly under a one-way deck slot the player is standing on, which is
+        /// what a Down-hold descend needs.
+        /// </summary>
+        public bool TryFindClimbableBelowDeck(out Collider2D climbable)
+        {
+            climbable = null;
+            if (!IsGrounded || _groundCollider == null || !IsOneWayPlatform(_groundCollider))
+                return false;
+
+            var bounds = _collider.bounds;
+            var probe = new Vector2(bounds.center.x, bounds.min.y - DescendProbeOffsetY);
+            var size = new Vector2(DescendProbeSize, DescendProbeSize);
+            climbable = Physics2D.OverlapBox(probe, size, 0f, _climbableMask);
+            return climbable != null;
+        }
+
+        /// <summary>
+        /// Starts a descent: suspends the deck collision for the drop-through window, slides the body
+        /// below the deck top and grips the chain.
+        /// </summary>
+        public void BeginDescendClimb(Collider2D climbable)
+        {
+            if (climbable == null)
+                return;
+
+            var deck = _groundCollider;
+            if (deck != null)
+            {
+                _droppedPlatform = deck;
+                _ledgeIgnoredPlatform = deck;
+                _dropRestoreTime = Time.time + Config.DropThroughDuration;
+                Physics2D.IgnoreCollision(_collider, deck, true);
+            }
+
+            ClimbTarget = climbable;
+            _body.position = new Vector2(
+                climbable.bounds.center.x - FacingDirection * Config.ClimbHandOffsetX,
+                climbable.bounds.max.y - DescendStartInsetY);
+            _groundCollider = null;
+            IsGrounded = false;
+        }
+
+        /// <summary>Teleports the feet to a world point and kills the velocity (flush dismounts).</summary>
+        public void SnapPosition(Vector2 worldFeet)
+        {
+            _body.position = worldFeet;
+            _body.linearVelocity = Vector2.zero;
         }
 
         public bool TryFindWall(out int wallDir)

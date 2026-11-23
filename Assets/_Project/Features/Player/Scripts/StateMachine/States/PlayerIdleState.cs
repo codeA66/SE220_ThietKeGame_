@@ -6,6 +6,9 @@ namespace DeadCells.Player.StateMachine.States
 
         public override void Enter() => Ctx.SetGravityScale(Ctx.Config.GravityScale);
 
+        // Idling on a slope switches gravity off; hand it back on the way out.
+        public override void Exit() => Ctx.SetGravityScale(Ctx.Config.GravityScale);
+
         public override void Tick()
         {
             if (TryGroundedActions() || TryCrouch())
@@ -14,6 +17,6 @@ namespace DeadCells.Player.StateMachine.States
                 Machine.ChangeState(Machine.Run);
         }
 
-        public override void FixedTick() => Ctx.SetHorizontalVelocity(0f);
+        public override void FixedTick() => Ctx.ApplyGroundedMove(0f);
     }
 }

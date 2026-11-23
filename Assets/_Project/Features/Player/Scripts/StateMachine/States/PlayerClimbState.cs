@@ -9,6 +9,11 @@ namespace DeadCells.Player.StateMachine.States
     /// </summary>
     public class PlayerClimbState : PlayerStateBase
     {
+        /// <summary>How far below the chain top the feet are placed on a top dismount (units).</summary>
+        private const float TopDismountInset = 0.06f;
+        /// <summary>Climbing within this distance of the chain top steps onto the deck, if Up is held.</summary>
+        private const float TopDismountTrigger = 0.1f;
+
         public PlayerClimbState(PlayerContext context, PlayerStateMachine machine) : base(context, machine) { }
 
         public override void Enter()
@@ -42,6 +47,16 @@ namespace DeadCells.Player.StateMachine.States
             float y = Ctx.Position.y;
             var bounds = target.bounds;
             bool movingDown = Ctx.Input.MoveY < 0f;
+
+            // Top of the chain: step off onto the deck the chain serves instead of hanging on the
+            // overhanging trigger (the trigger tops out above the plank surface). Snapping lands the
+            // feet inside GroundCheckDistance of the deck, so the next frame is already grounded.
+            if (Ctx.IsUpHeld && y >= bounds.max.y - TopDismountTrigger)
+            {
+                Ctx.SnapPosition(new Vector2(Ctx.Position.x, bounds.max.y - TopDismountInset));
+                Machine.ChangeState(Ctx.HasMoveInput ? Machine.Run : Machine.Idle);
+                return;
+            }
 
             // Bottom: stepping off onto the ground. Top / bottom of a hanging chain: let go.
             if ((movingDown && Ctx.IsGrounded) || y > bounds.max.y || y < bounds.min.y - 0.01f)

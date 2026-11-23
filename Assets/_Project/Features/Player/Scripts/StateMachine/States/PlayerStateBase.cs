@@ -59,10 +59,11 @@ namespace DeadCells.Player.StateMachine.States
         protected bool TryWallCling() => Ctx.TryFindWall(out _) && Machine.ChangeState(Machine.WallCling);
 
         /// <summary>
-        /// Grab a chain or vine the player overlaps while holding up. Returns true if a transition started.
+        /// Grab a chain or vine the player overlaps while holding up. A grab that would start at or
+        /// above the chain top is refused, because the trigger overhangs its deck by half a unit.
         /// </summary>
         protected bool TryClimb() =>
-            Ctx.IsUpHeld && Ctx.TryFindClimbable() && Machine.ChangeState(Machine.Climb);
+            Ctx.IsUpHeld && Ctx.CanMountClimbableUpward() && Machine.ChangeState(Machine.Climb);
 
         /// <summary>
         /// Crouch when holding down or crouch on the ground. Returns true if a transition started.
