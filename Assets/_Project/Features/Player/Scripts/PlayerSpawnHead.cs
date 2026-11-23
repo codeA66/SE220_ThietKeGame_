@@ -12,7 +12,7 @@ namespace DeadCells.Player
     /// </summary>
     public class PlayerSpawnHead : MonoBehaviour
     {
-        private enum Phase { Idle, WaitingForBody, Falling, Settling, WindUp, Hopping, Pausing }
+        private enum Phase { Idle, WaitingForBody, Assembling, Falling, Settling, WindUp, Hopping, Pausing }
 
         private static readonly int FlashId = Shader.PropertyToID("_Flash");
 
@@ -80,6 +80,16 @@ namespace DeadCells.Player
         private float _hopPeak;
         private bool _finalHop;
         private float _flashTimer = -1f;
+        private SpriteRenderer[] _shards;
+        private Sprite[] _shardSprites;
+        private Vector2[] _shardOffsets;
+        private float[] _shardSpins;
+        private float[] _shardDelays;
+
+        // The scarf pulls itself back together over this long before it drops, in a grid of this many shards (seconds).
+        private const float AssembleTime = 0.8f;
+        private const int ShardColumns = 6;
+        private const int ShardRows = 3;
 
         private void Awake()
         {
@@ -87,6 +97,10 @@ namespace DeadCells.Player
             _renderer.enabled = false;
             SetTrail(false);
         }
+
+        /// <summary>The head sprite renderer, so effects can borrow its sprite, material and size.</summary>
+        public SpriteRenderer Renderer => _renderer;
+        public float BaseScale => _baseScale;
 
         /// <summary>Starts the sequence; the head drops once the body has settled on the ground.</summary>
         public void Play(PlayerContext context)
@@ -106,9 +120,11 @@ namespace DeadCells.Player
             _velocityY = 0f;
             _angle = 0f;
             _renderer.flipX = _direction < 0;
-            _renderer.enabled = true;
-            SetTrail(true);
-            _phase = Phase.Falling;
+            _renderer.enabled = false;
+
+            _timer = 0f;
+            BuildShards();
+            _phase = Phase.Assembling;
             Apply(Vector2.one);
         }
 
@@ -128,12 +144,85 @@ namespace DeadCells.Player
                     if (_context.IsGrounded)
                         Begin();
                     break;
+                case Phase.Assembling: TickAssemble(dt); break;
                 case Phase.Falling: TickFall(dt); break;
                 case Phase.Settling: TickSettle(dt); break;
                 case Phase.WindUp: TickWindUp(dt); break;
                 case Phase.Hopping: TickHop(dt); break;
                 case Phase.Pausing: TickPause(dt); break;
             }
+        }
+
+        // Cuts the head sprite into a grid of shards scattered around where the head will hang, ready to be pulled together.
+        private void BuildShards()
+        {
+            Sprite source = _renderer.sprite;
+            int count = ShardColumns * ShardRows;
+            _shards = new SpriteRenderer[count];
+            _shardSprites = new Sprite[count];
+            _shardOffsets = new Vector2[count];
+            _shardSpins = new float[count];
+            _shardDelays = new float[count];
+            Rect rect = source.rect;
+            float cellWidth = rect.width / ShardColumns;
+            float cellHeight = rect.height / ShardRows;
+            for (int i = 0; i < count; i++)
+            {
+                int column = i % ShardColumns;
+                int row = i / ShardColumns;
+                var cell = new Rect(rect.x + column * cellWidth, rect.y + row * cellHeight, cellWidth, cellHeight);
+                var pivot = new Vector2((source.pivot.x - column * cellWidth) / cellWidth, (source.pivot.y - row * cellHeight) / cellHeight);
+                _shardSprites[i] = Sprite.Create(source.texture, cell, pivot, source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+
+                var go = new GameObject("HeadShard");
+                var shard = go.AddComponent<SpriteRenderer>();
+                shard.sprite = _shardSprites[i];
+                shard.flipX = _renderer.flipX;
+                shard.sharedMaterial = _renderer.sharedMaterial;
+                shard.sortingLayerID = _renderer.sortingLayerID;
+                shard.sortingOrder = _renderer.sortingOrder;
+                _shards[i] = shard;
+                float angle = Random.value * Mathf.PI * 2f;
+                _shardOffsets[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * Random.Range(1.2f, 2.8f);
+                _shardSpins[i] = Random.Range(-540f, 540f);
+                _shardDelays[i] = Random.Range(0f, 0.2f);
+            }
+            PlaceShards(0f);
+        }
+
+        private void PlaceShards(float time)
+        {
+            for (int i = 0; i < _shards.Length; i++)
+            {
+                float k = Mathf.Clamp01((time - _shardDelays[i]) / (AssembleTime - _shardDelays[i]));
+                float ease = 1f - Mathf.Pow(1f - k, 3f);
+                Transform shard = _shards[i].transform;
+                shard.position = _position + _shardOffsets[i] * (1f - ease);
+                shard.rotation = Quaternion.Euler(0f, 0f, _shardSpins[i] * (1f - ease));
+                shard.localScale = Vector3.one * (_baseScale * (0.5f + 0.5f * ease));
+                _shards[i].color = new Color(1f, 1f, 1f, ease);
+            }
+        }
+
+        // The scarf is drawn back together out of scattered shards, then the whole head appears with a burst and drops.
+        private void TickAssemble(float dt)
+        {
+            _timer += dt;
+            PlaceShards(_timer);
+            if (_timer < AssembleTime)
+                return;
+
+            foreach (SpriteRenderer shard in _shards)
+                Destroy(shard.gameObject);
+            foreach (Sprite piece in _shardSprites)
+                Destroy(piece);
+            _shards = null;
+            _renderer.enabled = true;
+            SetTrail(true);
+            Burst(_landBurstCount);
+            _velocityY = 0f;
+            _phase = Phase.Falling;
+            Apply(Vector2.one);
         }
 
         private void TickFall(float dt)
@@ -244,8 +333,6 @@ namespace DeadCells.Player
             _renderer.enabled = false;
             SetTrail(false);
             Burst(_mergeBurstCount);
-            if (_camera != null)
-                _camera.Shake(_mergeShakeAmplitude, _mergeShakeDuration);
             _flashTimer = _mergeFlashDuration;
             SetBodyFlash(1f);
             _context.SpawnHeadArrived = true;

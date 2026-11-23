@@ -21,9 +21,14 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.SetGravityScale(0f);
             Ctx.SetHorizontalVelocity(0f);
             Ctx.SetVerticalVelocity(-Ctx.Config.StompSpeed);
+            Ctx.NotifyStompStarted();
         }
 
-        public override void Exit() => Ctx.SetGravityScale(Ctx.Config.GravityScale);
+        public override void Exit()
+        {
+            Ctx.SetGravityScale(Ctx.Config.GravityScale);
+            Ctx.NotifyStompEnded();
+        }
 
         public override void Tick()
         {
@@ -33,6 +38,7 @@ namespace DeadCells.Player.StateMachine.States
                 {
                     _landed = true;
                     Ctx.NotifyLanded();
+                    Ctx.NotifyStomped();
                     Ctx.Combat.PerformStomp(Ctx.Config.StompDamage, Ctx.Config.StompStun, Ctx.Config.StompArea);
                 }
                 return;

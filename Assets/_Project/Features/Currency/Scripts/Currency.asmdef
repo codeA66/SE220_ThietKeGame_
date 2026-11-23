@@ -2,6 +2,7 @@
     "name": "Currency",
     "rootNamespace": "DeadCells.Currency",
     "references": [
+        "Core",
         "Combat",
         "Enemies"
     ],

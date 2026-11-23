@@ -147,6 +147,11 @@ namespace DeadCells.Enemies
         [Header("Skills (checked in order; the first usable one is used)")]
         [SerializeField] private Skill[] _skills = Array.Empty<Skill>();
 
+        [Header("Loot")]
+        [Tooltip("Scales gold and gem drops on top of max health (gold ~ health / 10, gem chance ~ health / 200).")]
+        [Min(0f)]
+        [SerializeField] private float _lootMultiplier = 1f;
+
         public string DcId => _dcId;
         public Color FleshColor => _fleshColor;
         public Color GlowColor => _glowColor;
@@ -172,5 +177,6 @@ namespace DeadCells.Enemies
         public float TeleportCooldown => _teleportCooldown;
         public float TeleportBehind => _teleportBehindCells * WeaponData.CellSize;
         public Skill[] Skills => _skills;
+        public float LootMultiplier => _lootMultiplier;
     }
 }
