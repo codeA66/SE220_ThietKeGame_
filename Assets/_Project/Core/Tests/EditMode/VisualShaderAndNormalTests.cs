@@ -186,8 +186,18 @@ namespace DeadCells.Core.Tests
             Material groundMist = AssetDatabase.LoadAssetAtPath<Material>($"{envMatDir}/Mat_GroundMist_Prison.mat");
             Assert.AreEqual(0.04f, groundMist.GetFloat("_ScrollSpeed"), 1e-4f);
             Assert.AreEqual(3.5f, groundMist.GetFloat("_NoiseScale"), 1e-4f);
-            Assert.GreaterOrEqual(groundMist.GetColor("_MistColor").a, 0.30f,
-                "Mat_GroundMist_Prison _MistColor alpha must be >= 0.30 so ground mist reads on GPU.");
+            Assert.GreaterOrEqual(groundMist.GetColor("_MistColor").a, 0.55f,
+                "Mat_GroundMist_Prison _MistColor alpha must be >= 0.55 so dual-layer ground mist reads visibly on GPU.");
+
+            string groundMistSource = File.ReadAllText("Assets/_Project/Art/Shaders/GroundMist2D.shader");
+            StringAssert.Contains("fbmA", groundMistSource,
+                "GroundMist2D.shader must define primary FBM layer fbmA.");
+            StringAssert.Contains("fbmB", groundMistSource,
+                "GroundMist2D.shader must define counter-drifting FBM layer fbmB.");
+            StringAssert.Contains("lerp", groundMistSource,
+                "GroundMist2D.shader must smoothstep/lerp dual-layer mist density.");
+            StringAssert.Contains("hFade", groundMistSource,
+                "GroundMist2D.shader must apply horizontal edge feathering hFade.");
 
             Material roomBannerSway = AssetDatabase.LoadAssetAtPath<Material>($"{envMatDir}/Mat_RoomBanner_Sway.mat");
             Assert.AreEqual(0.09f, roomBannerSway.GetFloat("_SwayAmplitude"), 1e-4f);
@@ -300,14 +310,37 @@ namespace DeadCells.Core.Tests
         [Test]
         public void PrisonGeneratedProps_Are24PpuPointUncompressedWithBoundNormalMaps()
         {
+            const string normalDir = "Assets/_Project/Art/Environment/Prison/Normals";
             var expectedProps = new (string path, int width, int height, string normalPath)[]
             {
                 (PrisonPropSpriteGenerator.WallLanternAssetPath, 20, 30,
-                    "Assets/_Project/Art/Environment/Prison/Normals/prisonWallLantern_00_n.png"),
+                    $"{normalDir}/prisonWallLantern_00_n.png"),
                 (PrisonPropSpriteGenerator.ArchSillAssetPath, 24, 8,
-                    "Assets/_Project/Art/Environment/Prison/Normals/prisonArchSill_00_n.png"),
+                    $"{normalDir}/prisonArchSill_00_n.png"),
+                (PrisonPropSpriteGenerator.ArchSill01AssetPath, 24, 8,
+                    $"{normalDir}/prisonArchSill_01_n.png"),
+                (PrisonPropSpriteGenerator.ArchSill02AssetPath, 24, 8,
+                    $"{normalDir}/prisonArchSill_02_n.png"),
                 (PrisonPropSpriteGenerator.ArchJambAssetPath, 8, 24,
-                    "Assets/_Project/Art/Environment/Prison/Normals/prisonArchJamb_00_n.png"),
+                    $"{normalDir}/prisonArchJamb_00_n.png"),
+                (PrisonPropSpriteGenerator.ArchJamb01AssetPath, 8, 24,
+                    $"{normalDir}/prisonArchJamb_01_n.png"),
+                (PrisonPropSpriteGenerator.ArchJamb02AssetPath, 8, 24,
+                    $"{normalDir}/prisonArchJamb_02_n.png"),
+                (PrisonPropSpriteGenerator.ArchSpandrelAssetPath, 24, 24,
+                    $"{normalDir}/prisonArchSpandrel_00_n.png"),
+                (PrisonPropSpriteGenerator.ArchMullionAssetPath, 8, 24,
+                    $"{normalDir}/prisonArchMullion_00_n.png"),
+                (PrisonPropSpriteGenerator.ShelfVial00AssetPath, 10, 14,
+                    $"{normalDir}/prisonShelfVial_00_n.png"),
+                (PrisonPropSpriteGenerator.ShelfVial01AssetPath, 10, 14,
+                    $"{normalDir}/prisonShelfVial_01_n.png"),
+                (PrisonPropSpriteGenerator.ShelfVial02AssetPath, 10, 14,
+                    $"{normalDir}/prisonShelfVial_02_n.png"),
+                (PrisonPropSpriteGenerator.PrisonBellAssetPath, 48, 56,
+                    $"{normalDir}/prisonBell_00_n.png"),
+                (PrisonPropSpriteGenerator.SlabStrataAssetPath, 72, 18,
+                    $"{normalDir}/prisonSlabStrata_00_n.png"),
             };
 
             Assert.AreEqual(0.125f, PrisonPropSpriteGenerator.WallLanternFlameOffsetLocalY, 1e-4f);
@@ -335,11 +368,220 @@ namespace DeadCells.Core.Tests
                 Assert.IsNotNull(normalImporter);
                 Assert.AreEqual(TextureImporterType.NormalMap, normalImporter.textureType);
                 Assert.AreEqual(FilterMode.Point, normalImporter.filterMode);
+                Assert.AreEqual(TextureImporterCompression.Uncompressed, normalImporter.textureCompression);
+                Assert.IsFalse(normalImporter.mipmapEnabled);
 
                 SecondarySpriteTexture[] secondary = importer.secondarySpriteTextures;
                 Assert.IsTrue(
                     secondary != null && System.Array.Exists(secondary, s => s.name == "_NormalMap" && s.texture == normalTex),
                     $"'{spec.path}' must bind '{spec.normalPath}' as secondary texture '_NormalMap'.");
+            }
+        }
+
+        [Test]
+        public void PrisonRound9GeneratedSprites_HaveWeatheredNotchesCurvedArchCutoutAndCohesiveDetail()
+        {
+            string[] sillPaths =
+            {
+                PrisonPropSpriteGenerator.ArchSillAssetPath,
+                PrisonPropSpriteGenerator.ArchSill01AssetPath,
+                PrisonPropSpriteGenerator.ArchSill02AssetPath,
+            };
+            foreach (string path in sillPaths)
+            {
+                Color32[] pixels = LoadPngPixels(path, out int w, out int h);
+                Assert.AreEqual(24, w, $"'{path}' width");
+                Assert.AreEqual(8, h, $"'{path}' height");
+
+                int outerNotches = 0;
+                int innerSolid = 0;
+                for (int x = 0; x < w; x++)
+                {
+                    if (pixels[x].a == 0)
+                        outerNotches++;
+                    if (pixels[(h - 1) * w + x].a >= 180)
+                        innerSolid++;
+                }
+
+                Assert.GreaterOrEqual(outerNotches, 5,
+                    $"'{path}' wall-facing bottom row (y=0) must have chipped transparent notches (>= 5 px alpha==0), not a solid sticker border.");
+                Assert.GreaterOrEqual(innerSolid, 18,
+                    $"'{path}' sky-facing top row (y=7) must preserve structural sill masonry.");
+            }
+
+            string[] jambPaths =
+            {
+                PrisonPropSpriteGenerator.ArchJambAssetPath,
+                PrisonPropSpriteGenerator.ArchJamb01AssetPath,
+                PrisonPropSpriteGenerator.ArchJamb02AssetPath,
+            };
+            foreach (string path in jambPaths)
+            {
+                Color32[] pixels = LoadPngPixels(path, out int w, out int h);
+                Assert.AreEqual(8, w, $"'{path}' width");
+                Assert.AreEqual(24, h, $"'{path}' height");
+
+                int outerNotches = 0;
+                int innerSolid = 0;
+                for (int y = 0; y < h; y++)
+                {
+                    if (pixels[y * w].a == 0)
+                        outerNotches++;
+                    if (pixels[y * w + (w - 1)].a >= 180)
+                        innerSolid++;
+                }
+
+                Assert.GreaterOrEqual(outerNotches, 5,
+                    $"'{path}' wall-facing left column (x=0) must have chipped transparent notches (>= 5 px alpha==0), not a solid sticker border.");
+                Assert.GreaterOrEqual(innerSolid, 18,
+                    $"'{path}' sky-facing right column (x=7) must preserve structural jamb masonry.");
+            }
+
+            // Curved Gothic arch spandrel (24x24): stone top-left, transparent curved void bottom-right
+            Color32[] spandrel = LoadPngPixels(PrisonPropSpriteGenerator.ArchSpandrelAssetPath, out int sw, out int sh);
+            Assert.AreEqual(24, sw);
+            Assert.AreEqual(24, sh);
+            int spandrelCutout = 0;
+            int spandrelTopLeftStone = 0;
+            int spandrelBottomRightOpaque = 0;
+            for (int y = 0; y < sh; y++)
+            {
+                for (int x = 0; x < sw; x++)
+                {
+                    Color32 c = spandrel[y * sw + x];
+                    if (c.a == 0)
+                        spandrelCutout++;
+                    if (x <= 4 && y >= 19 && c.a >= 200)
+                        spandrelTopLeftStone++;
+                    if (x >= 16 && y <= 7 && c.a > 0)
+                        spandrelBottomRightOpaque++;
+                }
+            }
+            Assert.GreaterOrEqual(spandrelTopLeftStone, 18, "prisonArchSpandrel_00 upper-left corner must be solid stone.");
+            Assert.GreaterOrEqual(spandrelCutout, 180, "prisonArchSpandrel_00 must have a generous curved transparent arch void.");
+            Assert.AreEqual(0, spandrelBottomRightOpaque, "prisonArchSpandrel_00 lower-right quadrant (x>=16, y<=7) must be 100% transparent.");
+
+            // Wrought-iron gothic mullion (8x24): continuous 3px rod + riveted collars every 12px
+            Color32[] mullion = LoadPngPixels(PrisonPropSpriteGenerator.ArchMullionAssetPath, out int mw, out int mh);
+            Assert.AreEqual(8, mw);
+            Assert.AreEqual(24, mh);
+            int collarRows = 0;
+            int firstCollarY = -1;
+            int lastCollarY = -1;
+            for (int y = 0; y < mh; y++)
+            {
+                int opaqueInRow = 0;
+                for (int x = 0; x < mw; x++)
+                {
+                    if (mullion[y * mw + x].a >= 200)
+                        opaqueInRow++;
+                }
+                Assert.GreaterOrEqual(opaqueInRow, 3, $"prisonArchMullion_00 row {y} must retain >= 3px continuous wrought-iron rod.");
+                if (opaqueInRow >= 5)
+                {
+                    collarRows++;
+                    if (firstCollarY < 0) firstCollarY = y;
+                    lastCollarY = y;
+                }
+            }
+            Assert.GreaterOrEqual(collarRows, 2, "prisonArchMullion_00 must include riveted horizontal collars.");
+            Assert.GreaterOrEqual(lastCollarY - firstCollarY, 10, "prisonArchMullion_00 collars must space along the 24px bar.");
+
+            // Alchemy shelf vials (10x14): emerald / violet / amber silhouettes
+            (string path, System.Func<Color32, bool> colorMatcher, string label)[] vialSpecs =
+            {
+                (PrisonPropSpriteGenerator.ShelfVial00AssetPath, c => c.a >= 200 && c.g > c.r + 25 && c.g > c.b, "emerald"),
+                (PrisonPropSpriteGenerator.ShelfVial01AssetPath, c => c.a >= 200 && c.r > c.g + 20 && c.b > c.g + 25, "violet"),
+                (PrisonPropSpriteGenerator.ShelfVial02AssetPath, c => c.a >= 200 && c.r > c.g + 20 && c.g > c.b + 20, "amber"),
+            };
+            foreach (var spec in vialSpecs)
+            {
+                Color32[] vial = LoadPngPixels(spec.path, out int vw, out int vh);
+                Assert.AreEqual(10, vw, spec.path);
+                Assert.AreEqual(14, vh, spec.path);
+                int transparent = 0;
+                int solid = 0;
+                int tinted = 0;
+                for (int i = 0; i < vial.Length; i++)
+                {
+                    if (vial[i].a == 0) transparent++;
+                    if (vial[i].a >= 200) solid++;
+                    if (spec.colorMatcher(vial[i])) tinted++;
+                }
+                Assert.GreaterOrEqual(transparent, 45, $"'{spec.path}' must keep crisp transparent silhouette.");
+                Assert.GreaterOrEqual(solid, 30, $"'{spec.path}' must contain a solid bottle silhouette.");
+                Assert.GreaterOrEqual(tinted, 12, $"'{spec.path}' must show crisp {spec.label} alchemy liquid.");
+            }
+
+            // Dungeon verdigris bronze & dark wrought-iron bell (48x56)
+            Color32[] bell = LoadPngPixels(PrisonPropSpriteGenerator.PrisonBellAssetPath, out int bw, out int bh);
+            Assert.AreEqual(48, bw);
+            Assert.AreEqual(56, bh);
+            int bellTransparent = 0;
+            int bellSolid = 0;
+            int bellVerdigris = 0;
+            for (int i = 0; i < bell.Length; i++)
+            {
+                Color32 c = bell[i];
+                if (c.a == 0) bellTransparent++;
+                if (c.a >= 200) bellSolid++;
+                if (c.a >= 200 && c.g >= c.r + 8 && c.b >= c.r) bellVerdigris++;
+            }
+            Assert.GreaterOrEqual(bellTransparent, 900, "prisonBell_00 must have clean transparent silhouette margins.");
+            Assert.GreaterOrEqual(bellSolid, 800, "prisonBell_00 must have substantial solid bell + iron yoke body.");
+            Assert.GreaterOrEqual(bellVerdigris, 150, "prisonBell_00 must feature oxidized verdigris bronze tones.");
+
+            // Inter-tier moss-slate carved stone slab strata (72x18): readable above dirt_00 (meanLum > 0.18) with organic chipped edges
+            Color32[] strata = LoadPngPixels(PrisonPropSpriteGenerator.SlabStrataAssetPath, out int stw, out int sth);
+            Assert.AreEqual(72, stw);
+            Assert.AreEqual(18, sth);
+            int strataSolid = 0;
+            int topNotches = 0;
+            int bottomNotches = 0;
+            double sumOpaqueLum = 0.0;
+            double sumWeightedLum = 0.0;
+            for (int x = 0; x < stw; x++)
+            {
+                if (strata[x].a == 0) bottomNotches++;
+                if (strata[(sth - 1) * stw + x].a == 0) topNotches++;
+            }
+            for (int i = 0; i < strata.Length; i++)
+            {
+                Color32 c = strata[i];
+                float alpha = c.a / 255f;
+                float lum = (0.299f * c.r + 0.587f * c.g + 0.114f * c.b) / 255f;
+                sumWeightedLum += lum * alpha;
+                if (c.a >= 200)
+                {
+                    strataSolid++;
+                    sumOpaqueLum += lum;
+                }
+            }
+            float opaqueMeanLum = strataSolid > 0 ? (float)(sumOpaqueLum / strataSolid) : 0f;
+            float meanLum = (float)(sumWeightedLum / strata.Length);
+            Assert.GreaterOrEqual(bottomNotches, 8, "prisonSlabStrata_00 bottom edge must have organic chipped notches to blend into dirt_00.");
+            Assert.GreaterOrEqual(topNotches, 8, "prisonSlabStrata_00 top edge must have organic chipped notches to blend into dirt_00.");
+            Assert.GreaterOrEqual(strataSolid, 750, "prisonSlabStrata_00 must contain substantial carved stone block masonry.");
+            Assert.Greater(opaqueMeanLum, 0.24f, $"prisonSlabStrata_00 opaque stone mean luminance ({opaqueMeanLum:F3}) must be > 0.24.");
+            Assert.Greater(meanLum, 0.18f, $"prisonSlabStrata_00 canvas mean luminance ({meanLum:F3}) must be > 0.18 (never solid black).");
+        }
+
+        private static Color32[] LoadPngPixels(string assetPath, out int width, out int height)
+        {
+            Assert.IsTrue(File.Exists(assetPath), $"Expected sprite PNG at '{assetPath}'.");
+            byte[] rawBytes = File.ReadAllBytes(assetPath);
+            Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: false, linear: true);
+            try
+            {
+                Assert.IsTrue(ImageConversion.LoadImage(tex, rawBytes, markNonReadable: false),
+                    $"Failed to decode PNG at '{assetPath}'.");
+                width = tex.width;
+                height = tex.height;
+                return tex.GetPixels32();
+            }
+            finally
+            {
+                Object.DestroyImmediate(tex);
             }
         }
 

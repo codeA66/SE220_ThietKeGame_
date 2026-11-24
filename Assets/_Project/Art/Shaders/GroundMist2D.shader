@@ -1,10 +1,10 @@
-// World-space 3-octave quintic FBM ground mist with soft alpha blending and quadratic vertical feathering.
+// World-space dual-layer counter-drifting 3-octave quintic FBM ground mist with soft edge feathering.
 Shader "DeadCells/GroundMist2D"
 {
     Properties
     {
         [MainTexture][NoScaleOffset] _MainTex ("Mist Mask Sprite", 2D) = "white" {}
-        _MistColor ("Mist Color", Color) = (0.38, 0.54, 0.52, 0.15)
+        _MistColor ("Mist Color", Color) = (0.52, 0.80, 0.76, 0.62)
         _ScrollSpeed ("Scroll Speed", Float) = 0.04
         _NoiseScale ("Noise Scale", Float) = 3.5
     }
@@ -102,21 +102,25 @@ Shader "DeadCells/GroundMist2D"
             half4 Frag(Varyings input) : SV_Target
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
-                float2 p = input.worldXY * float2(0.22, 0.65) * (_NoiseScale * 0.28);
+                float2 pA = input.worldXY * float2(0.18, 0.55) * (_NoiseScale * 0.28);
+                float2 pB = input.worldXY * float2(0.31, 0.88) * (_NoiseScale * 0.28);
                 float t = _Time.y * _ScrollSpeed * 4.0;
-                float f1 = ValueNoise2D(p + float2(t, 0.0));
-                float f2 = ValueNoise2D(p * 2.03 + float2(-t * 0.72, 1.73));
-                float f3 = ValueNoise2D(p * 4.17 + float2(t * 0.45, 3.41));
-                half fbm = (half)(f1 * 0.52 + f2 * 0.33 + f3 * 0.15);
-                half noise = smoothstep(0.22h, 0.88h, fbm);
+                float fbmA = ValueNoise2D(pA + float2(t, 0.0)) * 0.52
+                           + ValueNoise2D(pA * 2.03 + float2(-t * 0.70, 1.73)) * 0.33
+                           + ValueNoise2D(pA * 4.17 + float2(t * 0.42, 3.41)) * 0.15;
+                float fbmB = ValueNoise2D(pB + float2(-t * 0.62, t * 0.14 + 4.11)) * 0.55
+                           + ValueNoise2D(pB * 2.11 + float2(t * 0.38, -t * 0.09 + 2.37)) * 0.30
+                           + ValueNoise2D(pB * 4.05 + float2(-t * 0.25, 5.19)) * 0.15;
+                half fbm = (half)(fbmA * 0.62 + fbmB * 0.38);
+                half density = lerp(0.45h, 1.0h, smoothstep(0.18h, 0.82h, fbm));
 
-                half vBottom = smoothstep(0.0h, 0.38h, (half)input.uv.y);
-                half vTop = 1.0h - smoothstep(0.32h, 1.0h, (half)input.uv.y);
-                half vFade = vBottom * vTop * vTop;
-                half hFade = smoothstep(0.0h, 0.10h, (half)input.uv.x) * (1.0h - smoothstep(0.90h, 1.0h, (half)input.uv.x));
+                half vBottom = smoothstep(0.0h, 0.16h, (half)input.uv.y);
+                half vTop = 1.0h - smoothstep(0.24h, 1.0h, (half)input.uv.y);
+                half vFade = vBottom * pow(max(vTop, 0.0001h), 1.25h);
+                half hFade = smoothstep(0.0h, 0.08h, (half)input.uv.x) * (1.0h - smoothstep(0.92h, 1.0h, (half)input.uv.x));
 
                 half4 col = _MistColor * input.color;
-                col.a *= noise * vFade * hFade * tex.a;
+                col.a = saturate(col.a * density * vFade * hFade * tex.a);
                 return col;
             }
             ENDHLSL
