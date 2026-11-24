@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Mob_zombie
-  m_Shader: {fileID: 4800000, guid: 558a3ce044b44b24589e88d4779018b0, type: 3}
+  m_Shader: {fileID: 4800000, guid: b6779f1273d0fd242a29c92c619840d8, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -27,10 +27,20 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _Flash: 0
+    - _SelfLitWeight: 0.45
     m_Colors:
-    - _FleshColor: {r: 0.73333335, g: 0.7372549, b: 0.654902, a: 1}
+    - _FlashColor: {r: 1, g: 1, b: 1, a: 1}
+    - _FleshColor: {r: 0.7333333, g: 0.737255, b: 0.654902, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

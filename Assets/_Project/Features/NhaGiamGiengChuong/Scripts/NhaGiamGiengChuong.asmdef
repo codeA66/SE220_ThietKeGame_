@@ -1,0 +1,15 @@
+{
+    "name": "NhaGiamGiengChuong",
+    "rootNamespace": "DeadCells.NhaGiamGiengChuong",
+    "references": [
+        "Core",
+        "Combat",
+        "Enemies",
+        "Player",
+        "CameraSystem",
+        "VFX",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "autoReferenced": true
+}
