@@ -61,3 +61,7 @@ Thumbs.db
 
 # Isolated local Fortress agent repositories; never stage their snapshots in the parent repo
 /.fortress-workspaces/
+
+# Unity scene recovery autosaves (never stage or delete user recovery backups)
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta
