@@ -65,3 +65,10 @@ Thumbs.db
 # Unity scene recovery autosaves (never stage or delete user recovery backups)
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
+
+# Local agent persona & scratch files (never commit to course repo)
+/AGENTS.habayakka.md
+/GEMINI.txt
+/*MASTER PROMPT*.md
+/tools/caveman-posttooluse.patch
+/tools/fortress/

@@ -1511,6 +1511,122 @@ namespace DeadCells.Core.Tests
             }
         }
 
+        [Test]
+        public void T09_EndRoll_RestoresInitialBodyExcludeLayersInsteadOfZeroing()
+        {
+            var root = new GameObject("T09_Root");
+            try
+            {
+                var harness = CreatePlayerHarness(root.transform, Vector2.zero);
+                LayerMask customInitialMask = 1 << GroundLayer;
+                harness.Body.excludeLayers = customInitialMask;
+
+                var ctx = new PlayerContext(
+                    harness.Body,
+                    harness.PlayerGo.GetComponent<BoxCollider2D>(),
+                    harness.PlayerGo.GetComponentInChildren<SpriteRenderer>(),
+                    (LayerMask)((1 << GroundLayer) | (1 << OneWayLayer)),
+                    (LayerMask)(1 << EnemyLayer),
+                    ClimbProbeMask,
+                    AssetDatabase.LoadAssetAtPath<PlayerMovementConfig>(MovementConfigPath),
+                    harness.Input,
+                    harness.PlayerGo.GetComponent<PlayerAnimatorBridge>());
+
+                ctx.BeginRoll();
+                Assert.AreEqual(((1 << GroundLayer) | (1 << EnemyLayer)), harness.Body.excludeLayers.value);
+                ctx.EndRoll();
+                Assert.AreEqual(customInitialMask.value, harness.Body.excludeLayers.value,
+                    "EndRoll must restore the Rigidbody2D's initial excludeLayers rather than hardcoding 0.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void T10_ScrollPickupPresentation_DestroyingGameObjectMidSequenceDestroysSnapshotTexture()
+        {
+            var go = new GameObject("T10_ScrollPresentation");
+            var tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            try
+            {
+                var pres = go.AddComponent<DeadCells.HUD.ScrollPickupPresentation>();
+                SetPrivateField(pres, "_snapshot", tex);
+                InvokePrivateMethod(pres, "OnDestroy");
+                Object.DestroyImmediate(go);
+                Assert.IsTrue(tex == null, "OnDestroy must destroy an active _snapshot Texture2D when the GameObject is torn down.");
+            }
+            finally
+            {
+                if (tex != null)
+                    Object.DestroyImmediate(tex);
+                if (go != null)
+                    Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void T11_ParallaxLayer2D_FrustumEdgePinningKeepsInteriorClearAcrossOrthoSizes()
+        {
+            var root = new GameObject("T11_Root");
+            var tex = new Texture2D(63, 121, TextureFormat.RGBA32, false);
+            var sp = Sprite.Create(tex, new Rect(0, 0, 63, 121), new Vector2(0.5f, 0.5f), 24f);
+            try
+            {
+                var camGo = new GameObject("Cam");
+                camGo.transform.SetParent(root.transform, false);
+                var cam = camGo.AddComponent<Camera>();
+                cam.orthographic = true;
+                cam.aspect = 16f / 9f;
+
+                var fgGo = new GameObject("Foreground_Silhouettes");
+                fgGo.transform.SetParent(root.transform, false);
+                var layer = fgGo.AddComponent<DeadCells.CameraSystem.ParallaxLayer2D>();
+                float[] restXs = { -38f, -12.85f, 12.85f, 38f };
+                for (int i = 0; i < restXs.Length; i++)
+                {
+                    var col = new GameObject($"FgColumn_{i}");
+                    col.transform.SetParent(fgGo.transform, false);
+                    col.transform.localPosition = new Vector3(restXs[i], 0f, 0f);
+                    var seg = new GameObject("Seg_0");
+                    seg.transform.SetParent(col.transform, false);
+                    seg.AddComponent<SpriteRenderer>().sprite = sp;
+                }
+
+                layer.Configure(cam.transform, new Vector2(0f, 1f), 0f, pixelSnap: true, pixelsPerUnit: 24f);
+                layer.ConfigureVerticalCameraLock(true, 1.5f);
+                layer.ConfigureFrustumEdgePinning(true, 0.46f, 26f);
+
+                foreach (var (cx, ortho) in new[] { (18f, 5.8f), (47f, 10.2f), (-49.5f, 11.2f), (119f, 6.8f) })
+                {
+                    cam.transform.position = new Vector3(cx, 3f, -10f);
+                    cam.orthographicSize = ortho;
+                    layer.UpdateParallax(cam.transform.position);
+
+                    float halfW = ortho * cam.aspect;
+                    float clearHalfW = halfW - 0.55f;
+                    foreach (Transform col in fgGo.transform)
+                    {
+                        Assert.AreEqual(Vector3.one, col.localScale, "FgColumn localScale must remain 1:1 (no vertical mixel stretch).");
+                        var b = col.GetComponentInChildren<SpriteRenderer>().bounds;
+                        bool intrudes = b.max.x > cx - clearHalfW && b.min.x < cx + clearHalfW;
+                        Assert.IsFalse(intrudes, $"{col.name} ({b.min.x:F2}..{b.max.x:F2}) intrudes [{cx - clearHalfW:F2}..{cx + clearHalfW:F2}] at ortho={ortho}.");
+                    }
+                }
+
+                layer.ResetFrustumPinnedColumnsToRest();
+                for (int i = 0; i < restXs.Length; i++)
+                    Assert.AreEqual(restXs[i], fgGo.transform.GetChild(i).localPosition.x, 1e-3f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(sp);
+                Object.DestroyImmediate(tex);
+                Object.DestroyImmediate(root);
+            }
+        }
+
         // ==================== Fixtures & helpers ====================
 
         /// <summary>A hittable dummy on the Enemy layer with a live Health (0s invulnerability).</summary>

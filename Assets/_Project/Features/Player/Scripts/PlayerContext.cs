@@ -43,6 +43,7 @@ namespace DeadCells.Player
         private readonly LayerMask _climbableMask;
         private readonly Vector2 _standingColliderSize;
         private readonly Vector2 _standingColliderOffset;
+        private readonly LayerMask _defaultExcludeLayers;
 
         private float _lastGroundedTime = float.NegativeInfinity;
         private float _lastJumpPressedTime = float.NegativeInfinity;
@@ -82,6 +83,7 @@ namespace DeadCells.Player
             _climbableMask = climbableMask;
             _standingColliderSize = collider.size;
             _standingColliderOffset = collider.offset;
+            _defaultExcludeLayers = body.excludeLayers;
             Config = config;
             Input = input;
             Animator = animator;
@@ -349,7 +351,7 @@ namespace DeadCells.Player
             if (!IsGrounded)
                 AirRollsRemaining--;
             IsInvulnerable = true;
-            _body.excludeLayers = _rollPassThroughMask;
+            _body.excludeLayers = _defaultExcludeLayers | _rollPassThroughMask;
             PerfectDodgeGhostPosition = Position;
             _perfectDodgeUntil = Time.time + Config.PerfectDodgeDuration;
             RollStarted?.Invoke(PerfectDodgeGhostPosition);
@@ -371,7 +373,7 @@ namespace DeadCells.Player
         public void EndRoll()
         {
             IsInvulnerable = false;
-            _body.excludeLayers = 0;
+            _body.excludeLayers = _defaultExcludeLayers;
             _rollReadyTime = Time.time + Config.RollCooldown;
         }
 

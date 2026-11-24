@@ -18,16 +18,6 @@ namespace DeadCells.Player
         [SerializeField] private HitStop _hitStop;
         [SerializeField] private CameraFollow2D _camera;
 
-        [Header("On Hit Dealt")]
-        [SerializeField] private float _hitStopDuration = 0.05f;
-        [SerializeField] private float _hitShakeAmplitude = 0.08f;
-        [SerializeField] private float _hitShakeDuration = 0.1f;
-
-        [Header("On Damage Taken")]
-        [SerializeField] private float _hurtShakeAmplitude = 0.2f;
-        [SerializeField] private float _hurtShakeDuration = 0.2f;
-        [SerializeField] private float _flashDuration = 0.1f;
-
         private const float LightHitStop = 0.045f;
         private const float CritHitStop = 0.075f;
         private const float KillHitStop = 0.095f;

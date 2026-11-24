@@ -2649,12 +2649,6 @@ MonoBehaviour:
   _sprite: {fileID: 1325374163017810342}
   _hitStop: {fileID: 0}
   _camera: {fileID: 0}
-  _hitStopDuration: 0.05
-  _hitShakeAmplitude: 0.08
-  _hitShakeDuration: 0.1
-  _hurtShakeAmplitude: 0.2
-  _hurtShakeDuration: 0.2
-  _flashDuration: 0.1
 --- !u!114 &3625282525215014192
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5125,7 +5119,7 @@ SpriteRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6172276847100543315}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 0
   m_ReceiveShadows: 0
   m_DynamicOccludee: 1

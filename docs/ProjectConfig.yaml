@@ -21,9 +21,10 @@ di_framework: "none"
 
 # Packages (name: version)
 packages:
-  com.unity.inputsystem: "1.19.0"
-  com.unity.2d.tilemap.extras: "8.0.3"
-  com.unity.2d.animation: "15.1.0"
+  com.unity.inputsystem: "1.20.1"
+  com.unity.2d.tilemap.extras: "9.0.1"
+  com.unity.2d.animation: "16.0.1"
+  com.unity.render-pipelines.universal: "17.6.0"
 
 # Third-Party
 third_party: []

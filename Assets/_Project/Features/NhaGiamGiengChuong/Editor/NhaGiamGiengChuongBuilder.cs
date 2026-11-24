@@ -224,6 +224,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             SaveRoomPrefab("W2_SewerCistern", root => BuildRoomW2_SewerCistern(root, spriteLit, spriteUnlit, palette));
             SaveRoomPrefab("W3_WestBastion", root => BuildRoomW3_WestBastion(root, spriteLit, spriteUnlit, palette));
             SaveRoomPrefab("U1_UpperPromenade", root => BuildRoomU1_UpperPromenade(root, spriteLit, spriteUnlit, palette));
+            EditorUtility.UnloadUnusedAssetsImmediate(true);
+            GC.Collect();
 
             // 2. Build ResultPanel UI Prefab
             BuildResultPanelPrefab();
@@ -235,6 +237,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             EnsureSceneInBuildSettings(ScenePath);
 
             AssetDatabase.SaveAssets();
+            EditorUtility.UnloadUnusedAssetsImmediate(true);
+            GC.Collect();
             AssetDatabase.Refresh();
             Debug.Log("[NhaGiamGiengChuongBuilder] BuildAll completed cleanly.");
         }
@@ -591,14 +595,25 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddCornerBeamsAndWebs(artRoot, rimTm, mat, pal, "A", 0f, 18f, 5.5f, 0f, isTallRoom: false, hasLeftBottomWall: true, hasRightBottomWall: false);
             AddCornerBeamsAndWebs(artRoot, rimTm, mat, pal, "B", 18f, 42f, 6f, 0f, isTallRoom: false, hasLeftBottomWall: false, hasRightBottomWall: false);
 
-            // Room A props: Homunculus spawn fountain/pipes (outside Bay #0 [8..12, 2..5]) + suspendedCage_00 anchored at ceiling 5.5f (bottom 3.5u >= 3.0u)
+            // Room A props: Homunculus spawn fountain/pipes (outside Bay #0 [8..12, 2..5]) + suspendedCage_00 anchored at ceiling 5.5f @ 14.8f (bottom 3.5u >= 3.0u, clear of pipes & Bay #0)
             AddGroundedPrisonSprite(artRoot, "Art_A_Fountain", pal.PrisonFountain, mat, 4.3f, 0f, 0.85f, -13, Color.white);
             AddPrisonSpriteProp(artRoot, "Art_A_HomonculusPipes", pal.HomonculusFlush, mat, new Vector2(4.3f, 2.6f), 0.85f, -14, Color.white);
-            AddScaledCeilingProp(artRoot, "Art_A_Cage", pal.SuspendedCage, mat, 4.8f, 5.5f, 1f, -7, Color.white);
+            AddScaledCeilingProp(artRoot, "Art_A_Cage", pal.SuspendedCage, mat, 14.8f, 5.5f, 1f, -7, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_A_Bed", pal.WallBed, mat, 1.8f, 0f, 0.90f, -11, Color.white);
             AddWindowWithGodray(artRoot, "Art_A_Window", mat, unlitMat, pal, new Vector2(6.2f, 3.6f));
             AddFloorJunkCluster(artRoot, "Art_A_Junk", pal, mat, 7.2f, 0f, 1);
             AddFloorJunkCluster(artRoot, "Art_A_JunkEast", pal, mat, 10.0f, 0f, 6);
+
+            var vatLightGo = CreateChild(artRoot, "Art_A_VatFillLight");
+            vatLightGo.transform.position = new Vector3(4.3f, 2.8f, 0f);
+            var vatLight = vatLightGo.AddComponent<Light2D>();
+            vatLight.lightType = Light2D.LightType.Point;
+            vatLight.color = new Color(0.72f, 0.90f, 0.96f, 1f);
+            vatLight.intensity = 0.52f;
+            vatLight.pointLightInnerRadius = 0.6f;
+            vatLight.pointLightOuterRadius = 3.4f;
+            vatLight.falloffIntensity = 0.65f;
+            ConfigureGameplayPointLight(vatLight, enableVolumetric: false, volumeIntensity: 0f, addFlicker: false, phaseSeed: 0f);
 
             // Room B grounded landmarks (preserving A08 names & grounded y=0)
             AddGroundedPrisonSprite(artRoot, "Art_B_Arch1", pal.ArcheSmall, mat, 24f, 0f, 1f, -14, new Color(0.88f, 0.90f, 0.92f, 1f));
@@ -1014,7 +1029,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_N_Alcove1", pal.PrisonBigAlcove, mat, 84f, 8f, 1.0f, -14, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_N_Alcove2", pal.PrisonBigAlcove, mat, 148.5f, 8f, 1.0f, -14, Color.white);
             AddScaledCeilingProp(artRoot, "Art_N_Cage1", pal.SuspendedCage, mat, 113f, 22.5f, 1.0f, -7, Color.white);
-            AddScaledCeilingProp(artRoot, "Art_N_Cage2", pal.SuspendedCage, mat, 131.5f, 22.5f, 1.0f, -7, Color.white);
+            AddScaledCeilingProp(artRoot, "Art_N_Cage2", pal.SuspendedCage, mat, 146.5f, 22.5f, 1.0f, -7, Color.white);
 
             // Phase 2 (P1-02 & P1-03): Room M & N Windows with GodRays, Buttress Piers & Storytelling Clusters
             AddWindowWithGodray(artRoot, "Art_M_Window1", mat, unlitMat, pal, new Vector2(80.5f, 4.2f));
@@ -1034,8 +1049,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddWindowWithGodray(artRoot, "Art_N_Window1", mat, unlitMat, pal, new Vector2(80.5f, 18.2f));
             AddWindowWithGodray(artRoot, "Art_N_Window2", mat, unlitMat, pal, new Vector2(99.5f, 18.2f));
             AddWindowWithGodray(artRoot, "Art_N_Window3", mat, unlitMat, pal, new Vector2(158.0f, 18.2f));
-            AddGroundedPrisonSprite(artRoot, "Art_N_Pillar1", pal.SpawnerPillar, mat, 98.5f, 8f, 0.90f, -13, Color.white);
-            AddGroundedPrisonSprite(artRoot, "Art_N_Pillar2", pal.SpawnerPillar, mat, 131.5f, 8f, 0.90f, -13, Color.white);
+            AddFullHeightStonePilaster(artRoot, "Art_N_Pillar1", pal, mat, 97.62f, 8f, 22.5f);
+            AddFullHeightStonePilaster(artRoot, "Art_N_Pillar2", pal, mat, 131.5f, 8f, 22.5f);
             AddPrisonSpriteProp(artRoot, "Art_N_BannerBig1", pal.BannerBig, pal.MatBannerSway, new Vector2(91.0f, 16.8f), 0.82f, -12, Color.white);
             AddShelfWithFioles(artRoot, "Art_N_Shelf1", pal, mat, 113.0f, 10.6f, -11);
             AddFloorJunkCluster(artRoot, "Art_N_Junk1", pal, mat, 78.5f, 8f, 2);
@@ -1192,7 +1207,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // Phase 2 (P1-02 & P1-03): Room O & P Windows with GodRays, Piers, Arches, Cages & Storytelling Clusters
             AddWindowWithGodray(artRoot, "Art_O_Window1", mat, unlitMat, pal, new Vector2(86.0f, -6.5f));
             AddWindowWithGodray(artRoot, "Art_O_Window2", mat, unlitMat, pal, new Vector2(150.5f, -6.5f));
-            AddGroundedPrisonSprite(artRoot, "Art_O_Pillar1", pal.SpawnerPillar, mat, 98.0f, -16f, 0.85f, -13, Color.white);
+            AddFullHeightStonePilaster(artRoot, "Art_O_Pillar1", pal, mat, 95.8f, -16f, -1f);
             AddScaledCeilingProp(artRoot, "Art_O_Cage1", pal.SuspendedCage, mat, 84.0f, -1f, 1.0f, -7, Color.white);
             AddScaledCeilingProp(artRoot, "Art_O_Cage2", pal.SuspendedCage, mat, 126.0f, -1f, 1.0f, -7, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_O_Bed1", pal.WallBed, mat, 84.5f, -16f, 0.90f, -11, Color.white);
@@ -1335,6 +1350,16 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_Q_JudasSeat", pal.JudasSeat, mat, -38.0f, 16f, 0.85f, -11, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_Q_Billot", pal.Billot, mat, -61.0f, 16f, 0.85f, -11, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_Q_SkeletonPier", pal.SpawnerPillar, mat, -52.2f, 16f, 0.92f, -12, Color.white);
+            var qPierGo = artRoot.transform.Find("Art_Q_SkeletonPier").gameObject;
+            var qPierCap = CreateChild(qPierGo, "Art_Q_SkeletonPier_Cap");
+            qPierCap.transform.localScale = Vector3.one;
+            qPierCap.transform.position = new Vector3(-52.2f, 23f - pal.SpawnerPillar.bounds.max.y * 0.92f, 0f);
+            var qPierCapSr = qPierCap.AddComponent<SpriteRenderer>();
+            qPierCapSr.sprite = pal.SpawnerPillar;
+            qPierCapSr.sharedMaterial = mat;
+            qPierCapSr.sortingLayerID = SortingLayerSetup.GetSortingLayerId("Background");
+            qPierCapSr.sortingOrder = -12;
+            qPierCapSr.color = Color.white;
             AddGroundedPrisonSprite(artRoot, "Art_Q_SkeletonSpawn", pal.PrisonBigAlcove, mat, -49.0f, 16f, 1.0f, -13, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_Q_SnakeLandmark", pal.ArcheSmall, mat, -91.5f, 16f, 1.0f, -14, Color.white);
 
@@ -1357,7 +1382,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddWindowWithGodray(artRoot, "Art_R_Window1", mat, unlitMat, pal, new Vector2(-73.5f, 33.5f));
             AddWindowWithGodray(artRoot, "Art_R_Window2", mat, unlitMat, pal, new Vector2(-33.5f, 33.5f));
             AddPrisonSpriteProp(artRoot, "Art_R_BannerBig1", pal.BannerBig, pal.MatBannerSway, new Vector2(-80.0f, 34.0f), 0.82f, -12, Color.white);
-            AddGroundedPrisonSprite(artRoot, "Art_R_Pillar1", pal.SpawnerPillar, mat, -38.5f, 24f, 0.90f, -13, Color.white);
+            AddFullHeightStonePilaster(artRoot, "Art_R_Pillar1", pal, mat, -38.5f, 24f, 38.5f);
             AddShelfWithFioles(artRoot, "Art_R_Shelf1", pal, mat, -49.0f, 25.8f, -11);
             AddFloorJunkCluster(artRoot, "Art_R_JunkWest2", pal, mat, -98.0f, 24f, 2);
             AddFloorJunkCluster(artRoot, "Art_R_JunkWest3", pal, mat, -90.0f, 24f, 6);
@@ -1370,7 +1395,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             // Phase 3 (P2-04): Full-height stone pilaster, ornate iron cage, anchored chained silhouettes & floor-lip foliage
             var foliageTint = new Color(0.84f, 0.94f, 0.86f, 0.95f);
-            AddAnchoredChainedPrisoner(artRoot, "Art_Q_Chained1", pal.ChainedPrisoners[1], mat, pal, new Vector2(-53.8f, 19.6f), 23f);
+            AddAnchoredChainedPrisoner(artRoot, "Art_Q_Chained1", pal.ChainedPrisoners[1], mat, pal, new Vector2(-58.5f, 19.6f), 23f);
             AddGroundedPrisonSprite(artRoot, "Art_Q_Foliage1", pal.GroundFoliage[1], mat, -57.8f, 16f, 0.85f, -2, foliageTint);
             AddFullHeightStonePilaster(artRoot, "Art_R_Truss1", pal, mat, -84.0f, 24f, 38.5f);
             AddScaledCeilingProp(artRoot, "Art_R_OrnateCage1", pal.OrnateCages[2], mat, -68.2f, 38.5f, 0.90f, -7, Color.white);
@@ -1476,14 +1501,16 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             // Room S Hero Landmarks (Lore Room)
             AddGroundedPrisonSprite(artRoot, "Art_S_AlchemyBibli1", pal.AlchemyBibli, mat, 46.0f, 24f, 0.80f, -14, Color.white);
+            AddAlchemyBibliCeilingChain(artRoot, "Art_S_AlchemyBibli1", pal, mat, 46.0f, 24f, 0.80f, 39f);
             AddGroundedPrisonSprite(artRoot, "Art_S_AlchemyBibli2", pal.AlchemyBibli, mat, 62.5f, 24f, 0.80f, -14, Color.white);
+            AddAlchemyBibliCeilingChain(artRoot, "Art_S_AlchemyBibli2", pal, mat, 62.5f, 24f, 0.80f, 39f);
             AddGroundedPrisonSprite(artRoot, "Art_S_AspectsDesk", pal.AspectsNpcStuffs, mat, 73.0f, 24f, 0.82f, -11, Color.white);
             AddPrisonSpriteProp(artRoot, "Art_S_TableauNoir", pal.TableauNoir, mat, new Vector2(73.0f, 29.8f), 0.82f, -13, Color.white);
 
             // Room T Hero Landmarks (High Bastion)
             AddGroundedPrisonSprite(artRoot, "Art_T_BigAlcove", pal.PrisonBigAlcove, mat, 44.5f, 40f, 1.0f, -14, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_T_Pillar1", pal.AlcovePillar, mat, 88.0f, 40f, 0.90f, -13, Color.white);
-            AddGroundedPrisonSprite(artRoot, "Art_T_Pillar2", pal.SpawnerPillar, mat, 109.0f, 40f, 0.85f, -13, Color.white);
+            AddFullHeightStonePilaster(artRoot, "Art_T_Pillar2", pal, mat, 109.75f, 40f, 62.5f);
             AddGroundedPrisonSprite(artRoot, "Art_T_CourtyardArch", pal.ExitDoorPrisonCourtyard, mat, 126.0f, 40f, 0.80f, -13, Color.white);
 
             // P0-04 Part B: the courtyard arch is now a live Promenade biome exit — warm golden emissive glow + beacon in front of it
@@ -1554,7 +1581,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddScaledCeilingProp(artRoot, "Art_T_OrnateCage1", pal.OrnateCages[2], mat, 70.2f, 62.5f, 0.90f, -7, Color.white);
             AddScaledCeilingProp(artRoot, "Art_T_OrnateCage2", pal.OrnateCages[0], mat, 127.0f, 62.5f, 0.90f, -7, Color.white);
             AddAnchoredChainedPrisoner(artRoot, "Art_T_Chained1", pal.ChainedPrisoners[0], mat, pal, new Vector2(63.5f, 55.5f), 62.5f);
-            AddAnchoredChainedPrisoner(artRoot, "Art_T_Chained2", pal.ChainedPrisoners[2], mat, pal, new Vector2(109.5f, 55.5f), 62.5f);
+            AddAnchoredChainedPrisoner(artRoot, "Art_T_Chained2", pal.ChainedPrisoners[2], mat, pal, new Vector2(114.0f, 55.5f), 62.5f);
 
             // Lighting: Room S (3 floor + 3 ceiling @ r=10.0f) & Room T (5 floor + 5 mid-wall @ floorY=49f + 5 ceiling @ r=10.5f)
             var warmAmber = new Color(1f, 0.80f, 0.48f, 1f);
@@ -2962,7 +2989,11 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             {
                 EditorSceneManager.SetActiveScene(targetScene);
                 if (mainLevelScene.IsValid() && mainLevelScene.isLoaded)
+                {
                     EditorSceneManager.CloseScene(mainLevelScene, true);
+                    EditorUtility.UnloadUnusedAssetsImmediate(true);
+                    GC.Collect();
+                }
                 if (disabledTargetGlobalLight != null)
                     disabledTargetGlobalLight.enabled = true;
             }
@@ -3451,6 +3482,44 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                     {
                         slimeProp.objectReferenceValue = headSlimeVfx;
                         soHead.ApplyModifiedPropertiesWithoutUndo();
+                        changed = true;
+                    }
+
+                    var headSr = spawnHead.GetComponent<SpriteRenderer>();
+                    if (headSr != null && headSr.enabled)
+                    {
+                        headSr.enabled = false;
+                        changed = true;
+                    }
+
+                    var headTrail = spawnHead.GetComponentInChildren<TrailRenderer>(true);
+                    if (headTrail != null && headTrail.emitting)
+                    {
+                        headTrail.emitting = false;
+                        changed = true;
+                    }
+                }
+
+                var rimLight = prefabRoot.transform.Find("PlayerRimLight")?.GetComponent<Light2D>();
+                if (rimLight != null)
+                {
+                    var soRim = new SerializedObject(rimLight);
+                    var qProp = soRim.FindProperty("m_NormalMapQuality");
+                    var useNmProp = soRim.FindProperty("m_UseNormalMap");
+                    bool rimChanged = false;
+                    if (qProp != null && qProp.intValue != 0)
+                    {
+                        qProp.intValue = 0;
+                        rimChanged = true;
+                    }
+                    if (useNmProp != null && useNmProp.boolValue)
+                    {
+                        useNmProp.boolValue = false;
+                        rimChanged = true;
+                    }
+                    if (rimChanged)
+                    {
+                        soRim.ApplyModifiedPropertiesWithoutUndo();
                         changed = true;
                     }
                 }
@@ -4378,7 +4447,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                     continue;
 
                 string n = sr.gameObject.name;
-                if (n == "LanternFixture_R5" || n.Contains("Cage"))
+                if (n == "LanternFixture_R5" || n.Contains("Cage") || n == "Art_A_HomonculusPipes")
                 {
                     ceilingObstacles.Add(sr.bounds);
                     continue;
@@ -4877,6 +4946,48 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             }
         }
 
+        private static void AddAlchemyBibliCeilingChain(
+            GameObject parent,
+            string bibliName,
+            PrisonPalette pal,
+            Material mat,
+            float bibliX,
+            float floorY,
+            float chainScale,
+            float ceilingY)
+        {
+            var chainSp = pal.CageChain;
+            var chainTint = new Color(0.78f, 0.56f, 0.38f, 0.95f);
+            int bgLayerId = SortingLayerSetup.GetSortingLayerId("Background");
+            float chainX = bibliX - 0.0333f;
+            float startY = 32.95f - chainSp.bounds.min.y * chainScale;
+            float topCenterY = ceilingY - chainSp.bounds.max.y * chainScale;
+
+            int idx = 0;
+            for (float y = startY; y < topCenterY - 0.25f; y += 0.72f)
+            {
+                var segGo = CreateChild(parent, $"{bibliName}_Chain_{idx++}");
+                segGo.transform.position = new Vector3(chainX, y, 0f);
+                segGo.transform.localScale = new Vector3(chainScale, chainScale, 1f);
+                var sr = segGo.AddComponent<SpriteRenderer>();
+                sr.sprite = chainSp;
+                sr.sharedMaterial = mat;
+                sr.sortingLayerID = bgLayerId;
+                sr.sortingOrder = -15;
+                sr.color = chainTint;
+            }
+
+            var topSegGo = CreateChild(parent, $"{bibliName}_Chain_{idx}");
+            topSegGo.transform.position = new Vector3(chainX, topCenterY, 0f);
+            topSegGo.transform.localScale = new Vector3(chainScale, chainScale, 1f);
+            var topSr = topSegGo.AddComponent<SpriteRenderer>();
+            topSr.sprite = chainSp;
+            topSr.sharedMaterial = mat;
+            topSr.sortingLayerID = bgLayerId;
+            topSr.sortingOrder = -15;
+            topSr.color = chainTint;
+        }
+
         private static void AddInterTierSlabStrata(GameObject parent, PrisonPalette pal, Material mat, string tag, float xMin, float xMax, float centerY)
         {
             const float scale = 0.95f;
@@ -5121,12 +5232,12 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             var fgGo = CreateChild(parallaxRoot, "Foreground_Silhouettes");
             var fgParallax = fgGo.AddComponent<ParallaxLayer2D>();
-            fgParallax.Configure(camTransform, new Vector2(1.18f, 1.0f), 32f, pixelSnap: true, pixelsPerUnit: 24f);
+            fgParallax.Configure(camTransform, new Vector2(0f, 1.0f), 0f, pixelSnap: true, pixelsPerUnit: 24f);
             fgParallax.ConfigureVerticalCameraLock(true, 1.5f);
             var unlitMat = LoadMaterialAtPath(SpriteUnlitMatPath);
             var fgTint = new Color(4f / 255f, 8f / 255f, 14f / 255f, 0.15f);
-            float[] fgColXs = { -48f, -16f, 16f, 48f };
-            float[] fgSegLocalYs = { -5.2f, -0.4f, 4.4f, 9.2f };
+            float[] fgColXs = { -38.0f, -12.85f, 12.85f, 38.0f };
+            float[] fgSegLocalYs = { -10.0f, -5.2f, -0.4f, 4.4f, 9.2f, 14.0f };
             for (int i = 0; i < fgColXs.Length; i++)
             {
                 var colGo = CreateChild(fgGo, $"FgColumn_{i}");
@@ -5137,6 +5248,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                     segGo.transform.localPosition = new Vector3(0f, fgSegLocalYs[s], 0f);
                 }
             }
+            fgParallax.ConfigureFrustumEdgePinning(true, 0.46f, 26f);
 
             // 2. 8 Damp-Corner GlowingMushroom_0..7 + Cap-Aligned Additive MushroomHalo_0..7 + Isolated MushroomLight_0..7 (Spec §5.5 #3)
             var dressingRoot = new GameObject("Prison_Dressing_R5");
@@ -5232,7 +5344,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 else if (light.lightType == Light2D.LightType.Point)
                 {
                     SetLightSortingLayers(light, gameplayLayerIds);
-                    SetLightNormalMapQuality(light, Light2D.NormalMapQuality.Fast, 3.2f);
+                    if (light.gameObject.name != "PlayerRimLight" && light.GetComponentInParent<PlayerController>() == null)
+                        SetLightNormalMapQuality(light, Light2D.NormalMapQuality.Fast, 3.2f);
                     if (light.volumetricEnabled)
                     {
                         if (light.volumeIntensity > 0.10f)
@@ -5487,7 +5600,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
             var updateMeshMethod = typeof(Light2D).GetMethod("UpdateMesh", NonPublicInstance);
             var updateBoundsMethod = typeof(Light2D).GetMethod("UpdateBoundingSphere", NonPublicInstance);
-            foreach (var light in UnityEngine.Object.FindObjectsByType<Light2D>())
+            foreach (var light in UnityEngine.Object.FindObjectsByType<Light2D>(FindObjectsInactive.Include))
             {
                 if (light != null && light.isActiveAndEnabled && light.lightType != Light2D.LightType.Global)
                 {
@@ -5512,11 +5625,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var rt = ultraLowRam
                 ? new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB)
                 : new RenderTexture(width, height, 24, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+            rt.hideFlags = HideFlags.DontUnloadUnusedAsset;
             rt.antiAliasing = 1;
             rt.Create();
             var readTex = ultraLowRam
                 ? new Texture2D(width, height, TextureFormat.RGBA32, false)
                 : new Texture2D(width, height, TextureFormat.RGBAFloat, false, linear: true);
+            readTex.hideFlags = HideFlags.DontUnloadUnusedAsset;
 
             var gateFailures = new List<string>();
             if (shaderErrors != 0)
@@ -5604,14 +5719,16 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                         maxClipPct = clipPct;
 
                     File.WriteAllBytes(Path.Combine(outDir, shot.file), pngBytes);
+                    pngBytes = null;
                     Debug.Log($"[{logTag}] Captured {shot.file} ({width}x{height}) at cam={shot.pos} ortho={shot.orthoSize} meanLum={meanLum:F2} clip>=240={clipPct:F3}%");
 
                     if (clipPct > MaxClipPct)
                         gateFailures.Add($"{shot.file} clip>=240={clipPct:F3}% > {MaxClipPct:F3}%");
 
-                    if (ultraLowRam && ((shotIndex + 1) % 5 == 0))
+                    if (ultraLowRam)
                     {
-                        Resources.UnloadUnusedAssets();
+                        if ((shotIndex + 1) % 3 == 0)
+                            EditorUtility.UnloadUnusedAssetsImmediate(true);
                         GC.Collect();
                     }
                 }
@@ -5623,10 +5740,18 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 cam.transform.position = origPos;
                 cam.orthographicSize = origOrtho;
                 for (int i = 0; i < parallaxLayers.Length; i++)
-                    if (parallaxLayers[i] != null) parallaxLayers[i].transform.position = origParallaxPositions[i];
+                {
+                    if (parallaxLayers[i] != null)
+                    {
+                        parallaxLayers[i].transform.position = origParallaxPositions[i];
+                        parallaxLayers[i].ResetFrustumPinnedColumnsToRest();
+                    }
+                }
                 UnityEngine.Object.DestroyImmediate(readTex);
                 rt.Release();
                 UnityEngine.Object.DestroyImmediate(rt);
+                EditorUtility.UnloadUnusedAssetsImmediate(true);
+                GC.Collect();
             }
 
             Debug.Log($"[{logTag}] Summary captured={shots.Length}/{shots.Length} shaderErrors={shaderErrors} preFlight={preFlightPassCount}/5 defaultMaterialRenderers={defaultMatCount} maxClip={maxClipPct:F3}%");

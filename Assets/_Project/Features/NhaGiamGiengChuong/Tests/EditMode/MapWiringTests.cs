@@ -2676,6 +2676,135 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 "[A21/MistMaterialAlpha] Mat_GroundMist_Prison _MistColor.a must be >= 0.55f.");
         }
 
+        [Test]
+        public void A22_Round9PostReview_SpawnCleanlinessFrustumSilhouettesAndFullGravity()
+        {
+            EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
+
+            // 1. PlayerSpawnHead hidden in EditMode + PlayerRimLight preserves m_NormalMapQuality == 0 after BuildAll()
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            Assert.IsNotNull(player, "[A22/Player]");
+            var spawnHead = player.GetComponentInChildren<PlayerSpawnHead>(true);
+            Assert.IsNotNull(spawnHead, "[A22/PlayerSpawnHead]");
+            var spawnHeadSr = spawnHead.GetComponent<SpriteRenderer>();
+            Assert.IsNotNull(spawnHeadSr, "[A22/PlayerSpawnHeadSr]");
+            Assert.IsFalse(spawnHeadSr.enabled, "[A22/SpawnHeadHiddenAtRest] PlayerSpawnHead SpriteRenderer must be disabled in EditMode.");
+            var spawnTrail = spawnHead.GetComponentInChildren<TrailRenderer>(true);
+            if (spawnTrail != null)
+                Assert.IsFalse(spawnTrail.emitting, "[A22/SpawnTrailOffAtRest]");
+
+            var rimLight = player.transform.Find("PlayerRimLight")?.GetComponent<Light2D>();
+            Assert.IsNotNull(rimLight, "[A22/PlayerRimLight]");
+            Assert.AreEqual(0, new SerializedObject(rimLight).FindProperty("m_NormalMapQuality").intValue,
+                "[A22/PlayerRimLightNoNormalMap] BuildAll() must preserve m_NormalMapQuality=0 on PlayerRimLight.");
+
+            // 2. Foreground_Silhouettes frustum-edge pinning keeps interior clear across all 15 Round 9 camera shots at 1:1 scale
+            var cam = Camera.main ?? Object.FindAnyObjectByType<Camera>();
+            var fgLayer = GameObject.Find("Prison_Parallax_R5/Foreground_Silhouettes")?.GetComponent<ParallaxLayer2D>();
+            Assert.IsNotNull(fgLayer, "[A22/FgParallax]");
+            Assert.IsTrue(new SerializedObject(fgLayer).FindProperty("_pinColumnsToCameraFrustumEdges").boolValue, "[A22/FgFrustumPinEnabled]");
+
+            (Vector3 pos, float ortho)[] shots =
+            {
+                (new Vector3(18f, 3.0f, -10f), 5.8f), (new Vector3(47.0f, 9.8f, -10f), 10.2f),
+                (new Vector3(66f, 5.5f, -10f), 6.2f), (new Vector3(-8f, 19.5f, -10f), 6.0f),
+                (new Vector3(8f, 29.5f, -10f), 6.5f), (new Vector3(122f, 11.5f, -10f), 7.0f),
+                (new Vector3(198f, -10.5f, -10f), 6.8f), (new Vector3(-66f, 27.5f, -10f), 7.0f),
+                (new Vector3(72f, 38.0f, -10f), 7.0f), (new Vector3(14.0f, 12.5f, -10f), 5.8f),
+                (new Vector3(9.0f, 2.8f, -10f), 5.2f), (new Vector3(148.5f, 13.5f, -10f), 7.8f),
+                (new Vector3(119.0f, 45.0f, -10f), 6.8f), (new Vector3(-49.5f, 26.8f, -10f), 11.2f),
+                (new Vector3(58.5f, 31.0f, -10f), 8.8f),
+            };
+            float origOrtho = cam.orthographicSize;
+            Vector3 origCamPos = cam.transform.position;
+            Vector3 origFgPos = fgLayer.transform.position;
+            try
+            {
+                cam.aspect = 16f / 9f;
+                foreach (var (pos, ortho) in shots)
+                {
+                    cam.transform.position = pos;
+                    cam.orthographicSize = ortho;
+                    fgLayer.UpdateParallax(pos);
+                    float halfW = ortho * cam.aspect;
+                    float clearZoneHalfW = halfW - 0.55f;
+                    foreach (Transform col in fgLayer.transform)
+                    {
+                        if (!col.name.StartsWith("FgColumn_", StringComparison.Ordinal))
+                            continue;
+                        Assert.AreEqual(Vector3.one, col.localScale, $"[A22/FgNoMixelStretch/{col.name}]");
+                        Bounds cb = GetVisualSpriteBounds(col.gameObject);
+                        bool intrudes = cb.max.x > pos.x - clearZoneHalfW && cb.min.x < pos.x + clearZoneHalfW;
+                        Assert.IsFalse(intrudes,
+                            $"[A22/FgIntrudesInterior] '{col.name}' ({cb.min.x:F2}..{cb.max.x:F2}) intrudes [{pos.x - clearZoneHalfW:F2}..{pos.x + clearZoneHalfW:F2}] at cam={pos}, ortho={ortho}.");
+                        if (Mathf.Abs(cb.center.x - pos.x) < halfW + 5f)
+                        {
+                            Assert.LessOrEqual(cb.min.y, pos.y - ortho, $"[A22/FgCoversBottom/{col.name}] ortho={ortho}");
+                            Assert.GreaterOrEqual(cb.max.y, pos.y + ortho, $"[A22/FgCoversTop/{col.name}] ortho={ortho}");
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                cam.ResetAspect();
+                cam.orthographicSize = origOrtho;
+                cam.transform.position = origCamPos;
+                fgLayer.transform.position = origFgPos;
+                fgLayer.ResetFrustumPinnedColumnsToRest();
+            }
+
+            // 3. Room A Spawn Vat + Pipes disjoint from Art_A_Cage & ceiling accents + lit by Art_A_VatFillLight
+            var pipesGo = GameObject.Find("Art_A_HomonculusPipes");
+            var fountainGo = GameObject.Find("Art_A_Fountain");
+            var cageAGo = GameObject.Find("Art_A_Cage");
+            var vatLight = GameObject.Find("Art_A_VatFillLight")?.GetComponent<Light2D>();
+            Assert.IsNotNull(pipesGo, "[A22/Art_A_HomonculusPipes]");
+            Assert.IsNotNull(cageAGo, "[A22/Art_A_Cage]");
+            Assert.IsNotNull(vatLight, "[A22/Art_A_VatFillLight]");
+            Assert.IsTrue(vatLight.enabled && vatLight.intensity >= 0.40f, "[A22/VatFillLightActive]");
+            Bounds pipesBounds = GetVisualSpriteBounds(pipesGo);
+            Bounds cageBounds = GetVisualSpriteBounds(cageAGo);
+            Assert.IsFalse(OverlapsAabb(pipesBounds, cageBounds, -0.02f, -0.02f), "[A22/SpawnVatCageClear]");
+            Assert.IsFalse(OverlapsAabb(GetVisualSpriteBounds(fountainGo), cageBounds, -0.02f, -0.02f), "[A22/SpawnFountainCageClear]");
+
+            var allRenderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include);
+            foreach (var sr in allRenderers.Where(r => r != null && (r.name.StartsWith("Art_A_CeilStamp", StringComparison.Ordinal) || r.name.StartsWith("Art_A_RoofMoss", StringComparison.Ordinal))))
+                Assert.IsFalse(OverlapsAabb(sr.bounds, pipesBounds, -0.02f, -0.02f), $"[A22/SpawnPipesCeilAccentClear/{sr.name}]");
+
+            // 4. Every SpawnerPillar column under Rooms/Room_*/Art spans floorY..ceilingY (zero mid-wall truncated pillars)
+            (string propName, float floorY, float ceilingY)[] fullHeightSpawnerPillars =
+            {
+                ("Art_N_Pillar1", 8f, 22.5f),
+                ("Art_N_Pillar2", 8f, 22.5f),
+                ("Art_O_Pillar1", -16f, -1f),
+                ("Art_Q_SkeletonPier", 16f, 23f),
+                ("Art_R_Pillar1", 24f, 38.5f),
+                ("Art_T_Pillar2", 40f, 62.5f),
+            };
+            foreach (var (propName, floorY, ceilingY) in fullHeightSpawnerPillars)
+            {
+                var go = GameObject.Find(propName);
+                Assert.IsNotNull(go, $"[A22/PillarMissing/{propName}]");
+                Bounds pb = GetVisualSpriteBounds(go);
+                Assert.AreEqual(floorY, pb.min.y, 0.15f, $"[A22/PillarFloor/{propName}]");
+                Assert.AreEqual(ceilingY, pb.max.y, 0.15f, $"[A22/PillarCeiling/{propName}] Truncated mid-wall pillar detected.");
+            }
+
+            // 5. Room S Art_S_AlchemyBibli1 & Art_S_AlchemyBibli2 ceiling chains reach y=39.0 clear of Bay #14 [47..55, 34..38]
+            Bounds bay14 = new Bounds(new Vector3(51f, 36f, 0f), new Vector3(8f, 4f, 2f));
+            foreach (string bibliName in new[] { "Art_S_AlchemyBibli1", "Art_S_AlchemyBibli2" })
+            {
+                string chainPrefix = bibliName + "_Chain_";
+                var chainSegs = allRenderers.Where(sr => sr != null && sr.gameObject.name.StartsWith(chainPrefix, StringComparison.Ordinal)).ToArray();
+                Assert.IsNotEmpty(chainSegs, $"[A22/BibliChainMissing/{bibliName}]");
+                Assert.LessOrEqual(chainSegs.Min(s => s.bounds.min.y), 33.15f, $"[A22/BibliChainBottom/{bibliName}]");
+                Assert.That(chainSegs.Max(s => s.bounds.max.y), Is.InRange(38.85f, 39.15f), $"[A22/BibliChainCeiling/{bibliName}]");
+                foreach (var seg in chainSegs)
+                    Assert.IsFalse(OverlapsAabb(seg.bounds, bay14, -0.02f, -0.02f), $"[A22/BibliChainBay14Clash/{seg.name}]");
+            }
+        }
+
         private readonly struct RoomVerticalSpan
         {
             public readonly string Tag;

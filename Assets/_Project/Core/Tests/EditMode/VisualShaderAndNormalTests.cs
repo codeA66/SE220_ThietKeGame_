@@ -690,8 +690,6 @@ namespace DeadCells.Core.Tests
         [Test]
         public void PrisonChromakeyProps_HaveZeroRawMagentaPixels()
         {
-            PrisonPropSpriteGenerator.EnsureAll();
-
             string[] chromakeyAuditPaths =
             {
                 "Assets/_Project/Art/Environment/Prison/Sprites/exitDoorSewerShort_00.png",
