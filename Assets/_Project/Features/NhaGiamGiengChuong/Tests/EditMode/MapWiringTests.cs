@@ -274,7 +274,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
         {
             EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
 
-            // 1. Swapped chest/barrel fix: I3_HealingChest uses golden chest StorageAndVessel_003; Art_G_Barrel uses StorageAndVessel_014
+            // 1. Swapped chest/barrel fix & cohesive Prison Room C/G palette: I3_HealingChest uses golden chest StorageAndVessel_003; Art_G_Barrel uses floorjunk_0_00
             var chest = Object.FindAnyObjectByType<HealingChest>();
             Assert.IsNotNull(chest);
             var chestSr = chest.transform.Find("Visual")?.GetComponent<SpriteRenderer>();
@@ -287,8 +287,25 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             var barrelGo = GameObject.Find("Art_G_Barrel");
             Assert.IsNotNull(barrelGo, "[A08/Barrel] Missing Art_G_Barrel.");
             var barrelSr = barrelGo.GetComponent<SpriteRenderer>();
-            Assert.AreEqual("StorageAndVessel_014", barrelSr.sprite.name,
-                "[A08/BarrelSprite] Art_G_Barrel must display barrel StorageAndVessel_014, not chest StorageAndVessel_003.");
+            Assert.AreEqual("floorjunk_0_00", barrelSr.sprite.name,
+                "[A08/BarrelSprite] Art_G_Barrel must display cohesive 24-PPU Prison floorjunk_0_00, not GothicDungeon StorageAndVessel_014.");
+
+            string[] bannedRoomCGSprites =
+            {
+                "StorageAndVessel_014", "StorageAndVessel_010", "MachineryAndBell_001", "MachineryAndBell_012",
+            };
+            foreach (string roomPrefabName in new[] { "CD", "G" })
+            {
+                var roomGo = GameObject.Find($"Rooms/Room_{roomPrefabName}");
+                Assert.IsNotNull(roomGo, $"[A08/RoomMissing/{roomPrefabName}]");
+                foreach (var sr in roomGo.GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    if (sr == null || sr.sprite == null)
+                        continue;
+                    CollectionAssert.DoesNotContain(bannedRoomCGSprites, sr.sprite.name,
+                        $"[A08/RoomCGCohesion] '{sr.gameObject.name}' in Room {roomPrefabName} must not use legacy GothicDungeon sprite '{sr.sprite.name}'.");
+                }
+            }
 
             // 2. Every room prefab must contain visual-only Tilemaps (0 TilemapCollider2D): 9 rooms * 4 >= 36
             var tilemaps = Object.FindObjectsByType<UnityEngine.Tilemaps.Tilemap>();
@@ -742,7 +759,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.GreaterOrEqual(archSills.Length, 45, $"[A11/ArchSills] Expected >= 45 ArchSill_* renderers, found {archSills.Length}.");
             foreach (var sill in archSills)
             {
-                Assert.AreEqual("prisonArchSill_00", sill.sprite.name);
+                Assert.IsTrue(
+                    sill.sprite.name == "prisonArchSill_00" || sill.sprite.name == "prisonArchSill_01" || sill.sprite.name == "prisonArchSill_02",
+                    $"[A11/ArchSillVariant/{sill.name}] Expected prisonArchSill_00..02, got '{sill.sprite.name}'.");
                 Assert.AreEqual(24f, sill.sprite.pixelsPerUnit, 1e-4f);
                 Assert.AreEqual(Vector3.one, sill.transform.localScale);
                 Assert.AreEqual("Background", sill.sortingLayerName);
@@ -753,7 +772,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.GreaterOrEqual(archJambs.Length, 70, $"[A11/ArchJambs] Expected >= 70 ArchJamb_* renderers, found {archJambs.Length}.");
             foreach (var jamb in archJambs)
             {
-                Assert.AreEqual("prisonArchJamb_00", jamb.sprite.name);
+                Assert.IsTrue(
+                    jamb.sprite.name == "prisonArchJamb_00" || jamb.sprite.name == "prisonArchJamb_01" || jamb.sprite.name == "prisonArchJamb_02",
+                    $"[A11/ArchJambVariant/{jamb.name}] Expected prisonArchJamb_00..02, got '{jamb.sprite.name}'.");
                 Assert.AreEqual(24f, jamb.sprite.pixelsPerUnit, 1e-4f);
                 Assert.AreEqual(Vector3.one, jamb.transform.localScale);
                 Assert.AreEqual("Background", jamb.sortingLayerName);
@@ -849,9 +870,20 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             var mistRoot = GameObject.Find("GroundMist_R5");
             Assert.IsNotNull(mistRoot, "[A11/GroundMistRoot]");
             var mistRenderers = mistRoot.GetComponentsInChildren<SpriteRenderer>(true);
-            Assert.AreEqual(6, mistRenderers.Length, "[A11/GroundMistCount] Expected 6 GroundMist_R5 strips.");
+            Assert.AreEqual(9, mistRenderers.Length, "[A11/GroundMistCount] Expected 9 GroundMist_R5 strips.");
+            string[] expectedMistNames =
+            {
+                "Mist_RoomAB", "Mist_RoomC", "Mist_RoomG", "Mist_RoomK", "Mist_RoomE",
+                "Mist_RoomO", "Mist_RoomP", "Mist_RoomQ", "Mist_RoomT",
+            };
+            CollectionAssert.AreEquivalent(expectedMistNames, mistRenderers.Select(mr => mr.gameObject.name).ToArray(),
+                "[A11/GroundMistNames] GroundMist_R5 strip names mismatch.");
             foreach (var mr in mistRenderers)
+            {
                 Assert.AreEqual("DeadCells/GroundMist2D", mr.sharedMaterial.shader.name);
+                Assert.GreaterOrEqual(mr.color.a, 0.80f - 1e-4f,
+                    $"[A11/GroundMistAlpha/{mr.name}] Ground mist strip vertex alpha ({mr.color.a:F2}) must be >= 0.80f.");
+            }
 
             var castersRoot = GameObject.Find("ShadowCasters_R5");
             Assert.IsNotNull(castersRoot, "[A11/ShadowCastersRoot]");
@@ -1382,10 +1414,31 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
 
             for (int bayIndex = 0; bayIndex <= 15; bayIndex++)
             {
-                Assert.IsNotNull(GameObject.Find($"ArchBeam_TL_{bayIndex}"),
-                    $"P1-01: Missing carved arch bay frame 'ArchBeam_TL_{bayIndex}'.");
-                Assert.IsNotNull(GameObject.Find($"ArchBeam_TR_{bayIndex}"),
-                    $"P1-01: Missing carved arch bay frame 'ArchBeam_TR_{bayIndex}'.");
+                var tl = GameObject.Find($"ArchSpandrel_TL_{bayIndex}");
+                var tr = GameObject.Find($"ArchSpandrel_TR_{bayIndex}");
+                Assert.IsNotNull(tl, $"P1-01/Task3.1: Missing curved stone arch spandrel 'ArchSpandrel_TL_{bayIndex}'.");
+                Assert.IsNotNull(tr, $"P1-01/Task3.1: Missing curved stone arch spandrel 'ArchSpandrel_TR_{bayIndex}'.");
+                var tlSr = tl.GetComponent<SpriteRenderer>();
+                var trSr = tr.GetComponent<SpriteRenderer>();
+                Assert.AreEqual("prisonArchSpandrel_00", tlSr?.sprite?.name, $"[A15/SpandrelTL/{bayIndex}]");
+                Assert.AreEqual("prisonArchSpandrel_00", trSr?.sprite?.name, $"[A15/SpandrelTR/{bayIndex}]");
+                Assert.IsTrue(trSr.flipX, $"[A15/SpandrelTRFlipX/{bayIndex}] ArchSpandrel_TR_{bayIndex} must flipX.");
+                Assert.IsNull(GameObject.Find($"ArchBeam_TL_{bayIndex}"),
+                    $"Task3.1: Legacy black ear 'ArchBeam_TL_{bayIndex}' must be removed.");
+                Assert.IsNull(GameObject.Find($"ArchBeam_TR_{bayIndex}"),
+                    $"Task3.1: Legacy black ear 'ArchBeam_TR_{bayIndex}' must be removed.");
+            }
+            foreach (var sr in allRenderers)
+            {
+                if (sr == null || sr.sprite == null)
+                    continue;
+                if (sr.gameObject.name.StartsWith("Arch", StringComparison.Ordinal))
+                {
+                    Assert.AreNotEqual("littleBlackBeam_topLeft_0_00", sr.sprite.name,
+                        $"[A15/NoLittleBeam/{sr.name}] Carved bay must not use LittleBeamTL.");
+                    Assert.AreNotEqual("littleBlackBeam_topRight_0_00", sr.sprite.name,
+                        $"[A15/NoLittleBeam/{sr.name}] Carved bay must not use LittleBeamTR.");
+                }
             }
 
             Vector3Int[] carvedWingBayInteriorSamples =
@@ -1395,7 +1448,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 new Vector3Int(144, -6, 0),  // Bay #11 (Room O)
                 new Vector3Int(191, -6, 0),  // Bay #12 (Room P)
                 new Vector3Int(-72, 19, 0),  // Bay #13 (Room Q)
-                new Vector3Int(51, 33, 0),   // Bay #14 (Room S)
+                new Vector3Int(51, 35, 0),   // Bay #14 (Room S clerestory [47..55, 34..38])
                 new Vector3Int(100, 50, 0),  // Bay #15 (Room T)
             };
             foreach (var cell in carvedWingBayInteriorSamples)
@@ -1591,13 +1644,6 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                     $"P2-02: Room {tag} must contain at least 1 weathered stone wall patch.");
             }
 
-            (int bayIdx, float xMin, float xMax, float yMin, float yMax)[] carvedBays =
-            {
-                (0, 9f, 14f, 2f, 5f), (1, 46f, 52f, 11f, 16f), (2, 69f, 74f, 2f, 6f), (3, -15f, -9f, 18f, 21f),
-                (4, 6f, 10f, 25f, 30f), (5, 118f, 126f, 14f, 19f), (6, 100f, 106f, -13f, -8f), (7, -60f, -54f, 30f, 35f),
-                (8, 66f, 74f, 46f, 52f), (9, 97f, 102f, 2f, 6f), (10, 138f, 144f, 18f, 22f), (11, 140f, 148f, -9f, -3f),
-                (12, 187f, 195f, -9f, -3f), (13, -75f, -69f, 18f, 22f), (14, 47f, 55f, 31f, 37f), (15, 96f, 104f, 47f, 55f),
-            };
             foreach (var wp in wallPatches)
             {
                 Assert.AreEqual("Background", wp.sortingLayerName, $"P2-02: '{wp.name}' must sort on Background.");
@@ -1608,7 +1654,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                     $"P2-02: '{wp.name}' must use stampWallBig_* or stampWallMedium_*, got '{wp.sprite?.name}'.");
 
                 Bounds b = wp.bounds;
-                foreach (var bay in carvedBays)
+                foreach (var bay in CarvedBays)
                 {
                     bool ox = b.min.x < bay.xMax - 0.05f && b.max.x > bay.xMin + 0.05f;
                     bool oy = b.min.y < bay.yMax - 0.05f && b.max.y > bay.yMin + 0.05f;
@@ -1678,7 +1724,17 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             }
 
             // 5. P2-04: All 36 curated depth props exist on exact sorting layers and have zero clashes with carved bays, OneWay platforms, lanterns, or windows
-            string[] phase3Trusses = { "Art_N_Truss1", "Art_N_Truss2", "Art_O_Truss1", "Art_P_Truss1", "Art_R_Truss1", "Art_T_Truss1", "Art_T_Truss2" };
+            (string name, float floorY, float ceilingY)[] phase3Pilasters =
+            {
+                ("Art_N_Truss1", 8f, 22.5f),
+                ("Art_N_Truss2", 8f, 22.5f),
+                ("Art_O_Truss1", -16f, -1f),
+                ("Art_P_Truss1", -16f, -1.5f),
+                ("Art_R_Truss1", 24f, 38.5f),
+                ("Art_T_Truss1", 40f, 62.5f),
+                ("Art_T_Truss2", 40f, 62.5f),
+            };
+            string[] phase3Trusses = phase3Pilasters.Select(p => p.name).ToArray();
             string[] phase3Cages = { "Art_G_OrnateCage1", "Art_K_OrnateCage1", "Art_N_OrnateCage1", "Art_O_OrnateCage1", "Art_P_OrnateCage1", "Art_R_OrnateCage1", "Art_S_OrnateCage1", "Art_T_OrnateCage1", "Art_T_OrnateCage2" };
             string[] phase3Chained = { "Art_M_Chained1", "Art_N_Chained1", "Art_O_Chained1", "Art_P_Chained1", "Art_Q_Chained1", "Art_R_Chained1", "Art_T_Chained1", "Art_T_Chained2" };
             string[] phase3Foliage =
@@ -1695,13 +1751,27 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 .ToArray();
             var windowRenderers = allRenderers.Where(sr => sr.gameObject.name.Contains("Window") && sr.gameObject.name != "GodRay").ToArray();
 
-            foreach (string name in phase3Trusses)
+            Assert.IsFalse(allRenderers.Any(sr => sr != null && sr.sprite != null && sr.sprite.name == "PrisonwoodenBeam_00"),
+                "[A16/ZeroWoodenBeamTruss] Scene must contain ZERO legacy PrisonwoodenBeam_00 renderers.");
+
+            foreach (var (name, floorY, ceilingY) in phase3Pilasters)
             {
-                var sr = GameObject.Find(name)?.GetComponent<SpriteRenderer>();
-                Assert.IsNotNull(sr?.sprite, $"P2-04: Missing timber truss '{name}'.");
-                Assert.AreEqual("PrisonwoodenBeam_00", sr.sprite.name);
-                Assert.AreEqual("Background", sr.sortingLayerName);
-                Assert.AreEqual(-13, sr.sortingOrder);
+                var pilasterGo = GameObject.Find(name);
+                Assert.IsNotNull(pilasterGo, $"P2-04/Task3.4: Missing stone pilaster '{name}'.");
+                var segRenderers = pilasterGo.GetComponentsInChildren<SpriteRenderer>(true);
+                Assert.IsNotEmpty(segRenderers, $"P2-04/Task3.4: Pilaster '{name}' must have stacked spawnerPillar_00 SpriteRenderers.");
+                foreach (var sr in segRenderers)
+                {
+                    Assert.IsNotNull(sr.sprite, $"P2-04/Task3.4: Pilaster segment '{name}/{sr.name}' missing sprite.");
+                    Assert.AreEqual("spawnerPillar_00", sr.sprite.name, $"P2-04/Task3.4: '{name}/{sr.name}' must use spawnerPillar_00.");
+                    Assert.AreEqual("Background", sr.sortingLayerName, $"P2-04/Task3.4: '{name}/{sr.name}' sorting layer.");
+                    Assert.AreEqual(-13, sr.sortingOrder, $"P2-04/Task3.4: '{name}/{sr.name}' sorting order.");
+                }
+                Bounds pb = GetVisualSpriteBounds(pilasterGo);
+                Assert.LessOrEqual(pb.min.y, floorY + 0.12f,
+                    $"P2-04/Task3.4: Pilaster '{name}' bottom ({pb.min.y:F2}) must be grounded on floorY={floorY:F2}.");
+                Assert.GreaterOrEqual(pb.max.y, ceilingY - 0.15f,
+                    $"P2-04/Task3.4: Pilaster '{name}' top ({pb.max.y:F2}) must reach ceilingY={ceilingY:F2}.");
             }
             foreach (string name in phase3Cages)
             {
@@ -1924,25 +1994,36 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 StringAssert.StartsWith("ground_", rimSp.name, $"[A18/StairLandingRim/{cell + Vector3Int.up}] Landing cap rim must use ground_*.");
             }
 
-            // 2. M-02: GroundMist2D world-space shader & 6 GroundMist_R5 strips
+            // 2. M-02: GroundMist2D world-space shader & 9 GroundMist_R5 strips
             string mistShaderSrc = System.IO.File.ReadAllText("Assets/_Project/Art/Shaders/GroundMist2D.shader");
             StringAssert.Contains("TransformObjectToWorld", mistShaderSrc, "[A18/MistWorldSpace]");
             StringAssert.Contains("Blend SrcAlpha OneMinusSrcAlpha", mistShaderSrc, "[A18/MistBlendMode]");
             var mistRoot = GameObject.Find("GroundMist_R5");
             Assert.IsNotNull(mistRoot, "[A18/GroundMistRoot]");
             var mistRenderers = mistRoot.GetComponentsInChildren<SpriteRenderer>(true);
-            Assert.AreEqual(6, mistRenderers.Length, "[A18/GroundMistCount]");
+            Assert.AreEqual(9, mistRenderers.Length, "[A18/GroundMistCount]");
+            string[] expectedMistNames =
+            {
+                "Mist_RoomAB", "Mist_RoomC", "Mist_RoomG", "Mist_RoomK", "Mist_RoomE",
+                "Mist_RoomO", "Mist_RoomP", "Mist_RoomQ", "Mist_RoomT",
+            };
+            CollectionAssert.AreEquivalent(expectedMistNames, mistRenderers.Select(mr => mr.gameObject.name).ToArray(),
+                "[A18/GroundMistNames]");
             foreach (var mr in mistRenderers)
+            {
                 Assert.AreEqual("DeadCells/GroundMist2D", mr.sharedMaterial.shader.name, $"[A18/MistShader/{mr.name}]");
+                Assert.GreaterOrEqual(mr.color.a, 0.80f - 1e-4f, $"[A18/MistAlpha/{mr.name}]");
+            }
 
             // 3. M-03 & M-04: Art_Q_SkeletonPier sockets Art_Q_SkeletonSpawn left edge + grounded floor props clash-free
             var skelPierSr = GameObject.Find("Art_Q_SkeletonPier")?.GetComponent<SpriteRenderer>();
             var skelSpawnSr = GameObject.Find("Art_Q_SkeletonSpawn")?.GetComponent<SpriteRenderer>();
             Assert.IsNotNull(skelPierSr, "[A18/SkeletonPier]");
             Assert.IsNotNull(skelSpawnSr, "[A18/SkeletonSpawn]");
+            Assert.AreEqual("prisonBigAlcove_00", skelSpawnSr.sprite?.name, "[A18/SkeletonSpawnSprite]");
             Assert.AreEqual("Background", skelPierSr.sortingLayerName, "[A18/SkeletonPierLayer]");
             Assert.AreEqual(-12, skelPierSr.sortingOrder, "[A18/SkeletonPierOrder]");
-            Assert.AreEqual(-51.88f, skelSpawnSr.bounds.min.x, 0.15f, "[A18/SkeletonSpawnMinX]");
+            Assert.AreEqual(-51.50f, skelSpawnSr.bounds.min.x, 0.15f, "[A18/SkeletonSpawnMinX]");
             Assert.LessOrEqual(skelPierSr.bounds.min.x, skelSpawnSr.bounds.min.x + 0.05f, "[A18/SkeletonPierCoversLeft]");
             Assert.GreaterOrEqual(skelPierSr.bounds.max.x, skelSpawnSr.bounds.min.x - 0.05f, "[A18/SkeletonPierCoversRight]");
 
@@ -2086,16 +2167,30 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.AreEqual(7f, casterWorldVerts.Min(v => v.y), 0.05f, "[A18/StairsCasterMinY]");
             Assert.AreEqual(16f, casterWorldVerts.Max(v => v.y), 0.05f, "[A18/StairsCasterMaxY]");
 
-            // 5. A-13 & A-14: Foreground_Silhouettes span [-32..+32] + camera-attached ambient ParticleSystems
+            // 5. A-13 & A-14: Foreground_Silhouettes >= 4 peripheral FgColumn_* spanning [-36..+36] with zero center clutter (|x| >= 12f) + ambient ParticleSystems
             var fgSilhouettes = GameObject.Find("Foreground_Silhouettes");
             Assert.IsNotNull(fgSilhouettes, "[A18/ForegroundSilhouettes]");
+            var fgColumns = new List<Transform>();
+            foreach (Transform child in fgSilhouettes.transform)
+            {
+                if (child.name.StartsWith("FgColumn_", StringComparison.Ordinal))
+                    fgColumns.Add(child);
+            }
+            Assert.GreaterOrEqual(fgColumns.Count, 4, "[A18/FgColumnCount] Expected >= 4 peripheral FgColumn_* columns.");
+            foreach (var col in fgColumns)
+            {
+                Bounds colBounds = GetVisualSpriteBounds(col.gameObject);
+                float relCenterX = colBounds.center.x - fgSilhouettes.transform.position.x;
+                Assert.GreaterOrEqual(Mathf.Abs(relCenterX), 12.0f,
+                    $"[A18/FgColumnClearCenter/{col.name}] FgColumn must stay outside center |x| < 12f, got {relCenterX:F2}.");
+            }
             var fgRenderers = fgSilhouettes.GetComponentsInChildren<SpriteRenderer>(true);
             Assert.IsNotEmpty(fgRenderers, "[A18/FgRenderers]");
             Bounds fgBounds = fgRenderers[0].bounds;
             for (int i = 1; i < fgRenderers.Length; i++)
                 fgBounds.Encapsulate(fgRenderers[i].bounds);
-            Assert.LessOrEqual(fgBounds.min.x, -32.0f, $"[A18/FgMinX] min.x={fgBounds.min.x:F2} must be <= -32.0f.");
-            Assert.GreaterOrEqual(fgBounds.max.x, 32.0f, $"[A18/FgMaxX] max.x={fgBounds.max.x:F2} must be >= 32.0f.");
+            Assert.LessOrEqual(fgBounds.min.x, -36.0f, $"[A18/FgMinX] min.x={fgBounds.min.x:F2} must be <= -36.0f.");
+            Assert.GreaterOrEqual(fgBounds.max.x, 36.0f, $"[A18/FgMaxX] max.x={fgBounds.max.x:F2} must be >= 36.0f.");
 
             foreach (string psName in new[] { "AmbientDustMotes", "AmbientDrippingWater" })
             {
@@ -2184,6 +2279,564 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(hintText, "[A19/ControlsHintBadge.Text]");
             StringAssert.Contains("[Esc] Tạm dừng", hintText.text, "[A19/ControlsHintBadge.Esc]");
             StringAssert.Contains("[1/2] Vũ khí", hintText.text, "[A19/ControlsHintBadge.Weapons]");
+        }
+
+        [Test]
+        public void A20_Round9_ZeroOverlapsGroundedPilastersAnchoredChainedAndMixelDiscipline()
+        {
+            EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
+
+            var allRenderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include);
+
+            // 1. Task 3.3: Zero junk self-overlaps (*_Junk*_A vs *_Junk*_B overlapX <= 0.02f) & zero cross-junk overlaps (-0.04f tolerance)
+            var junkRenderers = allRenderers
+                .Where(sr => sr != null && sr.sprite != null &&
+                             sr.gameObject.name.Contains("_Junk", StringComparison.Ordinal) &&
+                             (sr.gameObject.name.EndsWith("_A", StringComparison.Ordinal) ||
+                              sr.gameObject.name.EndsWith("_B", StringComparison.Ordinal)))
+                .ToArray();
+            Assert.IsNotEmpty(junkRenderers, "[A20/JunkRenderers] Expected floor junk renderers.");
+
+            var junkByName = new Dictionary<string, SpriteRenderer>(StringComparer.Ordinal);
+            foreach (var sr in junkRenderers)
+                junkByName[sr.gameObject.name] = sr;
+
+            foreach (var srA in junkRenderers.Where(sr => sr.gameObject.name.EndsWith("_A", StringComparison.Ordinal)))
+            {
+                string nameB = srA.gameObject.name.Substring(0, srA.gameObject.name.Length - 2) + "_B";
+                Assert.IsTrue(junkByName.TryGetValue(nameB, out var srB),
+                    $"[A20/JunkPairMissing] Missing '{nameB}' paired with '{srA.gameObject.name}'.");
+                float overlapX = Mathf.Min(srA.bounds.max.x, srB.bounds.max.x) - Mathf.Max(srA.bounds.min.x, srB.bounds.min.x);
+                Assert.LessOrEqual(overlapX, 0.02f,
+                    $"[A20/JunkSelfOverlap] '{srA.gameObject.name}' ({srA.bounds.min.x:F2}..{srA.bounds.max.x:F2}) overlaps '{nameB}' ({srB.bounds.min.x:F2}..{srB.bounds.max.x:F2}), overlapX={overlapX:F3}.");
+            }
+
+            for (int i = 0; i < junkRenderers.Length; i++)
+            {
+                string clusterI = junkRenderers[i].gameObject.name.Substring(0, junkRenderers[i].gameObject.name.Length - 2);
+                for (int j = i + 1; j < junkRenderers.Length; j++)
+                {
+                    string clusterJ = junkRenderers[j].gameObject.name.Substring(0, junkRenderers[j].gameObject.name.Length - 2);
+                    if (clusterI == clusterJ)
+                        continue;
+                    Assert.IsFalse(OverlapsAabb(junkRenderers[i].bounds, junkRenderers[j].bounds, -0.04f, -0.04f),
+                        $"[A20/CrossJunkOverlap] '{junkRenderers[i].gameObject.name}' ({junkRenderers[i].bounds.min}..{junkRenderers[i].bounds.max}) overlaps '{junkRenderers[j].gameObject.name}' ({junkRenderers[j].bounds.min}..{junkRenderers[j].bounds.max}).");
+                }
+            }
+
+            // 2. Task 3.3: Zero floor junk overlaps with landmarks, POIs, or torches
+            var junkObstacles = new List<(string label, Bounds bounds)>();
+            string[] landmarkTokens =
+            {
+                "Door", "Bibli", "Alcove", "Arch", "Fountain", "Pillar", "Dummy", "JudasSeat", "Billot",
+            };
+            foreach (var sr in allRenderers)
+            {
+                if (sr == null || sr.sprite == null)
+                    continue;
+                string n = sr.gameObject.name;
+                string pn = sr.transform.parent != null ? sr.transform.parent.name : string.Empty;
+
+                if (n == "LanternFixture_R5")
+                {
+                    junkObstacles.Add(($"{pn}/{n}", sr.bounds));
+                    continue;
+                }
+
+                if (n == "GodRay" || n.Contains("Glow", StringComparison.Ordinal) || n == "LanternFlameCore_R5")
+                    continue;
+
+                bool isArtLandmark = (n.StartsWith("Art_", StringComparison.Ordinal) || pn.StartsWith("Art_", StringComparison.Ordinal)) &&
+                                     !n.StartsWith("Arch", StringComparison.Ordinal) &&
+                                     landmarkTokens.Any(tok => n.Contains(tok, StringComparison.Ordinal) || pn.Contains(tok, StringComparison.Ordinal));
+                if (isArtLandmark)
+                    junkObstacles.Add((n, sr.bounds));
+            }
+
+            foreach (var tp in Object.FindObjectsByType<TeleportGate>(FindObjectsInactive.Include))
+            {
+                foreach (var sr in tp.GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    if (sr != null && sr.sprite != null)
+                        junkObstacles.Add(($"{tp.name}/{sr.name}", sr.bounds));
+                }
+            }
+            foreach (var scroll in Object.FindObjectsByType<PowerScrollPickup>(FindObjectsInactive.Include))
+                junkObstacles.Add((scroll.name, GetVisualSpriteBounds(scroll.gameObject)));
+            foreach (var chest in Object.FindObjectsByType<HealingChest>(FindObjectsInactive.Include))
+                junkObstacles.Add((chest.name, GetVisualSpriteBounds(chest.gameObject)));
+            foreach (var tablet in Object.FindObjectsByType<LoreTablet>(FindObjectsInactive.Include))
+            {
+                if (tablet.TriggerZone != null)
+                    junkObstacles.Add((tablet.name, GeometryAuditHelper.GetWorldBounds(tablet.TriggerZone)));
+            }
+            foreach (var sd in Object.FindObjectsByType<SwitchDoor>(FindObjectsInactive.Include))
+            {
+                foreach (var sr in sd.GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    if (sr != null && sr.sprite != null)
+                        junkObstacles.Add(($"{sd.name}/{sr.name}", sr.bounds));
+                }
+            }
+
+            Assert.IsNotEmpty(junkObstacles, "[A20/JunkObstacles]");
+            foreach (var junk in junkRenderers)
+            {
+                foreach (var (obsLabel, obsBounds) in junkObstacles)
+                {
+                    Assert.IsFalse(OverlapsAabb(junk.bounds, obsBounds, -0.02f, -0.02f),
+                        $"[A20/JunkObstacleOverlap] '{junk.gameObject.name}' ({junk.bounds.min:F2}..{junk.bounds.max:F2}) overlaps '{obsLabel}' ({obsBounds.min:F2}..{obsBounds.max:F2}).");
+                }
+            }
+
+            // 3. Task 3.4: Zero wallJunk_10..13 tiles on TM_WallDecals & zero PrisonwoodenBeam_00 renderers
+            var decalTilemaps = Object.FindObjectsByType<Tilemap>(FindObjectsInactive.Include)
+                .Where(t => t.name == "TM_WallDecals")
+                .ToArray();
+            Assert.AreEqual(9, decalTilemaps.Length, "[A20/WallDecalTilemaps]");
+            foreach (var tm in decalTilemaps)
+            {
+                var cb = tm.cellBounds;
+                for (int x = cb.xMin; x < cb.xMax; x++)
+                {
+                    for (int y = cb.yMin; y < cb.yMax; y++)
+                    {
+                        var sp = tm.GetSprite(new Vector3Int(x, y, 0));
+                        if (sp == null)
+                            continue;
+                        Assert.IsFalse(
+                            sp.name == "wallJunk_10" || sp.name == "wallJunk_11" ||
+                            sp.name == "wallJunk_12" || sp.name == "wallJunk_13",
+                            $"[A20/NoWallBlobs] Found banned wall blob '{sp.name}' at ({x},{y}) on '{tm.transform.root.name}/TM_WallDecals'.");
+                    }
+                }
+            }
+
+            Assert.IsFalse(allRenderers.Any(sr => sr != null && sr.sprite != null && sr.sprite.name == "PrisonwoodenBeam_00"),
+                "[A20/ZeroWoodenBeamTruss] Scene must contain 0 PrisonwoodenBeam_00 renderers.");
+
+            // 4. Task 3.4: All 8 ChainedPrisoners have dual left & right anchor chains {name}_AnchorL_* and {name}_AnchorR_* reaching ceilingY - 0.15f
+            (string chainedName, float ceilingY)[] expectedChained =
+            {
+                ("Art_M_Chained1", 7f),
+                ("Art_N_Chained1", 22.5f),
+                ("Art_O_Chained1", -1f),
+                ("Art_P_Chained1", -1.5f),
+                ("Art_Q_Chained1", 23f),
+                ("Art_R_Chained1", 38.5f),
+                ("Art_T_Chained1", 62.5f),
+                ("Art_T_Chained2", 62.5f),
+            };
+            foreach (var (chainedName, ceilingY) in expectedChained)
+            {
+                var chainedGo = GameObject.Find(chainedName);
+                Assert.IsNotNull(chainedGo, $"[A20/ChainedMissing/{chainedName}]");
+                foreach (string sideSuffix in new[] { "_AnchorL_", "_AnchorR_" })
+                {
+                    string anchorPrefix = chainedName + sideSuffix;
+                    var anchors = allRenderers
+                        .Where(sr => sr != null && sr.gameObject.name.StartsWith(anchorPrefix, StringComparison.Ordinal))
+                        .ToArray();
+                    Assert.IsNotEmpty(anchors, $"[A20/ChainedAnchorMissing/{chainedName}{sideSuffix}] Expected '{anchorPrefix}*' chain segments reaching ceiling.");
+                    float maxAnchorY = anchors.Max(a => a.bounds.max.y);
+                    Assert.GreaterOrEqual(maxAnchorY, ceilingY - 0.15f,
+                        $"[A20/ChainedAnchorTop/{chainedName}{sideSuffix}] Top anchor max.y={maxAnchorY:F2} must reach ceilingY={ceilingY:F2} (-0.15).");
+                    Assert.LessOrEqual(maxAnchorY, ceilingY + 0.15f,
+                        $"[A20/ChainedAnchorOverflow/{chainedName}{sideSuffix}] Top anchor max.y={maxAnchorY:F2} must not protrude past ceilingY={ceilingY:F2}.");
+                }
+            }
+
+            // 5. Task 3.4: No floating open-doorway top webs at (17,4)/(18,4)
+            var rimTilemaps = Object.FindObjectsByType<Tilemap>(FindObjectsInactive.Include)
+                .Where(t => t.name == "TM_SolidRim")
+                .ToArray();
+            Assert.AreEqual(9, rimTilemaps.Length, "[A20/SolidRimCount]");
+            foreach (var openTopCell in new[] { new Vector3Int(17, 4, 0), new Vector3Int(18, 4, 0) })
+            {
+                var tile = rimTilemaps.Select(tm => tm.GetTile(openTopCell)).FirstOrDefault(t => t != null);
+                Assert.IsNull(tile, $"[A20/NoOpenDoorwayTopWeb] Open doorway top cell {openTopCell} on TM_SolidRim must be null, got '{tile?.name}'.");
+            }
+
+            // 5b. Reviewer Visual Guard: Zero *_CeilStamp* or *_RoofMoss* overlap with any of the 16 carved arch bays
+            var ceilingAccents = allRenderers
+                .Where(sr => sr != null && sr.sprite != null &&
+                             (sr.gameObject.name.Contains("_CeilStamp", StringComparison.Ordinal) ||
+                              sr.gameObject.name.Contains("_RoofMoss", StringComparison.Ordinal)))
+                .ToArray();
+            Assert.IsNotEmpty(ceilingAccents, "[A20/CeilingAccents]");
+            foreach (var ca in ceilingAccents)
+            {
+                foreach (var bay in CarvedBays)
+                {
+                    var bayBounds = new Bounds();
+                    bayBounds.SetMinMax(new Vector3(bay.xMin, bay.yMin, -1f), new Vector3(bay.xMax, bay.yMax, 1f));
+                    Assert.IsFalse(OverlapsAabb(ca.bounds, bayBounds, -0.05f, -0.05f),
+                        $"[A20/CeilingAccentBayOverlap] '{ca.gameObject.name}' ({ca.bounds.min:F2}..{ca.bounds.max:F2}) overlaps carved Bay #{bay.bayIdx} ([{bay.xMin}..{bay.xMax}], [{bay.yMin}..{bay.yMax}]).");
+                }
+            }
+
+            // 6. Task 3.4: Full-height peripheral Foreground_Silhouettes columns (>= 4 FgColumn_* spanning min.y <= -5.8f && max.y >= 8.8f, zero center clutter |x| < 12f)
+            var fgRoot = GameObject.Find("Foreground_Silhouettes");
+            Assert.IsNotNull(fgRoot, "[A20/ForegroundSilhouettes]");
+            var fgColumns = new List<Transform>();
+            foreach (Transform child in fgRoot.transform)
+            {
+                Assert.IsFalse(child.name.StartsWith("FgBeam_", StringComparison.Ordinal) || child.name.StartsWith("FgChain_", StringComparison.Ordinal),
+                    $"[A20/NoFgStub] Legacy severed foreground stub '{child.name}' must be removed.");
+                if (child.name.StartsWith("FgColumn_", StringComparison.Ordinal))
+                    fgColumns.Add(child);
+            }
+            Assert.GreaterOrEqual(fgColumns.Count, 4, "[A20/FgColumnCount] Expected >= 4 full-height peripheral FgColumn_* columns.");
+            foreach (var col in fgColumns)
+            {
+                Bounds colBounds = GetVisualSpriteBounds(col.gameObject);
+                float relCenterX = colBounds.center.x - fgRoot.transform.position.x;
+                Assert.GreaterOrEqual(Mathf.Abs(relCenterX), 12.0f,
+                    $"[A20/FgColumnClearCenter/{col.name}] FgColumn must stay outside center |x| < 12f, got {relCenterX:F2}.");
+                Assert.LessOrEqual(colBounds.min.y, -5.8f,
+                    $"[A20/FgColumnMinY/{col.name}] min.y={colBounds.min.y:F2} must extend <= -5.8f.");
+                Assert.GreaterOrEqual(colBounds.max.y, 8.8f,
+                    $"[A20/FgColumnMaxY/{col.name}] max.y={colBounds.max.y:F2} must extend >= 8.8f.");
+            }
+            Bounds allFgBounds = GetVisualSpriteBounds(fgRoot);
+            Assert.LessOrEqual(allFgBounds.min.x, -36.0f, $"[A20/FgSpanMinX] min.x={allFgBounds.min.x:F2} must be <= -36.0f.");
+            Assert.GreaterOrEqual(allFgBounds.max.x, 36.0f, $"[A20/FgSpanMaxX] max.x={allFgBounds.max.x:F2} must be >= 36.0f.");
+
+            // 7. Task 3.5: Global Mixel & Pixel-Density Guard across all Rooms/Room_*/Art SpriteRenderers
+            foreach (var prefabName in RoomPrefabNames)
+            {
+                var artGo = GameObject.Find($"Rooms/Room_{prefabName}/Art");
+                Assert.IsNotNull(artGo, $"[A20/MissingArtRoot/{prefabName}]");
+                var artRenderers = artGo.GetComponentsInChildren<SpriteRenderer>(true);
+                foreach (var sr in artRenderers)
+                {
+                    if (sr == null)
+                        continue;
+                    string objName = sr.gameObject.name;
+                    Assert.IsNotNull(sr.sprite, $"[A20/NullSprite/{prefabName}/{objName}] SpriteRenderer under Art has null sprite.");
+
+                    if (IsExcludedFromMixelScale(objName))
+                        continue;
+
+                    float absScaleX = Mathf.Abs(sr.transform.localScale.x);
+                    float absScaleY = Mathf.Abs(sr.transform.localScale.y);
+                    Assert.That(absScaleX, Is.InRange(0.78f, 1.25f),
+                        $"[A20/MixelScaleX/{prefabName}/{objName}] localScale.x={absScaleX:F3} must be in [0.78, 1.25] (sprite='{sr.sprite.name}').");
+                    Assert.That(absScaleY, Is.InRange(0.78f, 1.25f),
+                        $"[A20/MixelScaleY/{prefabName}/{objName}] localScale.y={absScaleY:F3} must be in [0.78, 1.25] (sprite='{sr.sprite.name}').");
+                    Assert.AreEqual(24f, sr.sprite.pixelsPerUnit, 0.01f,
+                        $"[A20/PPU24/{prefabName}/{objName}] Sprite '{sr.sprite.name}' pixelsPerUnit={sr.sprite.pixelsPerUnit} must equal 24.");
+
+                    if (IsExcludedFromRoomVerticalBounds(sr))
+                        continue;
+
+                    Assert.IsTrue(TryResolveRoomSpan(prefabName, sr, out var room),
+                        $"[A20/RoomResolve/{prefabName}/{objName}] Could not resolve owning room for '{objName}' at {sr.bounds.center}.");
+                    Assert.GreaterOrEqual(sr.bounds.min.y, room.FloorY - 0.15f,
+                        $"[A20/RoomFloorOverflow/{room.Tag}/{objName}] min.y={sr.bounds.min.y:F2} protrudes below Room {room.Tag} floorY={room.FloorY:F2}.");
+                    Assert.LessOrEqual(sr.bounds.max.y, room.CeilingY + 0.15f,
+                        $"[A20/RoomCeilingOverflow/{room.Tag}/{objName}] max.y={sr.bounds.max.y:F2} protrudes above Room {room.Tag} ceilingY={room.CeilingY:F2}.");
+                }
+            }
+        }
+
+        [Test]
+        public void A21_Round9_PlayerReadabilityWindowDepthFogAndPolish()
+        {
+            EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
+
+            // 1. Task 3.6a: Player/PlayerRimLight Light2D enabled, intensity in [0.45, 0.75], excludes ParallaxFar/ParallaxMid/Foreground
+            var player = Object.FindAnyObjectByType<PlayerController>();
+            Assert.IsNotNull(player, "[A21/Player]");
+            var rimTr = player.transform.Find("PlayerRimLight");
+            Assert.IsNotNull(rimTr, "[A21/PlayerRimLightMissing]");
+            var rimLight = rimTr.GetComponent<Light2D>();
+            Assert.IsNotNull(rimLight, "[A21/PlayerRimLightComponent]");
+            Assert.IsTrue(rimLight.enabled, "[A21/PlayerRimLightEnabled]");
+            Assert.AreEqual(Light2D.LightType.Point, rimLight.lightType, "[A21/PlayerRimLightType]");
+            Assert.That(rimLight.intensity, Is.InRange(0.45f, 0.75f),
+                $"[A21/PlayerRimLightIntensity] Expected [0.45, 0.75], got {rimLight.intensity:F2}.");
+
+            int farLayerId = SortingLayer.NameToID("ParallaxFar");
+            int midLayerId = SortingLayer.NameToID("ParallaxMid");
+            int fgLayerId = SortingLayer.NameToID("Foreground");
+            var rimLayersProp = new SerializedObject(rimLight).FindProperty("m_ApplyToSortingLayers");
+            Assert.IsNotNull(rimLayersProp, "[A21/PlayerRimLightSortingLayers]");
+            var rimAppliedLayers = Enumerable.Range(0, rimLayersProp.arraySize)
+                .Select(i => rimLayersProp.GetArrayElementAtIndex(i).intValue)
+                .ToArray();
+            CollectionAssert.DoesNotContain(rimAppliedLayers, farLayerId, "[A21/PlayerRimLightExcludesParallaxFar]");
+            CollectionAssert.DoesNotContain(rimAppliedLayers, midLayerId, "[A21/PlayerRimLightExcludesParallaxMid]");
+            CollectionAssert.DoesNotContain(rimAppliedLayers, fgLayerId, "[A21/PlayerRimLightExcludesForeground]");
+
+            // 2. Task 3.6b: Art_A_Torch clears Bay #0 right edge (x=12) and TP_0_Spawn (x=15.5) by >= 1.2f each
+            var torchA = GameObject.Find("Art_A_Torch");
+            var tp0 = GameObject.Find("TP_0_Spawn");
+            Assert.IsNotNull(torchA, "[A21/Art_A_Torch]");
+            Assert.IsNotNull(tp0, "[A21/TP_0_Spawn]");
+            Assert.GreaterOrEqual(torchA.transform.position.x - 12f, 1.2f,
+                $"[A21/TorchAClearanceBay0] Art_A_Torch x={torchA.transform.position.x:F2} must sit >= 1.2u clear of Bay #0 right edge x=12.");
+            Assert.GreaterOrEqual(tp0.transform.position.x - torchA.transform.position.x, 1.2f,
+                $"[A21/TorchAClearanceTP0] Art_A_Torch x={torchA.transform.position.x:F2} must sit >= 1.2u clear of TP_0_Spawn x={tp0.transform.position.x:F2}.");
+
+            // 3. Task 3.6b: >= 40 Art_*_SlabStrata_* renderers on Ground / -4
+            var allRenderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include);
+            var slabStrata = allRenderers
+                .Where(sr => sr != null &&
+                             sr.gameObject.name.StartsWith("Art_", StringComparison.Ordinal) &&
+                             sr.gameObject.name.Contains("_SlabStrata_", StringComparison.Ordinal))
+                .ToArray();
+            Assert.GreaterOrEqual(slabStrata.Length, 40,
+                $"[A21/SlabStrataCount] Expected >= 40 inter-tier Art_*_SlabStrata_* renderers, found {slabStrata.Length}.");
+            foreach (var sr in slabStrata)
+            {
+                Assert.IsNotNull(sr.sprite, $"[A21/SlabStrataSprite/{sr.name}]");
+                Assert.AreEqual("prisonSlabStrata_00", sr.sprite.name, $"[A21/SlabStrataName/{sr.name}]");
+                Assert.AreEqual("Ground", sr.sortingLayerName, $"[A21/SlabStrataLayer/{sr.name}]");
+                Assert.AreEqual(-4, sr.sortingOrder, $"[A21/SlabStrataOrder/{sr.name}]");
+            }
+
+            // 4. Task 3.6b: Art_G_Alcove center (60.5f, 10.4f) has a Point Light2D within <= 0.50f * outerRadius
+            var activePointLights = Object.FindObjectsByType<Light2D>(FindObjectsInactive.Include)
+                .Where(l => l.enabled && l.lightType == Light2D.LightType.Point && l.intensity > 0.01f && l.pointLightOuterRadius > 0.1f)
+                .ToArray();
+            Vector2 alcoveCenter = new Vector2(60.5f, 10.4f);
+            Assert.IsTrue(
+                activePointLights.Any(l => Vector2.Distance(alcoveCenter, l.transform.position) <= 0.50f * l.pointLightOuterRadius),
+                "[A21/Art_G_AlcoveLight] Expected an enabled Point Light2D within <= 0.50f * outerRadius of Art_G_Alcove center (60.5, 10.4).");
+
+            // 5. Task 3.1: Window variants (prisonArchJamb_00..02, prisonArchSill_00..02, prisonArchSpandrel_00, prisonArchMullion_00) & ArchMoonSpill_* across all 16 bays
+            var seenJambVariants = new HashSet<string>(StringComparer.Ordinal);
+            var seenSillVariants = new HashSet<string>(StringComparer.Ordinal);
+            for (int bayIndex = 0; bayIndex <= 15; bayIndex++)
+            {
+                var spandrelTL = GameObject.Find($"ArchSpandrel_TL_{bayIndex}")?.GetComponent<SpriteRenderer>();
+                var spandrelTR = GameObject.Find($"ArchSpandrel_TR_{bayIndex}")?.GetComponent<SpriteRenderer>();
+                Assert.AreEqual("prisonArchSpandrel_00", spandrelTL?.sprite?.name, $"[A21/Bay{bayIndex}/SpandrelTL]");
+                Assert.AreEqual("prisonArchSpandrel_00", spandrelTR?.sprite?.name, $"[A21/Bay{bayIndex}/SpandrelTR]");
+
+                var mullionMatches = allRenderers
+                    .Where(sr => sr != null && sr.gameObject.name.StartsWith($"ArchMullion_{bayIndex}_", StringComparison.Ordinal))
+                    .ToArray();
+                Assert.IsNotEmpty(mullionMatches, $"[A21/Bay{bayIndex}/MullionMissing]");
+                foreach (var msr in mullionMatches)
+                    Assert.AreEqual("prisonArchMullion_00", msr.sprite?.name, $"[A21/Bay{bayIndex}/MullionSprite/{msr.name}]");
+
+                var baySills = allRenderers
+                    .Where(sr => sr != null &&
+                                 (sr.gameObject.name.StartsWith($"ArchSill_{bayIndex}_", StringComparison.Ordinal) ||
+                                  sr.gameObject.name.StartsWith($"ArchLintel_{bayIndex}_", StringComparison.Ordinal)))
+                    .ToArray();
+                Assert.IsNotEmpty(baySills, $"[A21/Bay{bayIndex}/SillLintelMissing]");
+                foreach (var ssr in baySills)
+                {
+                    Assert.IsNotNull(ssr.sprite, $"[A21/Bay{bayIndex}/SillSprite/{ssr.name}]");
+                    StringAssert.StartsWith("prisonArchSill_0", ssr.sprite.name, $"[A21/Bay{bayIndex}/SillPrefix/{ssr.name}]");
+                    seenSillVariants.Add(ssr.sprite.name);
+                }
+
+                var bayJambs = allRenderers
+                    .Where(sr => sr != null &&
+                                 (sr.gameObject.name.StartsWith($"ArchJamb_L_{bayIndex}_", StringComparison.Ordinal) ||
+                                  sr.gameObject.name.StartsWith($"ArchJamb_R_{bayIndex}_", StringComparison.Ordinal)))
+                    .ToArray();
+                Assert.IsNotEmpty(bayJambs, $"[A21/Bay{bayIndex}/JambMissing]");
+                foreach (var jsr in bayJambs)
+                {
+                    Assert.IsNotNull(jsr.sprite, $"[A21/Bay{bayIndex}/JambSprite/{jsr.name}]");
+                    StringAssert.StartsWith("prisonArchJamb_0", jsr.sprite.name, $"[A21/Bay{bayIndex}/JambPrefix/{jsr.name}]");
+                    seenJambVariants.Add(jsr.sprite.name);
+                }
+
+                var moonLightGo = GameObject.Find($"ArchMoonSpill_{bayIndex}");
+                Assert.IsNotNull(moonLightGo, $"[A21/Bay{bayIndex}/ArchMoonSpillMissing]");
+                var moonLight = moonLightGo.GetComponent<Light2D>();
+                Assert.IsNotNull(moonLight, $"[A21/Bay{bayIndex}/ArchMoonSpillLight]");
+                Assert.IsTrue(moonLight.enabled, $"[A21/Bay{bayIndex}/ArchMoonSpillEnabled]");
+                Assert.AreEqual(Light2D.LightType.Point, moonLight.lightType, $"[A21/Bay{bayIndex}/ArchMoonSpillType]");
+                Assert.Greater(moonLight.intensity, 0.1f, $"[A21/Bay{bayIndex}/ArchMoonSpillIntensity]");
+            }
+            CollectionAssert.IsSupersetOf(seenSillVariants, new[] { "prisonArchSill_00", "prisonArchSill_01", "prisonArchSill_02" },
+                "[A21/SillVariants] All 3 weathered sill variants prisonArchSill_00..02 must appear across bays.");
+            CollectionAssert.IsSupersetOf(seenJambVariants, new[] { "prisonArchJamb_00", "prisonArchJamb_01", "prisonArchJamb_02" },
+                "[A21/JambVariants] All 3 weathered jamb variants prisonArchJamb_00..02 must appear across bays.");
+
+            // 6. Task 3.2: All 9 GroundMist_R5 strips have vertex color.a >= 0.80f & Mat_GroundMist_Prison.mat _MistColor.a >= 0.55f
+            var mistRoot = GameObject.Find("GroundMist_R5");
+            Assert.IsNotNull(mistRoot, "[A21/GroundMistRoot]");
+            var mistRenderers = mistRoot.GetComponentsInChildren<SpriteRenderer>(true);
+            Assert.AreEqual(9, mistRenderers.Length, "[A21/GroundMistCount]");
+            foreach (var mr in mistRenderers)
+                Assert.GreaterOrEqual(mr.color.a, 0.80f - 1e-4f, $"[A21/MistAlpha/{mr.name}]");
+
+            const string mistMatPath = "Assets/_Project/Art/Materials/Environment/Mat_GroundMist_Prison.mat";
+            var mistMat = AssetDatabase.LoadAssetAtPath<Material>(mistMatPath);
+            Assert.IsNotNull(mistMat, $"[A21/MistMaterialMissing] {mistMatPath}");
+            Assert.GreaterOrEqual(mistMat.GetColor("_MistColor").a, 0.55f - 1e-4f,
+                "[A21/MistMaterialAlpha] Mat_GroundMist_Prison _MistColor.a must be >= 0.55f.");
+        }
+
+        private readonly struct RoomVerticalSpan
+        {
+            public readonly string Tag;
+            public readonly float XMin;
+            public readonly float XMax;
+            public readonly float FloorY;
+            public readonly float CeilingY;
+
+            public RoomVerticalSpan(string tag, float xMin, float xMax, float floorY, float ceilingY)
+            {
+                Tag = tag;
+                XMin = xMin;
+                XMax = xMax;
+                FloorY = floorY;
+                CeilingY = ceilingY;
+            }
+        }
+
+        private static readonly (int bayIdx, float xMin, float xMax, float yMin, float yMax)[] CarvedBays =
+        {
+            (0, 8f, 12f, 2f, 5f), (1, 46f, 52f, 11f, 16f), (2, 69f, 74f, 2f, 6f), (3, -15f, -9f, 18f, 21f),
+            (4, 6f, 10f, 25f, 30f), (5, 118f, 126f, 14f, 19f), (6, 100f, 106f, -13f, -8f), (7, -60f, -54f, 30f, 35f),
+            (8, 66f, 74f, 46f, 52f), (9, 97f, 102f, 2f, 6f), (10, 138f, 144f, 18f, 22f), (11, 140f, 148f, -9f, -3f),
+            (12, 187f, 195f, -9f, -3f), (13, -75f, -69f, 18f, 22f), (14, 47f, 55f, 34f, 38f), (15, 96f, 104f, 47f, 55f),
+        };
+
+        private static readonly string[] RoomPrefabNames =
+        {
+            "AB", "CD", "G", "HJK", "ELF",
+            "W1_EastCourtyard", "W2_SewerCistern", "W3_WestBastion", "U1_UpperPromenade",
+        };
+
+        private static readonly Dictionary<string, RoomVerticalSpan[]> RoomSpansByPrefab = new Dictionary<string, RoomVerticalSpan[]>(StringComparer.Ordinal)
+        {
+            ["AB"] = new[]
+            {
+                new RoomVerticalSpan("A", 0f, 18f, 0f, 5.5f),
+                new RoomVerticalSpan("B", 18f, 42f, 0f, 6f),
+            },
+            ["CD"] = new[]
+            {
+                new RoomVerticalSpan("C", 42f, 56f, 0f, 18.5f),
+                new RoomVerticalSpan("D", 22f, 42f, 8f, 13.5f),
+            },
+            ["G"] = new[]
+            {
+                new RoomVerticalSpan("G", 56f, 76f, 0f, 14.5f),
+            },
+            ["HJK"] = new[]
+            {
+                new RoomVerticalSpan("H", 6f, 22f, 8f, 22.5f),
+                new RoomVerticalSpan("J", -16f, 6f, 16f, 22.5f),
+                new RoomVerticalSpan("K", -30f, -16f, 16f, 30.5f),
+            },
+            ["ELF"] = new[]
+            {
+                new RoomVerticalSpan("E", -16f, 22f, 24f, 31f),
+                new RoomVerticalSpan("L", 22f, 38f, 24f, 38.5f),
+                new RoomVerticalSpan("F", 0f, 22f, 32f, 38f),
+            },
+            ["W1_EastCourtyard"] = new[]
+            {
+                new RoomVerticalSpan("M", 76f, 164f, 0f, 7f),
+                new RoomVerticalSpan("N", 76f, 164f, 8f, 22.5f),
+            },
+            ["W2_SewerCistern"] = new[]
+            {
+                new RoomVerticalSpan("O", 76f, 164f, -16f, -1f),
+                new RoomVerticalSpan("P", 164f, 234f, -16f, -1.5f),
+            },
+            ["W3_WestBastion"] = new[]
+            {
+                new RoomVerticalSpan("Q", -102f, -30f, 16f, 23f),
+                new RoomVerticalSpan("R", -102f, -30f, 24f, 38.5f),
+            },
+            ["U1_UpperPromenade"] = new[]
+            {
+                new RoomVerticalSpan("S", 38f, 92f, 24f, 39f),
+                new RoomVerticalSpan("T", 38f, 140f, 40f, 62.5f),
+            },
+        };
+
+        private static bool OverlapsAabb(Bounds a, Bounds b, float padX, float padY)
+        {
+            return a.min.x < b.max.x + padX && a.max.x > b.min.x - padX &&
+                   a.min.y < b.max.y + padY && a.max.y > b.min.y - padY;
+        }
+
+        private static bool IsExcludedFromMixelScale(string objName)
+        {
+            return objName == "GodRay" ||
+                   objName == "LanternFlameCore_R5" ||
+                   objName.Contains("Glow", StringComparison.Ordinal) ||
+                   objName.StartsWith("Beam_", StringComparison.Ordinal) ||
+                   objName.StartsWith("Plank_", StringComparison.Ordinal);
+        }
+
+        private static bool IsExcludedFromRoomVerticalBounds(SpriteRenderer sr)
+        {
+            string n = sr.gameObject.name;
+            string pn = sr.transform.parent != null ? sr.transform.parent.name : string.Empty;
+
+            if (n.Contains("_BedrockStone_", StringComparison.Ordinal) ||
+                n.Contains("_StairCoreStone_", StringComparison.Ordinal) ||
+                n.Contains("_SlabStrata_", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (pn == "Art_I7_Chain" || pn == "Art_I8_Chain" || pn == "Art_I9_Chain" || pn == "Art_I10_Chain")
+                return true;
+
+            if (n.Contains("WellBridgeBrace", StringComparison.Ordinal) ||
+                n.Contains("WellCapBrace", StringComparison.Ordinal) ||
+                n.Contains("ShaftCapBrace", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryResolveRoomSpan(string prefabName, SpriteRenderer sr, out RoomVerticalSpan resolved)
+        {
+            resolved = default;
+            if (!RoomSpansByPrefab.TryGetValue(prefabName, out var candidates) || candidates.Length == 0)
+                return false;
+            if (candidates.Length == 1)
+            {
+                resolved = candidates[0];
+                return true;
+            }
+
+            string n = sr.gameObject.name;
+            string pn = sr.transform.parent != null ? sr.transform.parent.name : string.Empty;
+            foreach (var c in candidates)
+            {
+                string prefix = $"Art_{c.Tag}_";
+                if (n.StartsWith(prefix, StringComparison.Ordinal) || pn.StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    resolved = c;
+                    return true;
+                }
+            }
+
+            Vector3 center = sr.bounds.center;
+            float bestScore = float.MaxValue;
+            bool found = false;
+            foreach (var c in candidates)
+            {
+                if (center.x < c.XMin - 0.5f || center.x > c.XMax + 0.5f)
+                    continue;
+                float dy = center.y < c.FloorY ? c.FloorY - center.y : (center.y > c.CeilingY ? center.y - c.CeilingY : 0f);
+                if (dy < bestScore)
+                {
+                    bestScore = dy;
+                    resolved = c;
+                    found = true;
+                }
+            }
+            return found;
         }
 
         private static Bounds GetVisualSpriteBounds(GameObject go)
