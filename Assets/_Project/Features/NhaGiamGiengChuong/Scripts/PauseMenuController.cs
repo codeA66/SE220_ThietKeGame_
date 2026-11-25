@@ -31,7 +31,7 @@ namespace DeadCells.NhaGiamGiengChuong
         public bool CanPause =>
             _run != null &&
             _run.IsPlaying &&
-            (_player == null || _player.RunStats == null || !_player.RunStats.IsChoosing);
+            (_player == null || ((_player.RunStats == null || !_player.RunStats.IsChoosing) && !_player.IsInScriptedSequence));
 
         public Action QuitHandler { get; set; }
 

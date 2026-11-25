@@ -30,6 +30,7 @@ namespace DeadCells.Player.StateMachine
             Hurt = new PlayerHurtState(context, this);
             Dead = new PlayerDeadState(context, this);
             Spawn = new PlayerSpawnState(context, this);
+            ScriptedWalk = new PlayerScriptedWalkState(context, this);
         }
 
         public IPlayerState Current { get; private set; }
@@ -51,6 +52,7 @@ namespace DeadCells.Player.StateMachine
         public IPlayerState Hurt { get; }
         public IPlayerState Dead { get; }
         public IPlayerState Spawn { get; }
+        public PlayerScriptedWalkState ScriptedWalk { get; }
 
         /// <summary>
         /// Switches state. Only one transition is accepted per frame.
