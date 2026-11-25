@@ -272,5 +272,141 @@ namespace DeadCells.Core.Tests
                 UnityEngine.Object.DestroyImmediate(arrowGo);
             }
         }
+
+        [Test]
+        public void ParticleMeshSystems_DisableComponentWhenEmpty_AndReEnableOnEmit()
+        {
+            BloodDrops blood = null;
+            Debris debris = null;
+            Sparks sparks = null;
+            try
+            {
+                BloodDrops.Emit(Vector2.zero, 1, BloodBurst.Light, 0);
+                blood = Object.FindAnyObjectByType<BloodDrops>();
+                Assert.IsNotNull(blood, "BloodDrops singleton must be created on Emit.");
+                Assert.IsTrue(blood.enabled, "BloodDrops must be enabled after Emit.");
+
+                ClearParticleListsAndTick(blood, "_active");
+                Assert.IsFalse(blood.enabled, "BloodDrops must disable after _active drains and LateUpdate clears mesh.");
+                Assert.AreEqual(0, blood.GetComponent<MeshFilter>().sharedMesh.vertexCount);
+
+                BloodDrops.Emit(Vector2.zero, 1, BloodBurst.Light, 0);
+                Assert.IsTrue(blood.enabled, "BloodDrops must re-enable on subsequent Emit.");
+
+                Debris.Shockwave(Vector2.zero, 0, 0.25f, 4);
+                debris = Object.FindAnyObjectByType<Debris>();
+                Assert.IsNotNull(debris, "Debris singleton must be created on Shockwave.");
+                Assert.IsTrue(debris.enabled, "Debris must be enabled after Shockwave.");
+
+                ClearParticleListsAndTick(debris, "_active");
+                Assert.IsFalse(debris.enabled, "Debris must disable after _active drains and LateUpdate clears mesh.");
+                Assert.AreEqual(0, debris.GetComponent<MeshFilter>().sharedMesh.vertexCount);
+
+                Debris.Shockwave(Vector2.zero, 0, 0.25f, 4);
+                Assert.IsTrue(debris.enabled, "Debris must re-enable on subsequent Shockwave.");
+
+                Sparks.Emit(Vector2.zero, 1, SparkBurst.Shield, 0);
+                sparks = Object.FindAnyObjectByType<Sparks>();
+                Assert.IsNotNull(sparks, "Sparks singleton must be created on Emit.");
+                Assert.IsTrue(sparks.enabled, "Sparks must be enabled after Emit.");
+
+                ClearParticleListsAndTick(sparks, "_active", "_flashes");
+                Assert.IsFalse(sparks.enabled, "Sparks must disable after _active and _flashes drain and LateUpdate clears meshes.");
+
+                Sparks.Emit(Vector2.zero, 1, SparkBurst.Shield, 0);
+                Assert.IsTrue(sparks.enabled, "Sparks must re-enable on subsequent Emit.");
+            }
+            finally
+            {
+                if (blood != null) Object.DestroyImmediate(blood.gameObject);
+                if (debris != null) Object.DestroyImmediate(debris.gameObject);
+                if (sparks != null) Object.DestroyImmediate(sparks.gameObject);
+            }
+        }
+
+        [Test]
+        public void ParallaxLayer2D_PinColumnsToFrustumEdges_PreservesColumnPositionsWithCachedCameraAndWidths()
+        {
+            var camGo = new GameObject("CamTest");
+            var layerGo = new GameObject("FgLayerTest");
+            var tex = new Texture2D(64, 32);
+            var sprite = Sprite.Create(tex, new Rect(0f, 0f, 64f, 32f), new Vector2(0.5f, 0.5f), 32f);
+            _spawned.Add(camGo);
+            _spawned.Add(layerGo);
+
+            try
+            {
+                var cam = camGo.AddComponent<Camera>();
+                cam.orthographic = true;
+                cam.orthographicSize = 6.75f;
+                cam.aspect = 16f / 9f;
+
+                var col0 = CreateColumn(layerGo.transform, "FgColumn_0", -30f, 1.5f);
+                var col1 = CreateColumn(layerGo.transform, "FgColumn_1", -10f, 1.5f);
+                var col2 = CreateColumn(layerGo.transform, "FgColumn_2", 10f, 1.5f);
+                var col3 = CreateColumn(layerGo.transform, "FgColumn_3", 30f, 1.5f);
+
+                var sr1 = col1.gameObject.AddComponent<SpriteRenderer>();
+                sr1.sprite = sprite;
+                col1.localScale = new Vector3(1.5f, 1f, 1f);
+
+                var sr2 = col2.gameObject.AddComponent<SpriteRenderer>();
+                sr2.sprite = sprite;
+                col2.localScale = new Vector3(0.5f, 1f, 1f);
+
+                var layer = layerGo.AddComponent<ParallaxLayer2D>();
+                layer.Configure(camGo.transform, Vector2.one, 0f, pixelSnap: true, pixelsPerUnit: 24f);
+                layer.ConfigureFrustumEdgePinning(enabled: true, edgeVisibleInsetUnits: 0.46f, outerGuardOffsetUnits: 26f);
+
+                layer.UpdateParallax(new Vector3(10f, 0f, -10f));
+                layer.UpdateParallax(new Vector3(25f, 0f, -10f));
+
+                float halfW = cam.orthographicSize * cam.aspect;
+                float expectedLeft = Mathf.Round((halfW + 1.5f - 0.46f) * 24f) / 24f;
+                float expectedRight = Mathf.Round((halfW + 0.5f - 0.46f) * 24f) / 24f;
+                float expectedOuter = Mathf.Round(Mathf.Max(38f, halfW + 26f) * 24f) / 24f;
+
+                Assert.AreEqual(-expectedOuter, col0.localPosition.x, 1e-4f);
+                Assert.AreEqual(-expectedLeft, col1.localPosition.x, 1e-4f);
+                Assert.AreEqual(expectedRight, col2.localPosition.x, 1e-4f);
+                Assert.AreEqual(expectedOuter, col3.localPosition.x, 1e-4f);
+                Assert.AreEqual(1.5f, col1.localPosition.y, 1e-4f);
+
+                const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+                Assert.AreSame(cam, typeof(ParallaxLayer2D).GetField("_cachedCamera", flags).GetValue(layer));
+                Assert.IsTrue((bool)typeof(ParallaxLayer2D).GetField("_columnWidthsCached", flags).GetValue(layer));
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        private static Transform CreateColumn(Transform parent, string name, float localX, float localY)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(localX, localY, 0f);
+            return go.transform;
+        }
+
+        private static void ClearParticleListsAndTick(MonoBehaviour system, params string[] listFieldNames)
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            System.Type type = system.GetType();
+            for (int i = 0; i < listFieldNames.Length; i++)
+            {
+                FieldInfo field = type.GetField(listFieldNames[i], flags);
+                Assert.IsNotNull(field, $"{type.Name}.{listFieldNames[i]} field missing.");
+                var list = (System.Collections.IList)field.GetValue(system);
+                list.Clear();
+            }
+
+            type.GetMethod("Update", flags)?.Invoke(system, null);
+            MethodInfo lateUpdate = type.GetMethod("LateUpdate", flags);
+            Assert.IsNotNull(lateUpdate, $"{type.Name}.LateUpdate method missing.");
+            lateUpdate.Invoke(system, null);
+        }
     }
 }
