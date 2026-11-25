@@ -20,6 +20,8 @@ namespace DeadCells.Currency
         private float _attractAt;
         private bool _attracting;
 
+        public bool IsAttracting => _attracting;
+
         private void Awake()
         {
             _body = GetComponent<Rigidbody2D>();
@@ -58,10 +60,25 @@ namespace DeadCells.Currency
             _body.linearVelocity = new Vector2(Random.Range(-1.4f, 1.4f), 3.6f);
         }
 
-        private void Update()
+        private void Update() => Tick(Time.deltaTime, Time.time);
+
+        public void Tick(float deltaTime, float currentTime)
         {
-            if (_value <= 0 || _wallet == null || _player == null || !_player.IsAlive ||
-                Time.deltaTime <= 0f || Time.time < _attractAt)
+            if (_player == null || !_player.IsAlive)
+            {
+                if (_attracting)
+                {
+                    _attracting = false;
+                    if (_body != null && !_staticPlacement)
+                    {
+                        _body.simulated = true;
+                        _body.linearVelocity = Vector2.zero;
+                    }
+                }
+                return;
+            }
+
+            if (_value <= 0 || _wallet == null || deltaTime <= 0f || currentTime < _attractAt)
                 return;
 
             Vector2 target = (Vector2)_player.transform.position + Vector2.up * 0.75f;
@@ -76,7 +93,7 @@ namespace DeadCells.Currency
                 _body.simulated = false;
             }
 
-            Vector2 next = Vector2.MoveTowards(position, target, _magnetSpeed * Time.deltaTime);
+            Vector2 next = Vector2.MoveTowards(position, target, _magnetSpeed * deltaTime);
             transform.position = new Vector3(next.x, next.y, transform.position.z);
             if ((target - next).sqrMagnitude > 0.0625f)
                 return;

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DeadCells.Combat;
 using DeadCells.Core;
 using UnityEngine;
 
@@ -48,6 +49,7 @@ namespace DeadCells.Enemies
         private int _value;
         private GemStyle _gem;
         private Transform _player;
+        private Health _playerHealth;
         private LayerMask _groundMask;
         private LayerMask _solidMask;
         private Vector2 _velocity;
@@ -59,6 +61,7 @@ namespace DeadCells.Enemies
         private bool _isMagnetised;
 
         public bool IsResting => _isResting;
+        public bool IsMagnetised => _isMagnetised;
 
         public void StepSimulation(float dt) => Simulate(dt);
 
@@ -198,6 +201,7 @@ namespace DeadCells.Enemies
             _value = value;
             _gem = gem;
             _player = player;
+            _playerHealth = player != null ? player.GetComponent<Health>() : null;
             _groundMask = groundMask;
             int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
             int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
@@ -223,14 +227,25 @@ namespace DeadCells.Enemies
             gameObject.SetActive(true);
         }
 
-        private void Update()
+        private void Update() => Tick(Time.deltaTime);
+
+        public void Tick(float dt)
         {
-            float dt = Time.deltaTime;
             _age += dt;
             if (_kind == LootKind.Gem)
                 AnimateGlow();
 
-            if (_age >= PickupDelay && _player != null)
+            bool playerAlive = _player != null && _player.gameObject.activeInHierarchy &&
+                               (_playerHealth == null || _playerHealth.IsAlive);
+            if (!playerAlive)
+            {
+                if (_isMagnetised)
+                {
+                    _isMagnetised = false;
+                    _velocity = Vector2.zero;
+                }
+            }
+            else if (_age >= PickupDelay)
             {
                 Vector3 target = _player.position + PlayerCenterOffset;
                 Vector3 toPlayer = target - _cachedTransform.position;
