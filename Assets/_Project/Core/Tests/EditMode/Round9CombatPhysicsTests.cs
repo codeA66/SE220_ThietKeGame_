@@ -1697,6 +1697,7 @@ namespace DeadCells.Core.Tests
                 Assert.AreEqual(1.60f, col.size.y, 0.001f, "Standing up must restore 1.60u collider.");
 
                 // Open-air jump during bow recovery must clear _crouching and restore 1.60u collider.
+                harness.Context.Bow.ResetShots();
                 SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), true);
                 harness.Context.RefreshFrame();
                 ForceState(harness.Machine, harness.Machine.BowAttack);
