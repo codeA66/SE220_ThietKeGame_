@@ -100,5 +100,21 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.AreEqual(7f, cam.orthographicSize, 0.05f);
             Assert.AreEqual(34f, follow.transform.position.y, 0.25f);
         }
+
+        [Test]
+        public void EndFocusOverride_WithZeroReturnSmoothTime_ImmediatelySnapsOrthoSizeToDefault()
+        {
+            var follow = CreateCameraFixture(out var cam, out var target);
+            follow.SetBounds(true, new Rect(176f, 27f, 28f, 24f));
+            follow.BeginFocusOverride(new Vector2(191.5f, 37.2f), 0.3f, 5.2f);
+            for (int i = 0; i < 120; i++)
+                follow.StepCamera(1f / 60f);
+            Assert.AreEqual(5.2f, cam.orthographicSize, 0.05f);
+
+            follow.EndFocusOverride(0f);
+            Assert.IsFalse(follow.IsFocusOverrideActive);
+            Assert.AreEqual(7f, cam.orthographicSize, 0.001f,
+                "EndFocusOverride(0f) must immediately snap orthographicSize back to default before SnapToTarget or OnDisable.");
+        }
     }
 }
