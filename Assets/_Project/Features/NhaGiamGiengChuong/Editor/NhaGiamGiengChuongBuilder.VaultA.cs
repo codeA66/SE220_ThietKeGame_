@@ -668,6 +668,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             vel.enabled = true;
             vel.x = new ParticleSystem.MinMaxCurve(-0.18f, 0.25f);
             vel.y = new ParticleSystem.MinMaxCurve(-0.35f, -0.08f);
+            vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             var rend = go.GetComponent<ParticleSystemRenderer>();
             rend.sharedMaterial = particlesUnlit;
             rend.sortingLayerID = vfxLayerId;
