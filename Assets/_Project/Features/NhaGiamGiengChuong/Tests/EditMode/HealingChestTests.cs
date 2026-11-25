@@ -1,14 +1,21 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using DeadCells.Combat;
+using DeadCells.Core.StateMachine;
+using DeadCells.Enemies;
+using DeadCells.Player;
 using DeadCells.Player.StateMachine;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
 {
     public sealed class HealingChestTests
     {
+        private const string PlayerPrefabPath = "Assets/_Project/Features/Player/Prefabs/Player.prefab";
         private readonly List<GameObject> _created = new();
 
         private sealed class DummyPlayState : IPlayerState
@@ -16,6 +23,26 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             public void Enter() { }
             public void Exit() { }
             public void Tick() { }
+            public void FixedTick() { }
+        }
+
+        private sealed class CallbackCoreState : IState
+        {
+            private readonly Action _onTick;
+            public CallbackCoreState(Action onTick) => _onTick = onTick;
+            public void Enter() { }
+            public void Exit() { }
+            public void Tick() => _onTick?.Invoke();
+            public void FixedTick() { }
+        }
+
+        private sealed class CallbackPlayerState : IPlayerState
+        {
+            private readonly Action _onTick;
+            public CallbackPlayerState(Action onTick) => _onTick = onTick;
+            public void Enter() { }
+            public void Exit() { }
+            public void Tick() => _onTick?.Invoke();
             public void FixedTick() { }
         }
 
@@ -28,6 +55,12 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
                     Object.DestroyImmediate(_created[i]);
             }
             _created.Clear();
+            DamagePopup.ClearPoolForTests();
+            foreach (var popup in Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include))
+            {
+                if (popup != null)
+                    Object.DestroyImmediate(popup.gameObject);
+            }
             Time.timeScale = 1f;
         }
 
@@ -254,6 +287,275 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.AreEqual(expectedTint.g, visualSr.color.g, 1e-3f, "[T1.5/ChestTintG]");
             Assert.AreEqual(expectedTint.b, visualSr.color.b, 1e-3f, "[T1.5/ChestTintB]");
             Assert.AreEqual(expectedTint.a, visualSr.color.a, 1e-3f, "[T1.5/ChestTintA]");
+        }
+
+        [Test]
+        public void PlayerController_TeleportTo_SyncsColliderBoundsImmediately()
+        {
+#pragma warning disable CS0618
+            bool previousAutoSync = Physics2D.autoSyncTransforms;
+            Physics2D.autoSyncTransforms = false;
+#pragma warning restore CS0618
+            try
+            {
+                var player = CreatePlayerFromPrefab(Vector2.zero);
+                Assert.IsTrue(player.gameObject.CompareTag("Player"), "Player.prefab root must carry the Player tag.");
+
+                var col = player.GetComponent<BoxCollider2D>();
+                Physics2D.SyncTransforms();
+
+                var destination = new Vector2(25f, 12f);
+                player.TeleportTo(destination, -1);
+
+                Vector2 expectedCenter = destination + col.offset;
+                Assert.AreEqual(expectedCenter.x, col.bounds.center.x, 1e-3f,
+                    "TeleportTo must sync BoxCollider2D.bounds.center.x even when Physics2D.autoSyncTransforms is false.");
+                Assert.AreEqual(expectedCenter.y, col.bounds.center.y, 1e-3f,
+                    "TeleportTo must sync BoxCollider2D.bounds.center.y even when Physics2D.autoSyncTransforms is false.");
+                Assert.AreEqual(-1, player.Context.FacingDirection);
+            }
+            finally
+            {
+#pragma warning disable CS0618
+                Physics2D.autoSyncTransforms = previousAutoSync;
+#pragma warning restore CS0618
+            }
+        }
+
+        [Test]
+        public void StateMachine_ForceChangeBeforeTick_DoesNotBlockTransitionInsideTick()
+        {
+            // 1. Core StateMachine
+            var core = new StateMachine();
+            IState coreB = null;
+            IState coreC = null;
+            bool coreFirst = false;
+            bool coreSecond = true;
+            bool coreNextTick = false;
+
+            var coreForced = new CallbackCoreState(() =>
+            {
+                coreFirst = core.ChangeState(coreB);
+                coreSecond = core.ChangeState(coreC);
+            });
+            coreB = new CallbackCoreState(() => coreNextTick = core.ChangeState(coreC));
+            coreC = new CallbackCoreState(null);
+
+            core.ForceChangeState(coreForced);
+            core.Tick();
+            Assert.IsTrue(coreFirst, "ForceChangeState before Tick must not block ChangeState inside Tick.");
+            Assert.IsFalse(coreSecond, "A second ChangeState inside the same Tick must be rejected.");
+            Assert.AreSame(coreB, core.Current);
+
+            core.Tick();
+            Assert.IsTrue(coreNextTick, "A subsequent Tick on the same frame must allow another transition.");
+            Assert.AreSame(coreC, core.Current);
+
+            // 2. PlayerStateMachine
+            var player = CreatePlayerFromPrefab(Vector2.zero);
+            var playerMachine = (PlayerStateMachine)typeof(PlayerController)
+                .GetField("_machine", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(player);
+            IPlayerState playerB = null;
+            IPlayerState playerC = null;
+            bool playerFirst = false;
+            bool playerSecond = true;
+            bool playerNextTick = false;
+
+            var playerForced = new CallbackPlayerState(() =>
+            {
+                playerFirst = playerMachine.ChangeState(playerB);
+                playerSecond = playerMachine.ChangeState(playerC);
+            });
+            playerB = new CallbackPlayerState(() => playerNextTick = playerMachine.ChangeState(playerC));
+            playerC = new CallbackPlayerState(null);
+
+            playerMachine.ForceChangeState(playerForced);
+            playerMachine.Tick();
+            Assert.IsTrue(playerFirst, "PlayerStateMachine ForceChangeState before Tick must not block ChangeState inside Tick.");
+            Assert.IsFalse(playerSecond, "PlayerStateMachine must reject a second ChangeState inside the same Tick.");
+            Assert.AreSame(playerB, playerMachine.Current);
+
+            playerMachine.Tick();
+            Assert.IsTrue(playerNextTick, "PlayerStateMachine must allow a transition on the next Tick.");
+            Assert.AreSame(playerC, playerMachine.Current);
+        }
+
+        [Test]
+        public void Projectile_DeactivateViaSetActiveFalse_ReleasesBackToPool()
+        {
+            var projGo = Track(new GameObject("PooledArrow"));
+            var body = projGo.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Kinematic;
+            var col = projGo.AddComponent<BoxCollider2D>();
+            col.isTrigger = true;
+            var sr = projGo.AddComponent<SpriteRenderer>();
+            var proj = projGo.AddComponent<Projectile>();
+
+            typeof(Projectile).GetField("_mode", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(proj, Projectile.Mode.Straight);
+            typeof(Projectile).GetField("_renderer", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(proj, sr);
+
+            int releasedCount = 0;
+            proj.Setup(_ => releasedCount++, null, 0, 0);
+            proj.LaunchStraight(Vector2.zero, new Vector2(8f, 0f), 10, 1f, null);
+            Assert.IsTrue(proj.IsLive);
+            Assert.IsTrue(proj.gameObject.activeSelf);
+
+            proj.gameObject.SetActive(false);
+            Assert.IsFalse(proj.IsLive, "Disabling a live Projectile via SetActive(false) must mark it non-live.");
+            Assert.AreEqual(1, releasedCount, "Disabling a live Projectile via SetActive(false) must release it back to the pool once.");
+
+            // Pooled reuse still works cleanly without re-entry issues.
+            proj.LaunchStraight(Vector2.one, new Vector2(-6f, 0f), 10, 1f, null);
+            Assert.IsTrue(proj.IsLive);
+            proj.gameObject.SetActive(false);
+            Assert.IsFalse(proj.IsLive);
+            Assert.AreEqual(2, releasedCount);
+        }
+
+        [Test]
+        public void DamagePopup_Prewarm_RefillsPoolAfterSceneObjectsDestroyed()
+        {
+            DamagePopup.ClearPoolForTests();
+            try
+            {
+                DamagePopup.Prewarm();
+                var initial = Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include);
+                Assert.AreEqual(8, initial.Length, "Initial Prewarm must populate PrewarmCount (8) instances.");
+
+                // Simulate scene unload destroying pooled GameObjects while s_font remains initialized.
+                foreach (var popup in initial)
+                {
+                    if (popup != null)
+                        Object.DestroyImmediate(popup.gameObject);
+                }
+                Assert.AreEqual(0, Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include).Length);
+
+                DamagePopup.Prewarm();
+                var refilled = Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include);
+                Assert.AreEqual(8, refilled.Length, "Prewarm after scene object destruction must refill live pooled instances.");
+
+                DamagePopup.Spawn(Vector3.zero, 42, 1, false);
+                int activeCount = 0;
+                foreach (var popup in Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include))
+                {
+                    if (popup.gameObject.activeSelf)
+                        activeCount++;
+                }
+                Assert.AreEqual(1, activeCount, "Spawn after refill must activate a pooled DamagePopup.");
+            }
+            finally
+            {
+                DamagePopup.ClearPoolForTests();
+            }
+        }
+
+        [Test]
+        public void HealingChest_BlocksPromptAndInteraction_DuringScriptedOrUpgradeLock()
+        {
+            var player = CreatePlayerFromPrefab(new Vector2(72f, 0f));
+            var health = player.Health;
+            var playerCol = player.GetComponent<BoxCollider2D>();
+
+            var runGo = Track(new GameObject("Run"));
+            var run = runGo.AddComponent<LevelRunController>();
+            run.Configure(player, health);
+            Assert.IsTrue(run.TickIntro(new DummyPlayState(), 0f));
+
+            var chestGo = Track(new GameObject("I3_HealingChest"));
+            chestGo.transform.position = new Vector3(72f, 0f, 0f);
+            var trigger = chestGo.AddComponent<BoxCollider2D>();
+            trigger.isTrigger = true;
+            trigger.offset = new Vector2(0f, 0.75f);
+            trigger.size = new Vector2(2.5f, 1.5f);
+
+            var promptGo = Track(new GameObject("Prompt"));
+            promptGo.transform.SetParent(chestGo.transform, false);
+            var glowGo = Track(new GameObject("Glow"));
+            glowGo.transform.SetParent(chestGo.transform, false);
+
+            var chest = chestGo.AddComponent<HealingChest>();
+            chest.Configure(run, player, trigger, null, promptGo, glowGo, health, playerCol);
+
+            Assert.IsTrue(health.TakeDamage(new DamageInfo(35, 1, 0f, 0f, false, null)));
+            Assert.AreEqual(65, health.Current);
+
+            chest.RefreshVisualState();
+            Assert.IsTrue(chest.PromptVisible, "Precondition: prompt visible while damaged and unlocked.");
+
+            // 1. Scripted sequence lock hides prompt and blocks interaction.
+            player.EnterTransitionLock();
+            Assert.IsTrue(player.IsInScriptedSequence);
+            chest.RefreshVisualState();
+            Assert.IsFalse(chest.PromptVisible, "Prompt must hide during scripted sequence.");
+            Assert.IsFalse(promptGo.activeSelf);
+            Assert.IsFalse(chest.TryInteract(), "TryInteract must fail during scripted sequence.");
+            Assert.AreEqual(65, health.Current);
+            Assert.IsTrue(chest.HasReward);
+
+            player.EndScriptedSequence();
+            Assert.IsFalse(player.IsInScriptedSequence);
+            chest.RefreshVisualState();
+            Assert.IsTrue(chest.PromptVisible, "Prompt must return once scripted sequence ends.");
+
+            // 2. Scroll upgrade choice lock hides prompt and blocks interaction.
+            var scrollGo = Track(new GameObject("DummyScroll"));
+            var scroll = scrollGo.AddComponent<PowerScrollPickup>();
+            player.RunStats.ChoiceOpened += _ => { };
+            var tryBeginChoice = typeof(PlayerRunStats).GetMethod("TryBeginChoice", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(tryBeginChoice);
+            Assert.IsTrue((bool)tryBeginChoice.Invoke(player.RunStats, new object[] { scroll }));
+            Assert.IsTrue(player.RunStats.BlocksGameplayInput);
+
+            chest.RefreshVisualState();
+            Assert.IsFalse(chest.PromptVisible, "Prompt must hide while scroll upgrade menu is open.");
+            Assert.IsFalse(promptGo.activeSelf);
+            Assert.IsFalse(chest.TryInteract(), "TryInteract must fail while scroll upgrade menu is open.");
+            Assert.AreEqual(65, health.Current);
+            Assert.IsTrue(chest.HasReward);
+
+            player.RunStats.CancelChoice();
+            Assert.IsTrue(player.RunStats.BlocksGameplayInput, "Same-frame close guard keeps gameplay input blocked.");
+            chest.RefreshVisualState();
+            Assert.IsFalse(chest.PromptVisible);
+            Assert.IsFalse(chest.TryInteract());
+
+            var closedFrameField = typeof(PlayerRunStats).GetField("_closedFrame", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(closedFrameField);
+            closedFrameField.SetValue(player.RunStats, -1);
+            Assert.IsFalse(player.RunStats.BlocksGameplayInput);
+
+            chest.RefreshVisualState();
+            Assert.IsTrue(chest.PromptVisible, "Prompt must return once upgrade input lock clears.");
+            Assert.IsTrue(chest.TryInteract(), "Chest must heal once all input locks clear.");
+            Assert.AreEqual(health.Max, health.Current);
+            Assert.IsTrue(chest.IsConsumed);
+        }
+
+        private PlayerController CreatePlayerFromPrefab(Vector2 position)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
+            Assert.IsNotNull(prefab, $"Missing {PlayerPrefabPath}");
+            var playerGo = Track((GameObject)PrefabUtility.InstantiatePrefab(prefab));
+            playerGo.transform.position = new Vector3(position.x, position.y, 0f);
+
+            var player = playerGo.GetComponent<PlayerController>();
+            var health = playerGo.GetComponent<Health>();
+            var input = playerGo.GetComponent<PlayerInputReader>();
+
+            InvokeNonPublic(health, "Awake");
+            InvokeNonPublic(input, "Awake");
+            InvokeNonPublic(player, "Awake");
+            return player;
+        }
+
+        private static void InvokeNonPublic(object target, string methodName)
+        {
+            var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(method, $"Missing {target.GetType().Name}.{methodName}");
+            method.Invoke(target, null);
         }
 
         private (LevelRunController Run, GameObject PlayerGo, BoxCollider2D PlayerCol, Health Health, HealingChest Chest, GameObject PromptGo, GameObject GlowGo) CreateFixture()
