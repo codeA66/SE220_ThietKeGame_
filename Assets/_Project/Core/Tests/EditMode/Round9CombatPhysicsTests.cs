@@ -2445,16 +2445,28 @@ namespace DeadCells.Core.Tests
             SetPrivateField(machine, "_lastTransitionFrame", -1);
         }
 
+        private static FieldInfo FindPrivateField(System.Type type, string fieldName)
+        {
+            for (var cursor = type; cursor != null; cursor = cursor.BaseType)
+            {
+                var field = cursor.GetField(fieldName,
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                if (field != null)
+                    return field;
+            }
+            return null;
+        }
+
         private static void SetPrivateField(object target, string fieldName, object value)
         {
-            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            var field = FindPrivateField(target.GetType(), fieldName);
             Assert.IsNotNull(field, $"Missing private field {target.GetType().Name}.{fieldName}");
             field.SetValue(target, value);
         }
 
         private static T GetPrivateField<T>(object target, string fieldName)
         {
-            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            var field = FindPrivateField(target.GetType(), fieldName);
             Assert.IsNotNull(field, $"Missing private field {target.GetType().Name}.{fieldName}");
             return (T)field.GetValue(target);
         }
