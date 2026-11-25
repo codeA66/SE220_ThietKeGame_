@@ -142,6 +142,7 @@ namespace DeadCells.Player
             transform.position = new Vector3(position.x, position.y, transform.position.z);
             if (_context != null && facingDirection != 0)
                 _context.Face(facingDirection > 0 ? 1 : -1);
+            Physics2D.SyncTransforms();
         }
 
         private void Update()
@@ -278,6 +279,8 @@ namespace DeadCells.Player
             _respawnAt = -1f;
             _body.position = _spawnPoint;
             _body.linearVelocity = Vector2.zero;
+            transform.position = new Vector3(_spawnPoint.x, _spawnPoint.y, transform.position.z);
+            Physics2D.SyncTransforms();
             _health.RestoreFull();
             _bow.ResetShots();
             _context.ClearComboCarry();
