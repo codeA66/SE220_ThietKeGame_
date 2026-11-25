@@ -44,6 +44,8 @@ namespace DeadCells.Combat
             // down walls, plus a blood mist. Crits deal normal damage: no crit multiplier exists yet.
             [Tooltip("DC: canCrit. On: hits from this strike are critical: gold flare, freeze + slow-motion, bigger shake; a crit kill throws a crimson gore burst (blood drops that land on floors and walls, plus mist). Damage is unchanged.")]
             public bool CanCrit;
+            [Tooltip("Optional stun duration dealt by this strike (s). Non-zero breaks front shields.")]
+            public float Stun;
             [Tooltip("DC: charge. Recorded for reference; timing uses HitFrame.")]
             public float Charge;
             [Tooltip("Swing effect played on the hit frame. DC: fxId.")]
