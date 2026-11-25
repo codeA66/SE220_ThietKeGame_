@@ -63,6 +63,9 @@ namespace DeadCells.Player.StateMachine.States
                     Machine.ChangeState(Machine.Fall);
                     return;
                 }
+
+                // Grounded under a low ceiling: discard blocked jump buffer so it cannot fire once clear.
+                Ctx.ClearJumpBuffer();
             }
 
             _holdTimer += deltaTime;
