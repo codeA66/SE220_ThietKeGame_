@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using DeadCells.Combat;
 using DeadCells.Player;
 using UnityEngine;
@@ -22,9 +23,13 @@ namespace DeadCells.HUD
         private readonly ContactFilter2D _climbableFilter;
         private readonly Collider2D[] _hits = new Collider2D[12];
         private readonly List<MinimapMarker> _staticLandmarks = new();
+        private readonly List<Health> _enemyHealths = new();
+        private readonly List<MonoBehaviour> _behaviourScratch = new();
+        private readonly Type _healingChestType;
+        private readonly PropertyInfo _healingChestIsConsumedProp;
 
-        private Health[] _healths = Array.Empty<Health>();
         private PowerScrollPickup[] _scrolls = Array.Empty<PowerScrollPickup>();
+        private UnityEngine.Object[] _healingChests = Array.Empty<UnityEngine.Object>();
         private float _nextDynamicScan = -1f;
 
         public MinimapWorldScanner(float cellSize)
@@ -32,6 +37,8 @@ namespace DeadCells.HUD
             _cellSize = cellSize;
             _probeSize = Vector2.one * (cellSize * 0.86f);
             _oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
+            _healingChestType = Type.GetType("DeadCells.NhaGiamGiengChuong.HealingChest, NhaGiamGiengChuong", throwOnError: false);
+            _healingChestIsConsumedProp = _healingChestType?.GetProperty("IsConsumed", BindingFlags.Public | BindingFlags.Instance);
 
             int terrainMask = LayerMask.GetMask("Ground", "OneWayPlatform");
             if (terrainMask == 0)
@@ -111,12 +118,25 @@ namespace DeadCells.HUD
             if (now >= _nextDynamicScan)
             {
                 _nextDynamicScan = now + DynamicScanInterval;
-                _healths = UnityEngine.Object.FindObjectsByType<Health>(FindObjectsSortMode.None);
-                _scrolls = UnityEngine.Object.FindObjectsByType<PowerScrollPickup>(FindObjectsSortMode.None);
+                RefreshEnemyHealthCache();
+                _scrolls = UnityEngine.Object.FindObjectsByType<PowerScrollPickup>();
+                _healingChests = _healingChestType != null
+                    ? UnityEngine.Object.FindObjectsByType(_healingChestType, FindObjectsInactive.Exclude)
+                    : Array.Empty<UnityEngine.Object>();
             }
 
             for (int i = 0; i < _staticLandmarks.Count; i++)
                 output.Add(_staticLandmarks[i]);
+
+            for (int i = 0; i < _healingChests.Length; i++)
+            {
+                MonoBehaviour chest = _healingChests[i] as MonoBehaviour;
+                if (chest == null || !chest.gameObject.activeInHierarchy)
+                    continue;
+                if (_healingChestIsConsumedProp != null && (bool)_healingChestIsConsumedProp.GetValue(chest))
+                    continue;
+                output.Add(new MinimapMarker(chest.transform.position, MinimapMarkerKind.Chest));
+            }
 
             for (int i = 0; i < _scrolls.Length; i++)
             {
@@ -127,9 +147,9 @@ namespace DeadCells.HUD
             }
 
             Health playerHealth = player != null ? player.Health : null;
-            for (int i = 0; i < _healths.Length; i++)
+            for (int i = 0; i < _enemyHealths.Count; i++)
             {
-                Health health = _healths[i];
+                Health health = _enemyHealths[i];
                 if (health == null || !health.IsAlive || health == playerHealth || !health.gameObject.activeInHierarchy)
                     continue;
                 output.Add(new MinimapMarker((Vector2)health.transform.position + Vector2.up * 0.6f, MinimapMarkerKind.Enemy));
@@ -137,6 +157,31 @@ namespace DeadCells.HUD
 
             if (player != null)
                 output.Add(new MinimapMarker((Vector2)player.transform.position + Vector2.up * 0.75f, MinimapMarkerKind.Player));
+        }
+
+        private void RefreshEnemyHealthCache()
+        {
+            _enemyHealths.Clear();
+            Health[] allHealths = UnityEngine.Object.FindObjectsByType<Health>();
+            for (int i = 0; i < allHealths.Length; i++)
+            {
+                Health health = allHealths[i];
+                if (health != null && HasComponentType(health.gameObject, "EnemyController"))
+                    _enemyHealths.Add(health);
+            }
+        }
+
+        private bool HasComponentType(GameObject go, string typeName)
+        {
+            _behaviourScratch.Clear();
+            go.GetComponents(_behaviourScratch);
+            for (int i = 0; i < _behaviourScratch.Count; i++)
+            {
+                MonoBehaviour behaviour = _behaviourScratch[i];
+                if (behaviour != null && behaviour.GetType().Name == typeName)
+                    return true;
+            }
+            return false;
         }
 
         private static bool TryClassifyLandmark(GameObject go, out MinimapMarkerKind kind)
@@ -149,7 +194,9 @@ namespace DeadCells.HUD
                 if (behaviour == null)
                     continue;
                 string typeName = behaviour.GetType().Name;
-                if (typeName == "ExitTrigger")
+                if (typeName == "ExitTrigger"
+                    || typeName == "SecondaryBiomeExitTrigger"
+                    || typeName == "LevelExitTrigger")
                 {
                     kind = MinimapMarkerKind.Exit;
                     return true;
@@ -157,11 +204,6 @@ namespace DeadCells.HUD
                 if (typeName == "TeleportGate")
                 {
                     kind = MinimapMarkerKind.Teleport;
-                    return true;
-                }
-                if (typeName == "HealingChest")
-                {
-                    kind = MinimapMarkerKind.Chest;
                     return true;
                 }
             }
