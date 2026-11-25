@@ -266,6 +266,79 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.IsTrue(hudCanvas.enabled);
             Assert.AreEqual(0f, fader.LetterboxAmount, 0.001f);
             Assert.IsFalse(cam.IsFocusOverrideActive);
+            Assert.AreEqual(7f, cam.GetComponent<Camera>().orthographicSize, 0.001f);
+            Assert.IsFalse(player.IsInScriptedSequence);
+        }
+
+        [Test]
+        public void PassageTransition_SubscribesToStarted_AndRestoresParallaxAndAmbientOnMidEntryDisableOrRunEnd()
+        {
+            CreateCoreFixture(out var run, out var player, out var pHealth, out var pCol, out var cam, out var fader, out var actions);
+            player.TeleportTo(new Vector2(0.8f, 0f), -1);
+            Physics2D.SyncTransforms();
+
+            var roomRoot = Track(new GameObject("Room_VaultA"));
+            roomRoot.SetActive(false);
+            var parallaxRoot = Track(new GameObject("Prison_Parallax_R5"));
+            parallaxRoot.SetActive(true);
+
+            var entryGo = Track(new GameObject("I22_VaultA_Entry"));
+            entryGo.transform.position = new Vector3(0.8f, 0f, 0f);
+            var trig = entryGo.AddComponent<BoxCollider2D>();
+            trig.isTrigger = true;
+            trig.size = new Vector2(2f, 2.5f);
+            Physics2D.SyncTransforms();
+
+            var entry = entryGo.AddComponent<PassageTransition>();
+            entry.Configure(run, player, pHealth, pCol, trig, actions, null, fader, cam,
+                new Vector2(180f, 29f), 1, new Rect(176f, 27f, 28f, 24f), true, roomRoot, parallaxRoot, null, 0.55f, null, startsUnlocked: true);
+
+            var soEntry = new SerializedObject(entry);
+            soEntry.FindProperty("_fadeDuration").floatValue = 0f;
+            soEntry.ApplyModifiedPropertiesWithoutUndo();
+
+            // Run real entry transition (sets chamber occupied, hides parallax, ducks ambient), then disable
+            IEnumerator enterRoutine = entry.ExecuteTransitionRoutine();
+            int guard = 0;
+            while (enterRoutine.MoveNext() && guard++ < 64) { }
+            Assert.IsFalse(parallaxRoot.activeSelf);
+            Assert.AreEqual(0f, CombatAudioHub.AmbientMultiplier, 0.001f);
+
+            typeof(PassageTransition).GetMethod("OnDisable", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(entry, null);
+
+            Assert.IsTrue(parallaxRoot.activeSelf, "Post-entry disable must restore Prison_Parallax_R5.");
+            Assert.AreEqual(1f, CombatAudioHub.AmbientMultiplier, 0.001f, "Disable while inside VaultA must restore ambient multiplier to 1f.");
+        }
+
+        [Test]
+        public void WallInscription_UsesInteractStartedForHoldAction_AndRunEndSuppressesHudRestoreInSequence()
+        {
+            CreateCoreFixture(out var run, out var player, out var pHealth, out var pCol, out var cam, out var fader, out var actions);
+            var hudGo = Track(new GameObject("GameplayHUD"));
+            var hudCanvas = hudGo.AddComponent<Canvas>();
+            hudCanvas.enabled = true;
+
+            var seqGo = Track(new GameObject("Seq_RunEnd"));
+            var seqTrig = seqGo.AddComponent<BoxCollider2D>();
+            seqTrig.isTrigger = true;
+            var audioSrc = seqGo.AddComponent<AudioSource>();
+            var seq = seqGo.AddComponent<ChamberFramingSequence>();
+            seq.Configure(run, player, pHealth, pCol, seqTrig, cam, fader, audioSrc, 0.55f, hudCanvas, null, null);
+
+            // Start sequence, then end run via death -> sequence aborts and does NOT re-enable gameplay HUD over ResultPanel
+            IEnumerator routine = seq.ExecuteSequenceRoutine();
+            Assert.IsTrue(routine.MoveNext());
+            Assert.IsFalse(hudCanvas.enabled);
+
+            int frame = Time.frameCount;
+            run.RequestLoss(frame);
+            run.ResolvePendingOutcome(frame + 1);
+            Assert.AreEqual(LevelPhase.Ended, run.Phase);
+
+            Assert.IsFalse(seq.IsPlaying, "Sequence must abort immediately when run ends.");
+            Assert.IsFalse(hudCanvas.enabled, "Run end must not restore gameplay HUD over ResultPanel.");
+            Assert.IsFalse(cam.IsFocusOverrideActive);
+            Assert.AreEqual(0f, fader.LetterboxAmount, 0.001f);
             Assert.IsFalse(player.IsInScriptedSequence);
         }
 
