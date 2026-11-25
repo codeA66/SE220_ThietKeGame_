@@ -16,13 +16,13 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
         public override void TearDown()
         {
             Time.timeScale = 1f;
-            CombatAudioHub.SetAmbientMultiplier(1f);
             base.TearDown();
         }
 
         [UnityTest]
         public IEnumerator P11_VaultA_BreakEnterFrameInspectScrollsAndReturn()
         {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
             yield return PlayModeTestHelper.LoadLevelScene();
 
             var run = Object.FindAnyObjectByType<LevelRunController>();
@@ -42,114 +42,153 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             yield return PlayModeTestHelper.WaitForPlaying(run);
 
             // 1. Initial rest state: VaultA inactive, parallax active, masonry intact, entry locked
-            Assert.IsFalse(vaultRoom.activeSelf, "[P09/VaultInactiveAtRest]");
-            Assert.IsTrue(parallaxRoot.activeSelf, "[P09/ParallaxActiveAtRest]");
-            Assert.IsFalse(masonry.IsBroken, "[P09/MasonryIntact]");
-            Assert.IsFalse(entry.IsUnlocked, "[P09/EntryLocked]");
-            Assert.IsFalse(inscription.IsUnlocked, "[P09/InscriptionLocked]");
+            Assert.IsFalse(vaultRoom.activeSelf, "[P11/VaultInactiveAtRest]");
+            Assert.IsTrue(parallaxRoot.activeSelf, "[P11/ParallaxActiveAtRest]");
+            Assert.IsFalse(masonry.IsBroken, "[P11/MasonryIntact]");
+            Assert.IsFalse(entry.IsUnlocked, "[P11/EntryLocked]");
+            Assert.IsFalse(inscription.IsUnlocked, "[P11/InscriptionLocked]");
 
             // 2. Strike cracked masonry -> reveals fissure & unlocks entry
             Assert.IsTrue(masonry.WallHealth.TakeDamage(new DamageInfo(15, -1, 0f, 0f, false, player.gameObject)));
             yield return null;
-            Assert.IsTrue(masonry.IsBroken, "[P09/MasonryBroken]");
-            Assert.IsTrue(entry.IsUnlocked, "[P09/EntryUnlocked]");
+            Assert.IsTrue(masonry.IsBroken, "[P11/MasonryBroken]");
+            Assert.IsTrue(entry.IsUnlocked, "[P11/EntryUnlocked]");
 
-            // 3. Enter fissure -> black fade, Room_VaultA active, parallax hidden, bounds swapped, free walk corridor
+            // 3. Tap real Keyboard [E] at fissure (Hold interaction action!) + verify rapid [E] mash during fade is ignored
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(0.75f, 0f));
             yield return new WaitForFixedUpdate();
             yield return null;
-            Assert.IsTrue(entry.TryBeginTransition(), "[P09/BeginEnter]");
+            Press(keyboard.eKey);
+            yield return null;
+            Release(keyboard.eKey);
+
+            yield return PlayModeTestHelper.WaitUntil(
+                () => entry.Fader.IsTransitioning,
+                1.0f,
+                "[P11/RealETapStartedEntry] Tapping Keyboard E must trigger PassageTransition (Hold action uses .started).");
+            // Mash [E] mid-fade: must be ignored
+            Assert.IsFalse(entry.TryBeginTransition(), "[P11/ReentrantEBlocked]");
 
             yield return PlayModeTestHelper.WaitUntil(
                 () => vaultRoom.activeSelf && !entry.Fader.IsTransitioning && !player.IsInScriptedSequence,
                 4.0f,
-                "[P09/EnterComplete] Fade transition into Room_VaultA did not finish.");
+                "[P11/EnterComplete] Fade transition into Room_VaultA did not finish.");
 
-            Assert.IsFalse(parallaxRoot.activeSelf, "[P09/ParallaxHiddenInside]");
-            Assert.AreEqual(new Rect(176f, 27f, 28f, 24f), camFollow.CurrentBounds, "[P09/VaultBounds]");
-            Assert.AreEqual(180f, player.transform.position.x, 0.25f, "[P09/ArrivalX]");
-            Assert.AreEqual(29f, player.transform.position.y, 0.25f, "[P09/ArrivalY]");
-            Assert.IsTrue(pauseMenu.CanPause, "[P09/PauseAllowedBeforeTrigger]");
-            Assert.LessOrEqual(CombatAudioHub.AmbientMultiplier, 0.15f, "[P09/AmbientDucked]");
+            Assert.IsFalse(parallaxRoot.activeSelf, "[P11/ParallaxHiddenInside]");
+            Assert.AreEqual(new Rect(176f, 27f, 28f, 24f), camFollow.CurrentBounds, "[P11/VaultBounds]");
+            Assert.AreEqual(180f, player.transform.position.x, 0.25f, "[P11/ArrivalX]");
+            Assert.AreEqual(29f, player.transform.position.y, 0.25f, "[P11/ArrivalY]");
+            Assert.IsTrue(pauseMenu.CanPause, "[P11/PauseAllowedBeforeTrigger]");
+            Assert.LessOrEqual(CombatAudioHub.AmbientMultiplier, 0.15f, "[P11/AmbientDucked]");
 
-            // 4. Step across framing sequence trigger at x = 183.85 -> locks controls, blocks Pause, starts piano & camera focus
-            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(183.85f, 29f));
+            // 4. Airborne entry into framing trigger (x = 183.85, y = 30.8) -> locks controls, lands cleanly, walks to 190
+            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(183.85f, 30.8f));
             yield return new WaitForFixedUpdate();
             yield return null;
 
-            yield return PlayModeTestHelper.WaitUntil(() => seq.IsPlaying, 1.5f, "[P09/SeqStarted]");
-            Assert.IsTrue(player.IsInScriptedSequence, "[P09/ControlsLocked]");
-            Assert.IsFalse(pauseMenu.CanPause, "[P09/PauseBlockedDuringSeq]");
-            Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P09/PianoPlaying]");
+            yield return PlayModeTestHelper.WaitUntil(() => seq.IsPlaying, 1.5f, "[P11/SeqStarted]");
+            Assert.IsTrue(player.IsInScriptedSequence, "[P11/ControlsLocked]");
+            Assert.IsFalse(pauseMenu.CanPause, "[P11/PauseBlockedDuringSeq]");
+            Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P11/PianoPlaying]");
 
             // 5. Wait for full unskippable sequence (~6.5s) to finish -> unlocks control, Pause, & inscription
             yield return PlayModeTestHelper.WaitUntil(
                 () => !seq.IsPlaying && !player.IsInScriptedSequence,
                 12.0f,
-                "[P09/SeqFinished] Framing sequence did not finish cleanly.");
+                "[P11/SeqFinished] Framing sequence did not finish cleanly.");
 
-            Assert.IsTrue(seq.HasPlayed, "[P09/SeqMarkedPlayed]");
-            Assert.AreEqual(190f, player.transform.position.x, 0.35f, "[P09/PlayerStopX]");
-            Assert.IsFalse(camFollow.IsFocusOverrideActive, "[P09/CameraRestored]");
-            Assert.IsTrue(pauseMenu.CanPause, "[P09/PauseRestored]");
-            Assert.IsTrue(inscription.IsUnlocked, "[P09/InscriptionUnlocked]");
-            Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P09/PianoContinuesAfterSeq]");
+            Assert.IsTrue(seq.HasPlayed, "[P11/SeqMarkedPlayed]");
+            Assert.AreEqual(190f, player.transform.position.x, 0.35f, "[P11/PlayerStopX]");
+            Assert.AreEqual(29f, player.transform.position.y, 0.25f, "[P11/PlayerGroundedAfterAirborneTrigger]");
+            Assert.IsFalse(camFollow.IsFocusOverrideActive, "[P11/CameraRestored]");
+            Assert.IsTrue(pauseMenu.CanPause, "[P11/PauseRestored]");
+            Assert.IsTrue(inscription.IsUnlocked, "[P11/InscriptionUnlocked]");
+            Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P11/PianoContinuesAfterSeq]");
 
-            // 6. Inspect inscription quote beneath tapestry, then walk away to auto-close
+            // 6. Tap real Keyboard [E] at inscription beneath tapestry, then walk away to auto-close
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(191.5f, 29f));
             yield return new WaitForFixedUpdate();
             yield return null;
-            Assert.IsTrue(inscription.TryToggleReading(), "[P09/InscriptionOpen]");
-            Assert.IsTrue(inscription.IsReading);
+            Press(keyboard.eKey);
+            yield return null;
+            Release(keyboard.eKey);
+            yield return null;
+            Assert.IsTrue(inscription.IsReading, "[P11/RealETapOpensQuote]");
             Assert.IsTrue(inscription.BannerRoot.activeSelf);
 
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(198.5f, 29f));
             yield return new WaitForFixedUpdate();
             yield return null;
-            Assert.IsFalse(inscription.IsReading, "[P09/InscriptionAutoClose]");
+            Assert.IsFalse(inscription.IsReading, "[P11/InscriptionAutoClose]");
             Assert.IsFalse(inscription.BannerRoot.activeSelf);
 
-            // 7. Verify both VaultA PowerScrollPickups are reachable & available
+            // 7. Pick up I20_Scroll_VaultA1 via real PowerScrollInteraction + ScrollUpgradeMenu -> piano & VaultA bounds stay intact
             var scroll1 = GameObject.Find("I20_Scroll_VaultA1").GetComponent<PowerScrollPickup>();
             var scroll2 = GameObject.Find("I21_Scroll_VaultA2").GetComponent<PowerScrollPickup>();
-            Assert.IsTrue(scroll1.IsAvailable, "[P09/Scroll1Available]");
-            Assert.IsTrue(scroll2.IsAvailable, "[P09/Scroll2Available]");
-            Assert.IsTrue(scroll1.TryGetDistance(new Vector2(198.5f, 29f), out _), "[P09/Scroll1Reachable]");
-            Assert.IsTrue(scroll2.TryGetDistance(new Vector2(201.2f, 29f), out _), "[P09/Scroll2Reachable]");
-            Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P09/PianoStillPlayingNearScrolls]");
+            var scrollMenu = Object.FindAnyObjectByType<DeadCells.HUD.ScrollUpgradeMenu>(FindObjectsInactive.Include);
+            var scrollInteraction = Object.FindAnyObjectByType<PowerScrollInteraction>();
+            Assert.IsNotNull(scrollInteraction, "[P11/PowerScrollInteraction]");
+            Assert.IsTrue(scroll1.IsAvailable, "[P11/Scroll1Available]");
+            Assert.IsTrue(scroll2.IsAvailable, "[P11/Scroll2Available]");
+            Assert.IsTrue(scrollInteraction.Tick(new Vector2(198.5f, 29f), true, true, player.RunStats), "[P11/BeginScrollChoice]");
+            yield return null;
+            scrollMenu.ChooseBrutality();
+            yield return null;
+            Assert.IsFalse(scroll1.IsAvailable, "[P11/Scroll1Consumed]");
+            Assert.AreEqual(new Rect(176f, 27f, 28f, 24f), camFollow.CurrentBounds, "[P11/BoundsIntactAfterScroll]");
+            Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P11/PianoStillPlayingAfterScroll]");
 
-            // 8. Exit back to Room A via return fissure -> restores Room_VaultA inactive, parallax active, main bounds & ambient
+            // 8. Tap real Keyboard [E] at return fissure -> restores Room_VaultA inactive, parallax active, main bounds & ambient
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(178.5f, 29f));
             yield return new WaitForFixedUpdate();
             yield return null;
-            Assert.IsTrue(exit.TryBeginTransition(), "[P09/BeginExit]");
+            Press(keyboard.eKey);
+            yield return null;
+            Release(keyboard.eKey);
 
             yield return PlayModeTestHelper.WaitUntil(
                 () => !vaultRoom.activeSelf && !exit.Fader.IsTransitioning && !player.IsInScriptedSequence,
                 4.5f,
-                "[P09/ExitComplete] Fade transition back to Room A did not finish.");
+                "[P11/ExitComplete] Fade transition back to Room A did not finish.");
 
-            Assert.IsTrue(parallaxRoot.activeSelf, "[P09/ParallaxRestored]");
-            Assert.AreEqual(new Rect(-104f, -20f, 340f, 86f), camFollow.CurrentBounds, "[P09/MainBoundsRestored]");
-            Assert.AreEqual(1.2f, player.transform.position.x, 0.25f, "[P09/ReturnX]");
-            yield return PlayModeTestHelper.WaitUntil(() => CombatAudioHub.AmbientMultiplier >= 0.95f, 1.5f, "[P09/AmbientRestored]");
+            Assert.IsTrue(parallaxRoot.activeSelf, "[P11/ParallaxRestored]");
+            Assert.AreEqual(new Rect(-104f, -20f, 340f, 86f), camFollow.CurrentBounds, "[P11/MainBoundsRestored]");
+            Assert.AreEqual(1.2f, player.transform.position.x, 0.25f, "[P11/ReturnX]");
+            yield return PlayModeTestHelper.WaitUntil(() => CombatAudioHub.AmbientMultiplier >= 0.95f, 1.5f, "[P11/AmbientRestored]");
 
-            // 9. Re-enter VaultA & cross trigger again -> one-shot guard ensures sequence does NOT replay
+            // 9. Re-enter VaultA -> hides parallax, ducks ambient, fades piano in, keeps inscription unlocked, NO replay on trigger
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(0.75f, 0f));
             yield return new WaitForFixedUpdate();
             yield return null;
-            Assert.IsTrue(entry.TryBeginTransition(), "[P09/ReEnter]");
+            Press(keyboard.eKey);
+            yield return null;
+            Release(keyboard.eKey);
             yield return PlayModeTestHelper.WaitUntil(
                 () => vaultRoom.activeSelf && !entry.Fader.IsTransitioning && !player.IsInScriptedSequence,
                 4.0f,
-                "[P09/ReEnterComplete]");
+                "[P11/ReEnterComplete]");
+
+            Assert.IsFalse(parallaxRoot.activeSelf, "[P11/SecondVisitParallaxHidden]");
+            Assert.LessOrEqual(CombatAudioHub.AmbientMultiplier, 0.15f, "[P11/SecondVisitAmbientDucked]");
+            Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P11/SecondVisitPianoPlaying]");
+            Assert.IsTrue(inscription.IsUnlocked, "[P11/SecondVisitInscriptionStaysUnlocked]");
 
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(183.85f, 29f));
             yield return new WaitForFixedUpdate();
             yield return null;
             yield return null;
-            Assert.IsFalse(seq.IsPlaying, "[P09/NoReplayOnSecondVisit]");
-            Assert.IsFalse(player.IsInScriptedSequence, "[P09/FreeControlOnSecondVisit]");
+            Assert.IsFalse(seq.IsPlaying, "[P11/NoReplayOnSecondVisit]");
+            Assert.IsFalse(player.IsInScriptedSequence, "[P11/FreeControlOnSecondVisit]");
+
+            // Clean exit at end of test so TearDown doesn't mask ambient leak
+            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(178.5f, 29f));
+            yield return new WaitForFixedUpdate();
+            yield return null;
+            Press(keyboard.eKey);
+            yield return null;
+            Release(keyboard.eKey);
+            yield return PlayModeTestHelper.WaitUntil(() => !vaultRoom.activeSelf && !exit.Fader.IsTransitioning, 4.5f, "[P11/FinalExit]");
+            yield return PlayModeTestHelper.WaitUntil(() => CombatAudioHub.AmbientMultiplier >= 0.95f, 1.5f, "[P11/FinalAmbientRestored]");
         }
     }
 }
