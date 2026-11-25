@@ -18,6 +18,12 @@ namespace DeadCells.RunFlow
         public event Action Defeated;
         public event Action Completed;
 
+        private void Awake()
+        {
+            DeadCells.Core.Wallet.Reset();
+            DeadCells.Core.KillCounter.Reset();
+        }
+
         private void OnEnable()
         {
             if (_playerHealth != null)

@@ -97,6 +97,8 @@ namespace DeadCells.NhaGiamGiengChuong
         private void Awake()
         {
             Time.timeScale = 1f;
+            DeadCells.Core.Wallet.Reset();
+            DeadCells.Core.KillCounter.Reset();
             _initialized = true;
             if (_player != null)
             {
