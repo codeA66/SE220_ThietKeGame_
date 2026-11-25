@@ -21,7 +21,7 @@ SE220_ThietKeGame_/            ← Open THIS folder (Unity project lives at the 
 
 ## Project
 
-SE220 course project: a 2D roguelite action-platformer inspired by Dead Cells. Unity 6.6 (6000.6.9f1), URP 2D, New Input System. Prototype scope: player movement (run/jump/roll/wall-climb), 3-hit sword combo, 5 enemies (zombie, zombieShield, grenadier, deadArcher, Rat), tilemap platforms.
+SE220 course project: a 2D roguelite action-platformer inspired by Dead Cells. Unity 6.5 (6000.5.0f1), URP 2D, New Input System. Prototype scope: player movement (run/jump/roll/wall-climb), 3-hit sword combo, 5 enemies (zombie, zombieShield, grenadier, deadArcher, Rat), tilemap platforms.
 
 ## Project Config
 
@@ -65,14 +65,6 @@ Never present unverified information as fact.
 ## Coding Standards
 
 Follow `docs/CODING_STANDARDS.md`, `docs/NAMING_CONVENTIONS.md`, and `docs/GIT_CONVENTIONS.md`.
-
-## Unity Plugin Enforcement
-
-Always follow **Section 9 (`Bắt buộc sử dụng Unity Plugin`) in `AGENTS.md`**: prioritize the Unity plugin skills (`unity-cli`, `unity-pipeline`, `ui`, `create-2d-physics`, `create-tile-palette-or-rule-tiles`, `urp-postprocessing`, etc.), `.agents/skills/unity-cli/`, and `com.unity.pipeline` for Unity development tasks, while respecting the read-only / permission boundaries in `AGENTS.md` Section 2 and `docs/UnityConnection.md`.
-
-## Creative Direction & Mindset
-
-Always follow **Section 10 (`Định hướng sáng tạo & tư duy thiết kế (Dead Cells)`) in `AGENTS.md`**: treat this as a **2D hack-and-slash** heavily inspired by **Dead Cells** for a course project with **no creative limits**—think and design with the craft bar of Dead Cells' game, asset, gameplay, and VFX designers.
 
 ## Session Hygiene
 
