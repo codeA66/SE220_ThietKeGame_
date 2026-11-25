@@ -1,12 +1,19 @@
 using System.Collections.Generic;
 using System.Reflection;
+using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core;
+using DeadCells.Currency;
+using DeadCells.HUD;
+using DeadCells.Player;
 using DeadCells.Player.StateMachine;
 using DeadCells.Player.StateMachine.States;
+using DeadCells.VFX;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
 {
@@ -31,6 +38,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
                     Object.DestroyImmediate(_created[i]);
             }
             _created.Clear();
+            Wallet.Reset();
+            KillCounter.Reset();
             Time.timeScale = 1f;
         }
 
@@ -284,6 +293,271 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
                 }
             }
             return paths;
+        }
+
+        [Test]
+        public void RunEconomyReset_ZeroesWalletKillCounterAndGoldHud_WithoutTriggeringHitStopOrPickupFeedback()
+        {
+            Wallet.Reset();
+            KillCounter.Reset();
+            Time.timeScale = 1f;
+
+            var movementConfig = AssetDatabase.LoadAssetAtPath<PlayerMovementConfig>("Assets/_Project/Features/Player/Data/PlayerMovementConfig.asset");
+            var swordData = AssetDatabase.LoadAssetAtPath<WeaponData>("Assets/_Project/Features/Combat/Data/Weapon_StartSword.asset");
+            var bowData = AssetDatabase.LoadAssetAtPath<BowWeaponData>("Assets/_Project/Features/Combat/Data/Bow_StartBow.asset");
+            var arrowPrefab = AssetDatabase.LoadAssetAtPath<RecoverableArrow>("Assets/_Project/Features/Player/Prefabs/Projectile_PlayerArrow.prefab");
+            Assert.IsNotNull(movementConfig, "Missing PlayerMovementConfig asset.");
+            Assert.IsNotNull(swordData, "Missing Weapon_StartSword asset.");
+            Assert.IsNotNull(bowData, "Missing Bow_StartBow asset.");
+            Assert.IsNotNull(arrowPrefab, "Missing Projectile_PlayerArrow prefab.");
+
+            var glintDef = VfxDefinition.Create("TestGoldGlint", System.Array.Empty<Sprite>(), 30f, 1f, 1, 1);
+            var coinClip = AudioClip.Create("TestCoinClip", 256, 1, 22050, false);
+
+            var walletGo = Track(new GameObject("GoldWallet"));
+            var goldWallet = walletGo.AddComponent<GoldWallet>();
+
+            var hudGo = Track(new GameObject("GoldHud"));
+            var amountText = Track(new GameObject("GoldAmount", typeof(RectTransform))).AddComponent<Text>();
+            var goldHud = hudGo.AddComponent<GoldHud>();
+            SetPrivateField(goldHud, "_wallet", goldWallet);
+            SetPrivateField(goldHud, "_amount", amountText);
+
+            var vfxGo = Track(new GameObject("VfxSpawner"));
+            var vfxSpawner = vfxGo.AddComponent<VfxSpawner>();
+            SetPrivateField(vfxSpawner, "_prewarm", System.Array.Empty<VfxDefinition>());
+
+            var audioGo = Track(new GameObject("PickupAudio"));
+            var audioSource = audioGo.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+
+            var playerGo = Track(new GameObject("Player"));
+            var sprite = playerGo.AddComponent<SpriteRenderer>();
+            var animBridge = playerGo.AddComponent<PlayerAnimatorBridge>();
+            var inputReader = playerGo.AddComponent<PlayerInputReader>();
+            var playerHealth = playerGo.AddComponent<Health>();
+            playerHealth.Initialize(100, 0f);
+
+            var bow = playerGo.AddComponent<PlayerBow>();
+            SetPrivateField(bow, "_data", bowData);
+            SetPrivateField(bow, "_arrowPrefab", arrowPrefab);
+
+            var controller = playerGo.AddComponent<PlayerController>();
+            SetPrivateField(controller, "_config", movementConfig);
+            SetPrivateField(controller, "_input", inputReader);
+            SetPrivateField(controller, "_animator", animBridge);
+            SetPrivateField(controller, "_sprite", sprite);
+            SetPrivateField(controller, "_health", playerHealth);
+            SetPrivateField(controller, "_weapon", swordData);
+            SetPrivateField(controller, "_bow", bow);
+            SetPrivateField(controller, "_autoRespawn", false);
+            InvokePrivateMethod(controller, "Awake");
+
+            var hitStop = Track(new GameObject("HitStop")).AddComponent<HitStop>();
+            var cameraGo = Track(new GameObject("MainCamera"));
+            cameraGo.AddComponent<Camera>();
+            var cameraFollow = cameraGo.AddComponent<CameraFollow2D>();
+            InvokePrivateMethod(cameraFollow, "Awake");
+
+            var playerFeedback = playerGo.AddComponent<PlayerFeedback>();
+            SetPrivateField(playerFeedback, "_controller", controller);
+            SetPrivateField(playerFeedback, "_sprite", sprite);
+            SetPrivateField(playerFeedback, "_hitStop", hitStop);
+            SetPrivateField(playerFeedback, "_camera", cameraFollow);
+
+            var pickupGo = Track(new GameObject("ItemPickupFeedback"));
+            var pickupFeedback = pickupGo.AddComponent<ItemPickupFeedback>();
+            SetPrivateField(pickupFeedback, "_player", playerGo.transform);
+            SetPrivateField(pickupFeedback, "_wallet", goldWallet);
+            SetPrivateField(pickupFeedback, "_effects", vfxSpawner);
+            SetPrivateField(pickupFeedback, "_glint", glintDef);
+            SetPrivateField(pickupFeedback, "_audio", audioSource);
+            SetPrivateField(pickupFeedback, "_goldSound", coinClip);
+
+            try
+            {
+                InvokePrivateMethod(goldWallet, "OnEnable");
+                InvokePrivateMethod(goldHud, "OnEnable");
+                InvokePrivateMethod(pickupFeedback, "OnEnable");
+                InvokePrivateMethod(playerFeedback, "Start");
+
+                // 1. Populate economy & kills while HUD and feedback listeners are active.
+                Wallet.AddGold(35);
+                Wallet.AddGems(4);
+                KillCounter.AddKill();
+
+                Assert.AreEqual(35, Wallet.Gold);
+                Assert.AreEqual(4, Wallet.Gems);
+                Assert.AreEqual(1, KillCounter.Kills);
+                Assert.AreEqual("35", goldHud.Amount.text);
+                Assert.AreEqual(35, GetPrivateField<int>(pickupFeedback, "_lastBalance"));
+                Assert.AreEqual(0f, Time.timeScale, 0.0001f, "Positive kill should trigger HitStop.");
+
+                var pooledGlint = vfxGo.GetComponentInChildren<PooledVfx>(true);
+                Assert.IsNotNull(pooledGlint, "Positive gold gain must instantiate pooled glint VFX.");
+                Assert.IsTrue(pooledGlint.gameObject.activeSelf);
+
+                // Reset feedback probes before triggering economy reset.
+                SetPrivateField(hitStop, "_resumeAt", -1f);
+                SetPrivateField(hitStop, "_slowUntil", -1f);
+                SetPrivateField(hitStop, "_isActive", false);
+                Time.timeScale = 1f;
+                SetPrivateField(cameraFollow, "_shakeUntil", -1f);
+                pooledGlint.gameObject.SetActive(false);
+                InvokePrivateMethod(vfxSpawner, "Release", pooledGlint);
+                audioSource.Stop();
+
+                // 2. Direct Reset() zeroes Wallet, KillCounter, and GoldHud without HitStop/shake/pickup FX.
+                Wallet.Reset();
+                KillCounter.Reset();
+
+                Assert.AreEqual(0, Wallet.Gold);
+                Assert.AreEqual(0, Wallet.Gems);
+                Assert.AreEqual(0, KillCounter.Kills);
+                Assert.AreEqual("0", goldHud.Amount.text);
+                Assert.AreEqual(0, GetPrivateField<int>(pickupFeedback, "_lastBalance"));
+                Assert.AreEqual(1f, Time.timeScale, 0.0001f, "KillCounter.Reset() must not trigger HitStop freeze.");
+                Assert.Less(GetPrivateField<float>(hitStop, "_resumeAt"), 0f, "KillCounter.Reset() must not arm HitStop.");
+                Assert.Less(GetPrivateField<float>(cameraFollow, "_shakeUntil"), 0f, "KillCounter.Reset() must not trigger camera shake.");
+                Assert.IsFalse(pooledGlint.gameObject.activeSelf, "Wallet.Reset() must not trigger pickup glint VFX.");
+                Assert.IsFalse(audioSource.isPlaying, "Wallet.Reset() must not trigger pickup SFX.");
+
+                // 3. Subsequent positive gain updates GoldHud and _lastBalance and plays VFX normally.
+                Wallet.AddGold(5);
+                Assert.AreEqual("5", goldHud.Amount.text);
+                Assert.AreEqual(5, GetPrivateField<int>(pickupFeedback, "_lastBalance"));
+                Assert.IsTrue(pooledGlint.gameObject.activeSelf, "Subsequent positive gold gain must trigger glint VFX.");
+
+                // 4. LevelRunController.Awake() also resets leftover economy & kills silently.
+                Wallet.AddGold(12);
+                Wallet.AddGems(2);
+                KillCounter.AddKill();
+                SetPrivateField(hitStop, "_resumeAt", -1f);
+                SetPrivateField(hitStop, "_slowUntil", -1f);
+                SetPrivateField(hitStop, "_isActive", false);
+                Time.timeScale = 1f;
+                SetPrivateField(cameraFollow, "_shakeUntil", -1f);
+                pooledGlint.gameObject.SetActive(false);
+                InvokePrivateMethod(vfxSpawner, "Release", pooledGlint);
+                audioSource.Stop();
+
+                var resetRun = Track(new GameObject("LevelRunController_Reset")).AddComponent<LevelRunController>();
+                InvokePrivateMethod(resetRun, "Awake");
+
+                Assert.AreEqual(0, Wallet.Gold);
+                Assert.AreEqual(0, Wallet.Gems);
+                Assert.AreEqual(0, KillCounter.Kills);
+                Assert.AreEqual("0", goldHud.Amount.text);
+                Assert.AreEqual(0, GetPrivateField<int>(pickupFeedback, "_lastBalance"));
+                Assert.AreEqual(1f, Time.timeScale, 0.0001f, "LevelRunController.Awake() reset must not freeze Time.timeScale.");
+                Assert.Less(GetPrivateField<float>(hitStop, "_resumeAt"), 0f);
+                Assert.Less(GetPrivateField<float>(cameraFollow, "_shakeUntil"), 0f);
+                Assert.IsFalse(pooledGlint.gameObject.activeSelf, "LevelRunController.Awake() reset must not trigger pickup glint VFX.");
+                Assert.IsFalse(audioSource.isPlaying, "LevelRunController.Awake() reset must not trigger pickup SFX.");
+            }
+            finally
+            {
+                InvokePrivateMethod(pickupFeedback, "OnDisable");
+                InvokePrivateMethod(goldHud, "OnDisable");
+                InvokePrivateMethod(goldWallet, "OnDisable");
+                InvokePrivateMethod(playerFeedback, "OnDestroy");
+                InvokePrivateMethod(controller, "OnDestroy");
+                InvokePrivateMethod(hitStop, "OnDisable");
+                Object.DestroyImmediate(glintDef);
+                Object.DestroyImmediate(coinClip);
+            }
+        }
+
+        [Test]
+        public void GoldHud_WhenWalletOrAmountIsNull_DoesNotThrowOnEnableOrRender()
+        {
+            var unlinkedHudGo = Track(new GameObject("GoldHud_NullWallet"));
+            var unlinkedHud = unlinkedHudGo.AddComponent<GoldHud>();
+            Assert.DoesNotThrow(() =>
+            {
+                InvokePrivateMethod(unlinkedHud, "OnEnable");
+                InvokePrivateMethod(unlinkedHud, "OnDisable");
+            }, "GoldHud with null _wallet must not throw on OnEnable/OnDisable.");
+
+            var walletGo = Track(new GameObject("GoldWallet_NullText"));
+            var goldWallet = walletGo.AddComponent<GoldWallet>();
+            var noTextHudGo = Track(new GameObject("GoldHud_NullAmount"));
+            var noTextHud = noTextHudGo.AddComponent<GoldHud>();
+            SetPrivateField(noTextHud, "_wallet", goldWallet);
+
+            Assert.DoesNotThrow(() =>
+            {
+                InvokePrivateMethod(goldWallet, "OnEnable");
+                InvokePrivateMethod(noTextHud, "OnEnable");
+                Wallet.AddGold(10);
+                InvokePrivateMethod(noTextHud, "OnDisable");
+                InvokePrivateMethod(goldWallet, "OnDisable");
+            }, "GoldHud with null _amount must not throw on OnEnable/Render.");
+        }
+
+        [Test]
+        public void WalletAndKillCounter_ResetOnPlay_ZeroesValuesAndClearsStaleSubscribers()
+        {
+            int walletCallbacks = 0;
+            int killCallbacks = 0;
+            void OnWallet(int _, int __) => walletCallbacks++;
+            void OnKill(int _) => killCallbacks++;
+
+            Wallet.Changed += OnWallet;
+            KillCounter.Changed += OnKill;
+            try
+            {
+                Wallet.AddGold(20);
+                Wallet.AddGems(3);
+                KillCounter.AddKill();
+                Assert.AreEqual(2, walletCallbacks);
+                Assert.AreEqual(1, killCallbacks);
+
+                InvokeStaticPrivateMethod(typeof(Wallet), "ResetOnPlay");
+                InvokeStaticPrivateMethod(typeof(KillCounter), "ResetOnPlay");
+
+                Assert.AreEqual(0, Wallet.Gold);
+                Assert.AreEqual(0, Wallet.Gems);
+                Assert.AreEqual(0, KillCounter.Kills);
+
+                Wallet.AddGold(1);
+                KillCounter.AddKill();
+                Assert.AreEqual(2, walletCallbacks, "Wallet.ResetOnPlay must clear stale Changed subscribers.");
+                Assert.AreEqual(1, killCallbacks, "KillCounter.ResetOnPlay must clear stale Changed subscribers.");
+            }
+            finally
+            {
+                Wallet.Changed -= OnWallet;
+                KillCounter.Changed -= OnKill;
+            }
+        }
+
+        private static void SetPrivateField(object target, string fieldName, object value)
+        {
+            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field, $"Missing private field {target.GetType().Name}.{fieldName}");
+            field.SetValue(target, value);
+        }
+
+        private static T GetPrivateField<T>(object target, string fieldName)
+        {
+            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(field, $"Missing private field {target.GetType().Name}.{fieldName}");
+            return (T)field.GetValue(target);
+        }
+
+        private static void InvokePrivateMethod(object target, string methodName, params object[] args)
+        {
+            var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(method, $"Missing private method {target.GetType().Name}.{methodName}");
+            method.Invoke(target, args);
+        }
+
+        private static void InvokeStaticPrivateMethod(System.Type type, string methodName)
+        {
+            var method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNotNull(method, $"Missing static private method {type.Name}.{methodName}");
+            method.Invoke(null, null);
         }
 
         private LevelRunController CreateRun(out Health health)
