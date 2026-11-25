@@ -86,6 +86,14 @@ namespace DeadCells.Core.Tests
             hub.TickAmbientFade(0.60f);
             Assert.AreEqual(1f, CombatAudioHub.AmbientMultiplier, 0.0001f);
             Assert.AreEqual(0.18f, ambientSource.volume, 0.0001f);
+
+            // OnDestroy after ducking to 0 must reset static AmbientMultiplier back to 1f
+            CombatAudioHub.SetAmbientMultiplier(0f);
+            Assert.AreEqual(0f, CombatAudioHub.AmbientMultiplier, 0.0001f);
+            typeof(CombatAudioHub)
+                .GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.Invoke(hub, null);
+            Assert.AreEqual(1f, CombatAudioHub.AmbientMultiplier, 0.0001f);
         }
     }
 }
