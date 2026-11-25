@@ -231,6 +231,12 @@ namespace DeadCells.Enemies
             Finish();
         }
 
+        private void OnDisable()
+        {
+            if (_live)
+                Finish();
+        }
+
         private void Finish()
         {
             if (!_live)
@@ -238,9 +244,11 @@ namespace DeadCells.Enemies
             _live = false;
             if (_trail != null)
                 _trail.Emitting = false;
-            _body.linearVelocity = Vector2.zero;
-            gameObject.SetActive(false);
-            _release(this);
+            if (_body != null)
+                _body.linearVelocity = Vector2.zero;
+            if (gameObject.activeSelf)
+                gameObject.SetActive(false);
+            _release?.Invoke(this);
         }
     }
 }

@@ -20,6 +20,7 @@ namespace DeadCells.Enemies
         private const string Glyphs = "0123456789!";
 
         private static readonly Stack<DamagePopup> s_pool = new Stack<DamagePopup>();
+        private static readonly List<DamagePopup> s_liveScratch = new List<DamagePopup>(PrewarmCount);
         private static readonly int s_colorId = Shader.PropertyToID("_Color");
         private static readonly Color NormalColor = new Color(1f, 0.95f, 0.85f, 1f);
         private static readonly Color CriticalColor = new Color(1f, 0.55f, 0.1f, 1f);
@@ -49,13 +50,26 @@ namespace DeadCells.Enemies
         /// <summary>Pays the font load and glyph rasterisation up front instead of on the first hit.</summary>
         public static void Prewarm()
         {
-            if (s_font != null)
-                return;
-            s_font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            s_font.RequestCharactersInTexture(Glyphs, FontSize, FontStyle.Bold);
-            s_block = new MaterialPropertyBlock();
-            s_pool.Clear();
-            for (int i = 0; i < PrewarmCount; i++)
+            if (s_font == null)
+            {
+                s_font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                s_font.RequestCharactersInTexture(Glyphs, FontSize, FontStyle.Bold);
+                s_block = new MaterialPropertyBlock();
+            }
+
+            // Compact dead scene entries from s_pool, then top up live instances to PrewarmCount.
+            s_liveScratch.Clear();
+            while (s_pool.Count > 0)
+            {
+                DamagePopup entry = s_pool.Pop();
+                if (entry != null)
+                    s_liveScratch.Add(entry);
+            }
+            for (int i = s_liveScratch.Count - 1; i >= 0; i--)
+                s_pool.Push(s_liveScratch[i]);
+            s_liveScratch.Clear();
+
+            for (int i = s_pool.Count; i < PrewarmCount; i++)
             {
                 DamagePopup popup = Create();
                 popup.gameObject.SetActive(false);
