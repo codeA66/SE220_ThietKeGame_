@@ -41,6 +41,7 @@ namespace DeadCells.Enemies
 
         private void Awake()
         {
+            ApplyPlayerLayerExclusion();
             _health.Initialize(_data.MaxHealth, 0f);
             _context = new EnemyContext(GetComponent<Rigidbody2D>(), GetComponent<BoxCollider2D>(), _animator, _health,
                 _data, _groundMask, _attackTargets);
@@ -54,6 +55,18 @@ namespace DeadCells.Enemies
             gameObject.AddComponent<EnemyDamageNumbers>().Setup(_health, GetComponent<BoxCollider2D>());
             gameObject.AddComponent<EnemyVfx>().Setup(_health, _context, GetComponent<BoxCollider2D>());
             Initialize(_player, _projectiles, _vfx);
+        }
+
+        /// <summary>
+        /// The Player must fall through enemy bodies instead of standing on their heads, while the
+        /// global Layer 7 (Player) / Layer 8 (Enemy) matrix stays enabled so arrow triggers still fire.
+        /// </summary>
+        private void ApplyPlayerLayerExclusion()
+        {
+            var body = GetComponent<Rigidbody2D>();
+            int playerLayer = LayerMask.NameToLayer("Player");
+            if (body != null && playerLayer >= 0)
+                body.excludeLayers |= 1 << playerLayer;
         }
 
         private void OnDestroy()

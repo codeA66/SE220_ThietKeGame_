@@ -126,6 +126,20 @@ namespace DeadCells.HUD
             _snapshot = null;
         }
 
+        private void OnDestroy()
+        {
+            if (_blur != null)
+                _blur.texture = null;
+            if (_snapshot != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(_snapshot);
+                else
+                    DestroyImmediate(_snapshot);
+                _snapshot = null;
+            }
+        }
+
         public void Confirm(CombatStat stat)
         {
             _toastText.text = $"{stat} đã tăng!";

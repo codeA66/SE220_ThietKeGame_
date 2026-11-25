@@ -31,6 +31,9 @@ namespace DeadCells.VFX
             _frames = definition.Frames;
             _frameDuration = 1f / Mathf.Max(definition.Fps, 0.01f);
             _renderer.sortingOrder = definition.SortingOrder;
+            int vfxLayerId = SortingLayer.NameToID("VFX");
+            if (vfxLayerId != 0)
+                _renderer.sortingLayerID = vfxLayerId;
             transform.localScale = Vector3.one * definition.Scale;
             _renderer.color = definition.Tint;
             if (definition.Unlit && RuntimeSprites.UnlitMaterial != null)

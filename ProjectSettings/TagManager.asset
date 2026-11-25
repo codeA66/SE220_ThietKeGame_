@@ -41,6 +41,27 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: ParallaxFar
+    uniqueID: 548426159
+    locked: 0
+  - name: ParallaxMid
+    uniqueID: 1193262008
+    locked: 0
+  - name: Background
+    uniqueID: 989596349
+    locked: 0
+  - name: Ground
+    uniqueID: 1656045982
+    locked: 0
+  - name: Actors
+    uniqueID: 2034603147
+    locked: 0
+  - name: VFX
+    uniqueID: 219262143
+    locked: 0
+  - name: Foreground
+    uniqueID: 1500198624
+    locked: 0
   m_RenderingLayers:
   - Default
   m_MigratedRenderPipelines: []

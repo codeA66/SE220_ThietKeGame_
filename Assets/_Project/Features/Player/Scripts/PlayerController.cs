@@ -50,6 +50,7 @@ namespace DeadCells.Player
         public Health Health => _health;
         public PlayerWeaponLoadout Weapons => _context?.Weapons;
         public PlayerRunStats RunStats { get; private set; }
+        public event System.Action<int> Staggered;
 
         private void Awake()
         {
@@ -66,6 +67,7 @@ namespace DeadCells.Player
             _machine = new PlayerStateMachine(_context);
             _spawnPoint = _body.position;
 
+            _context.Combat.TargetHit += OnMeleeTargetHit;
             _health.DamageFilter = FilterDamage;
             _health.Damaged += OnDamaged;
             _health.Died += OnDied;
@@ -73,11 +75,19 @@ namespace DeadCells.Player
 
         private void OnDestroy()
         {
+            if (_context?.Combat != null)
+                _context.Combat.TargetHit -= OnMeleeTargetHit;
             if (_health == null)
                 return;
             _health.DamageFilter = null;
             _health.Damaged -= OnDamaged;
             _health.Died -= OnDied;
+        }
+
+        private void OnMeleeTargetHit(Health victim, DamageInfo _)
+        {
+            if (victim != null)
+                _bow.ExtractArrowsFrom(victim);
         }
 
         private void Start()
@@ -91,6 +101,49 @@ namespace DeadCells.Player
             _machine.ChangeState(_machine.Idle);
         }
 
+        public bool IsInScriptedSequence => _machine != null && _machine.Current == _machine.ScriptedWalk;
+        public bool HasArrivedAtScriptedTarget => _machine != null && _machine.ScriptedWalk.HasArrived;
+
+        public void EnterTransitionLock()
+        {
+            if (_machine == null || _context == null)
+                return;
+            _machine.ScriptedWalk.ConfigureHold();
+            if (_machine.Current != _machine.ScriptedWalk)
+                _machine.ForceChangeState(_machine.ScriptedWalk);
+            if (_body != null)
+                _body.linearVelocity = new Vector2(0f, _body.linearVelocity.y);
+        }
+
+        public void BeginScriptedWalk(float targetX, float speedMultiplier = 0.38f)
+        {
+            if (_machine == null || _context == null)
+                return;
+            _machine.ScriptedWalk.ConfigureWalk(targetX, speedMultiplier);
+            if (_machine.Current != _machine.ScriptedWalk)
+                _machine.ForceChangeState(_machine.ScriptedWalk);
+        }
+
+        public void EndScriptedSequence()
+        {
+            if (_machine == null || _context == null)
+                return;
+            if (_machine.Current == _machine.ScriptedWalk)
+                _machine.ForceChangeState(_health != null && _health.IsAlive ? _machine.Idle : _machine.Dead);
+        }
+
+        public void TeleportTo(Vector2 position, int facingDirection)
+        {
+            if (_body != null)
+            {
+                _body.position = position;
+                _body.linearVelocity = Vector2.zero;
+            }
+            transform.position = new Vector3(position.x, position.y, transform.position.z);
+            if (_context != null && facingDirection != 0)
+                _context.Face(facingDirection > 0 ? 1 : -1);
+        }
+
         private void Update()
         {
             if (_respawnAt >= 0f && Time.time >= _respawnAt)
@@ -101,6 +154,13 @@ namespace DeadCells.Player
                 return;
 
             _context.RefreshFrame();
+            if (IsInScriptedSequence)
+            {
+                _machine.Tick();
+                _animator.SetLocomotion(Mathf.Abs(_body.linearVelocity.x), _context.IsGrounded, _body.linearVelocity.y);
+                return;
+            }
+
             if (_powerScrolls != null && _powerScrolls.Tick(_body.position, CanReadScroll(), _input.InteractPressed, RunStats))
                 return;
 
@@ -148,6 +208,8 @@ namespace DeadCells.Player
         {
             if (!_health.IsAlive)
                 return;
+            if (_machine.Current is StateMachine.States.PlayerAttackState attackState && !attackState.CanWeaponSwapCancel)
+                return;
             PlayerWeaponSlot slot;
             if (_input.EquipSwordPressed)
                 slot = PlayerWeaponSlot.Sword;
@@ -163,7 +225,7 @@ namespace DeadCells.Player
                 return;
 
             IPlayerState next = !_context.IsGrounded ? _machine.Fall
-                : _context.IsDownHeld ? _machine.Crouch
+                : _context.IsCrouchHeld ? _machine.Crouch
                 : _context.HasMoveInput ? _machine.Run : _machine.Idle;
             _machine.ForceChangeState(next);
         }
@@ -173,7 +235,7 @@ namespace DeadCells.Player
         /// </summary>
         private bool FilterDamage(DamageInfo info)
         {
-            if (RunStats.IsChoosing)
+            if (RunStats.IsChoosing || IsInScriptedSequence)
                 return false;
 
             if (_context.IsPerfectDodgeWindowOpen && _context.TryRegisterPerfectDodge())
@@ -197,6 +259,7 @@ namespace DeadCells.Player
                 return;
             _context.Combat.LastDamageTaken = new DamageInfo(0, direction, _config.HurtMinKnockback, duration, false, null);
             _machine.ForceChangeState(_machine.Hurt);
+            Staggered?.Invoke(direction);
         }
 
         private void OnDied(DamageInfo info)

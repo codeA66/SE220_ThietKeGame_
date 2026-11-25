@@ -6,7 +6,7 @@ genre: "2D roguelite action-platformer (Dead Cells-like)"
 target_platforms: [Windows, WebGL, Android]
 
 # Unity
-unity_version: "6000.5.0f1"
+unity_version: "6000.6.9f1"
 render_pipeline: "URP"            # URP 2D renderer
 scripting_backend: "Mono"         # Mono for fast iteration; switch to IL2CPP for release builds
 ui_system: "UGUI"                 # UGUI (template default, simplest for a course project)
@@ -21,9 +21,10 @@ di_framework: "none"
 
 # Packages (name: version)
 packages:
-  com.unity.inputsystem: "1.19.0"
-  com.unity.2d.tilemap.extras: "8.0.3"
-  com.unity.2d.animation: "15.1.0"
+  com.unity.inputsystem: "1.20.1"
+  com.unity.2d.tilemap.extras: "9.0.1"
+  com.unity.2d.animation: "16.0.1"
+  com.unity.render-pipelines.universal: "17.6.0"
 
 # Third-Party
 third_party: []

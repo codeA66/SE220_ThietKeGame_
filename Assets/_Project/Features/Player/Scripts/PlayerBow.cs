@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -13,10 +14,13 @@ namespace DeadCells.Player
         [SerializeField] private RecoverableArrow _arrowPrefab;
 
         private readonly List<RecoverableArrow> _activeArrows = new();
+        private readonly Collider2D[] _aimResults = new Collider2D[16];
+        private ContactFilter2D _aimFilter;
         private ObjectPool<RecoverableArrow> _pool;
         private PlayerRunStats _stats;
         private LayerMask _targets;
         private LayerMask _ground;
+        private LayerMask _solidGround;
         private int _nextShot;
         private float _comboExpiresAt = float.NegativeInfinity;
         private float _readyAt = float.NegativeInfinity;
@@ -39,6 +43,11 @@ namespace DeadCells.Player
                 throw new InvalidOperationException("PlayerBow requires valid bow data and an arrow prefab.");
             _targets = targets;
             _ground = ground;
+            int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
+            int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
+            _solidGround = ground.value & ~oneWayBit;
+            _aimFilter = new ContactFilter2D { useTriggers = true };
+            _aimFilter.SetLayerMask(targets);
             _stats = stats;
             _pool = new ObjectPool<RecoverableArrow>(CreateArrow, null, ReleaseArrow, DestroyArrow,
                 collectionCheck: true, defaultCapacity: _data.AmmoCapacity, maxSize: _data.AmmoCapacity);
@@ -55,6 +64,7 @@ namespace DeadCells.Player
         {
             if (Time.time > _comboExpiresAt)
                 _nextShot = 0;
+            CombatAudioHub.Play(SfxId.BowDraw, 0.55f);
             return _data.GetShot(_nextShot);
         }
 
@@ -64,6 +74,8 @@ namespace DeadCells.Player
                 return false;
             Vector2 offset = _data.GetMuzzleOffset(crouching);
             offset.x *= facing;
+            Vector2 origin = feet + offset;
+            Vector2 aimDir = ResolveAimDirection(origin, feet, facing, crouching);
             // The last shot of the combo is the heavy finisher (DC: 60 damage vs 35 and 40).
             bool heavy = _data.ShotCount > 1 && _nextShot == _data.ShotCount - 1;
             var arrow = _pool.Get();
@@ -73,10 +85,62 @@ namespace DeadCells.Player
             _comboExpiresAt = Time.time + _data.ComboResetTime;
             _readyAt = Time.time + shot.Cooldown;
             int damage = _stats.ScaleDamage(shot.Damage, _data.ScalingStat);
-            arrow.Launch(feet + offset, facing, _data, damage, _targets, _ground, gameObject, heavy);
-            Fired?.Invoke(feet + offset, facing, heavy);
+            arrow.Launch(origin, aimDir, _data, damage, _targets, _ground, gameObject, heavy);
+            CombatAudioHub.Play(SfxId.BowRelease, 0.80f);
+            Fired?.Invoke(origin, facing, heavy);
             AmmoChanged?.Invoke(Ammo, _data.AmmoCapacity);
             return true;
+        }
+
+        private Vector2 ResolveAimDirection(Vector2 origin, Vector2 feet, int facing, bool crouching)
+        {
+            Vector2 straight = Vector2.right * facing;
+            if (crouching)
+                return straight;
+
+            int count = Physics2D.OverlapBox(
+                new Vector2(feet.x + facing * 5.0f, feet.y + 0.65f),
+                new Vector2(9.6f, 1.3f),
+                0f,
+                _aimFilter,
+                _aimResults);
+
+            Collider2D bestLowTarget = null;
+            float bestDistSq = float.PositiveInfinity;
+            float minY = origin.y - 0.14f;
+            float maxY = origin.y + 0.14f;
+
+            for (int i = 0; i < count; i++)
+            {
+                var col = _aimResults[i];
+                if (col == null || !col.TryGetComponent<Hurtbox>(out var hurtbox) || hurtbox.Target == null || !hurtbox.Target.IsAlive)
+                    continue;
+
+                var bounds = col.bounds;
+                if ((bounds.center.x - origin.x) * facing <= 0.2f)
+                    continue;
+
+                if (Physics2D.Linecast(origin, bounds.center, _solidGround))
+                    continue;
+
+                if (bounds.max.y >= minY && bounds.min.y <= maxY)
+                    return straight;
+
+                if (bounds.max.y < minY)
+                {
+                    float distSq = ((Vector2)bounds.center - origin).sqrMagnitude;
+                    if (distSq < bestDistSq)
+                    {
+                        bestDistSq = distSq;
+                        bestLowTarget = col;
+                    }
+                }
+            }
+
+            if (bestLowTarget != null)
+                return ((Vector2)bestLowTarget.bounds.center - origin).normalized;
+
+            return straight;
         }
 
         public void ResetShots()
@@ -99,6 +163,23 @@ namespace DeadCells.Player
             _readyAt = float.NegativeInfinity;
             Ammo = _data.AmmoCapacity;
             AmmoChanged?.Invoke(Ammo, _data.AmmoCapacity);
+        }
+
+        public int ExtractArrowsFrom(Health victim)
+        {
+            if (victim == null || _activeArrows.Count == 0)
+                return 0;
+            int extracted = 0;
+            for (int i = _activeArrows.Count - 1; i >= 0; i--)
+            {
+                var arrow = _activeArrows[i];
+                if (arrow != null && arrow.IsEmbeddedIn(victim))
+                {
+                    arrow.Recall();
+                    extracted++;
+                }
+            }
+            return extracted;
         }
 
         private void OnDisable() => ResetShots();

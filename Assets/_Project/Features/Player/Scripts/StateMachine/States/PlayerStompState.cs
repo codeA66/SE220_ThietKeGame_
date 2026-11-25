@@ -30,7 +30,9 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.NotifyStompEnded();
         }
 
-        public override void Tick()
+        public override void Tick() => Tick(Time.deltaTime);
+
+        public void Tick(float deltaTime)
         {
             if (!_landed)
             {
@@ -38,13 +40,17 @@ namespace DeadCells.Player.StateMachine.States
                 {
                     _landed = true;
                     Ctx.NotifyLanded();
+                    Ctx.NotifyStompLanded();
                     Ctx.NotifyStomped();
                     Ctx.Combat.PerformStomp(Ctx.Config.StompDamage, Ctx.Config.StompStun, Ctx.Config.StompArea);
                 }
                 return;
             }
 
-            _landTimer += Time.deltaTime;
+            if (TryRoll())
+                return;
+
+            _landTimer += deltaTime;
             if (_landTimer >= Ctx.Config.StompLandDuration)
                 ReturnToDefault();
         }

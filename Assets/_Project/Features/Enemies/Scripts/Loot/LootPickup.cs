@@ -81,21 +81,26 @@ namespace DeadCells.Enemies
             var go = new GameObject("LootPickup");
             LootPickup pickup = go.AddComponent<LootPickup>();
             pickup._cachedTransform = go.transform;
+            int vfxLayer = SortingLayer.NameToID("VFX");
             pickup._renderer = go.AddComponent<SpriteRenderer>();
+            if (vfxLayer != 0)
+                pickup._renderer.sortingLayerID = vfxLayer;
             pickup._renderer.sortingOrder = SortingOrder;
-            pickup._halo = CreateChild(go.transform, "Halo", s_halo, SortingOrder - 1);
+            pickup._halo = CreateChild(go.transform, "Halo", s_halo, vfxLayer, SortingOrder - 1);
             pickup._haloTransform = pickup._halo.transform;
-            pickup._sparkle = CreateChild(go.transform, "Sparkle", s_sparkle, SortingOrder + 1);
+            pickup._sparkle = CreateChild(go.transform, "Sparkle", s_sparkle, vfxLayer, SortingOrder + 1);
             pickup._sparkleTransform = pickup._sparkle.transform;
             return pickup;
         }
 
-        private static SpriteRenderer CreateChild(Transform parent, string childName, Sprite sprite, int order)
+        private static SpriteRenderer CreateChild(Transform parent, string childName, Sprite sprite, int sortingLayerId, int order)
         {
             var go = new GameObject(childName);
             go.transform.SetParent(parent, false);
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
+            if (sortingLayerId != 0)
+                sr.sortingLayerID = sortingLayerId;
             sr.sortingOrder = order;
             return sr;
         }

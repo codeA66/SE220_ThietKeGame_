@@ -1,5 +1,6 @@
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core.Audio;
 using DeadCells.VFX;
 using UnityEngine;
 
@@ -16,6 +17,7 @@ namespace DeadCells.Player
         [Header("Effects")]
         [SerializeField] private VfxDefinition _airJumpVfx;
         [SerializeField] private VfxDefinition _landVfx;
+        [SerializeField] private VfxDefinition _dodgeGlintVfx;
 
         [Tooltip("Small puffs laid along the floor during a roll. Left empty, generated puffs are used, picked at random.")]
         [SerializeField] private VfxDefinition _runDustVfx;
@@ -88,7 +90,9 @@ namespace DeadCells.Player
             _context.RollStarted += OnRollStarted;
             _context.Jumped += OnJumped;
             _context.AirJumped += OnAirJumped;
+            _context.WallJumped += OnWallJumped;
             _context.Landed += OnLanded;
+            _context.PerfectDodged += OnPerfectDodged;
             _context.StompStarted += OnStompStarted;
             _context.Stomped += OnStomped;
             _context.StompEnded += OnStompEnded;
@@ -166,16 +170,22 @@ namespace DeadCells.Player
             _context.RollStarted -= OnRollStarted;
             _context.Jumped -= OnJumped;
             _context.AirJumped -= OnAirJumped;
+            _context.WallJumped -= OnWallJumped;
             _context.Landed -= OnLanded;
+            _context.PerfectDodged -= OnPerfectDodged;
             _context.StompStarted -= OnStompStarted;
             _context.Stomped -= OnStomped;
             _context.StompEnded -= OnStompEnded;
             _context.LedgeClimbFinished -= OnLedgeClimbFinished;
             _context.Awakened -= OnAwakened;
             _context.Stunned -= OnStunned;
-            _controller.Health.Damaged -= OnHurt;
-            _controller.Health.Died -= OnKilled;
-            _context.Combat.StrikePerformed -= OnStrikePerformed;
+            if (_controller != null && _controller.Health != null)
+            {
+                _controller.Health.Damaged -= OnHurt;
+                _controller.Health.Died -= OnKilled;
+            }
+            if (_context.Combat != null)
+                _context.Combat.StrikePerformed -= OnStrikePerformed;
             if (_bow != null)
             {
                 _bow.Fired -= OnBowFired;
@@ -201,7 +211,7 @@ namespace DeadCells.Player
             }
 
             // Rolling on the ground: lay small puffs along the floor behind the player.
-            if (Time.time < _rollTrailUntil && _context.IsGrounded && Time.time >= _nextRollTrailAt)
+            if (_spawner != null && Time.time < _rollTrailUntil && _context.IsGrounded && Time.time >= _nextRollTrailAt)
             {
                 _nextRollTrailAt = Time.time + _rollTrailInterval;
                 _spawner.Play(RunDust, _context.Position, _context.FacingDirection < 0, 0f, Random.Range(0.7f, 1.2f));
@@ -216,30 +226,60 @@ namespace DeadCells.Player
         // The opening burst, then small puffs along the floor for as long as the roll lasts.
         private void OnRollStarted(Vector2 feet)
         {
-            _spawner.Play(RollDust, feet, _context.FacingDirection < 0, 0f, Random.Range(0.85f, 1.25f));
+            if (_spawner != null)
+                _spawner.Play(RollDust, feet, _context.FacingDirection < 0, 0f, Random.Range(0.85f, 1.25f));
             _rollTrailUntil = Time.time + _context.Config.RollDuration;
             _nextRollTrailAt = Time.time + _rollTrailInterval;
+            CombatAudioHub.Play(SfxId.Roll, 0.72f);
         }
 
         // Swing frames are drawn facing right with the hero's feet at the canvas centre, like the hero sprites.
-        private void OnStrikePerformed(WeaponData.Strike strike, Vector2 feet, int facing) =>
-            _spawner.Play(strike.SwingVfx, feet, facing < 0);
+        private void OnStrikePerformed(WeaponData.Strike strike, Vector2 feet, int facing)
+        {
+            if (_spawner != null)
+                _spawner.Play(strike.SwingVfx, feet, facing < 0);
+            SfxId slashSfx = strike.CanCrit || strike.AnimState == "AttackC"
+                ? SfxId.SwordSlash3
+                : strike.AnimState == "AttackB" ? SfxId.SwordSlash2 : SfxId.SwordSlash1;
+            CombatAudioHub.Play(slashSfx, 0.78f);
+        }
 
         private void OnJumped(Vector2 feet)
         {
-            if (_jumpVfxOnGroundJump)
+            if (_spawner != null && _jumpVfxOnGroundJump)
                 _spawner.Play(_airJumpVfx, feet);
+            CombatAudioHub.Play(SfxId.Jump, 0.70f);
         }
 
-        private void OnAirJumped(Vector2 feet) => _spawner.Play(_airJumpVfx, feet);
+        private void OnAirJumped(Vector2 feet)
+        {
+            if (_spawner != null)
+                _spawner.Play(_airJumpVfx, feet);
+            CombatAudioHub.Play(SfxId.AirJump, 0.75f);
+        }
+
+        private void OnWallJumped(Vector2 feet, int awayDir) =>
+            CombatAudioHub.Play(SfxId.WallJump, 0.75f);
 
         private void OnLanded(Vector2 feet, float impactSpeed)
         {
             // A stomp lands with a bigger version of this same cloud, so the ordinary one is skipped.
-            if (_isStomping)
+            if (_isStomping || impactSpeed < _minLandSpeed)
                 return;
-            if (impactSpeed >= _minLandSpeed)
+            if (_spawner != null)
                 _spawner.Play(_landVfx, feet + Vector2.down * LandDownOffset);
+            CombatAudioHub.Play(SfxId.Land, 0.65f);
+        }
+
+        private void OnPerfectDodged()
+        {
+            if (_spawner != null)
+            {
+                var vfx = _dodgeGlintVfx != null ? _dodgeGlintVfx : _airJumpVfx;
+                if (vfx != null)
+                    _spawner.Play(vfx, _context.PerfectDodgeGhostPosition + Vector2.up * 0.8f);
+            }
+            CombatAudioHub.Play(SfxId.PerfectDodge, 0.85f);
         }
 
         private void OnStompStarted()
@@ -273,9 +313,15 @@ namespace DeadCells.Player
         {
             _isStomping = false;
             SetStreaks(false);
-            _spawner.Play(_landVfx, feet + Vector2.down * LandDownOffset, false, 0f, _stompLandScale);
+            if (_spawner != null)
+            {
+                _spawner.Play(_landVfx, feet + Vector2.down * LandDownOffset, false, 0f, _stompLandScale);
+                if (_dodgeGlintVfx != null)
+                    _spawner.Play(_dodgeGlintVfx, feet + new Vector2(0f, 0.3f));
+            }
             float duration = _landVfx != null ? _landVfx.Frames.Length / _landVfx.Fps : 0.25f;
             Debris.Shockwave(feet, _context.GroundMask, duration);
+            CombatAudioHub.Play(SfxId.StompImpact, 0.90f);
         }
 
         // Release flash at the bow; the combo finisher gets the bigger gold one.

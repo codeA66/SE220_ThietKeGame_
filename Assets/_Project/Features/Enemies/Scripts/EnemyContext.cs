@@ -18,6 +18,7 @@ namespace DeadCells.Enemies
         private readonly Rigidbody2D _body;
         private readonly BoxCollider2D _collider;
         private readonly LayerMask _groundMask;
+        private readonly LayerMask _solidWallMask;
         private readonly HitQuery _hits;
         private readonly float[] _skillReadyTime;
         private float _turnTimer;
@@ -31,6 +32,9 @@ namespace DeadCells.Enemies
             Health = health;
             Data = data;
             _groundMask = groundMask;
+            int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
+            int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
+            _solidWallMask = groundMask.value & ~oneWayBit;
             _hits = new HitQuery(attackTargets);
             _skillReadyTime = new float[data.Skills.Length];
         }
@@ -97,7 +101,7 @@ namespace DeadCells.Enemies
             Vector2 target = new Vector2(Player.position.x, Player.position.y + PlayerChestHeight);
             if (Mathf.Abs(target.x - eye.x) > range || Mathf.Abs(Player.position.y - Position.y) > Data.MaxHeightDiff)
                 return false;
-            return Data.SeeThroughWalls || !Physics2D.Linecast(eye, target, _groundMask);
+            return Data.SeeThroughWalls || !Physics2D.Linecast(eye, target, _solidWallMask);
         }
 
         // ---------- Facing ----------
@@ -145,7 +149,7 @@ namespace DeadCells.Enemies
         {
             var b = _collider.bounds;
             return Physics2D.BoxCast(b.center, new Vector2(0.05f, b.size.y * 0.8f), 0f, new Vector2(dir, 0f),
-                b.extents.x + WallProbe, _groundMask);
+                b.extents.x + WallProbe, _solidWallMask);
         }
 
         public bool IsGroundAhead(int dir)
@@ -164,7 +168,7 @@ namespace DeadCells.Enemies
             var size = _collider.size;
             if (!Physics2D.Raycast(feet + Vector2.up * 0.2f, Vector2.down, 0.6f, _groundMask))
                 return false;
-            return !Physics2D.OverlapBox(feet + new Vector2(0f, size.y * 0.5f + 0.05f), size * 0.9f, 0f, _groundMask);
+            return !Physics2D.OverlapBox(feet + new Vector2(0f, size.y * 0.5f + 0.05f), size * 0.9f, 0f, _solidWallMask);
         }
 
         public void SetPhysicsActive(bool active)

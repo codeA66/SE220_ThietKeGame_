@@ -1,6 +1,7 @@
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
 using DeadCells.Core;
+using DeadCells.Core.Audio;
 using UnityEngine;
 
 namespace DeadCells.Player
@@ -18,18 +19,20 @@ namespace DeadCells.Player
         [SerializeField] private HitStop _hitStop;
         [SerializeField] private CameraFollow2D _camera;
 
-        [Header("On Hit Dealt")]
-        [SerializeField] private float _hitStopDuration = 0.05f;
-        [SerializeField] private float _hitShakeAmplitude = 0.08f;
-        [SerializeField] private float _hitShakeDuration = 0.1f;
+        private const float LightHitStop = 0.045f;
+        private const float CritHitStop = 0.075f;
+        private const float KillHitStop = 0.095f;
+        private const float ArrowHitStop = 0.035f;
+        private const float ArrowCritHitStop = 0.065f;
+        private const float HurtHitStop = 0.060f;
+        private const float StaggerHitStop = 0.055f;
+        private const float PerfectDodgeHitStop = 0.055f;
 
         [Header("On Critical Hit (DC: one-frame freeze, then a slowdown of a few tenths of a second)")]
         [SerializeField] private float _critFreeze = 0.035f;
         [SerializeField] private float _critSlowDuration = 0.25f;
         [Range(0.05f, 1f)]
         [SerializeField] private float _critSlowScale = 0.35f;
-        [SerializeField] private float _critShakeAmplitude = 0.16f;
-        [SerializeField] private float _critShakeDuration = 0.15f;
 
         [Header("On Bow Finisher Release")]
         [SerializeField] private float _finisherShakeAmplitude = 0.07f;
@@ -45,11 +48,6 @@ namespace DeadCells.Player
         [SerializeField] private float _stompShakeAmplitude = 0.35f;
         [SerializeField] private float _stompShakeDuration = 0.3f;
 
-        [Header("On Damage Taken")]
-        [SerializeField] private float _hurtShakeAmplitude = 0.2f;
-        [SerializeField] private float _hurtShakeDuration = 0.2f;
-        [SerializeField] private float _flashDuration = 0.1f;
-
         private MaterialPropertyBlock _block;
         private float _flashUntil = -1f;
         private PlayerContext _context;
@@ -63,14 +61,16 @@ namespace DeadCells.Player
             _context = _controller.Context;
             _context.Stomped += OnStomped;
             KillCounter.Changed += OnKill;
-            _combat = _controller.Context.Combat;
-            _bow = _controller.Context.Bow;
+            _combat = _context.Combat;
+            _bow = _context.Bow;
             _health = _controller.Health;
-            _combat.StrikeHit += OnStrikeHit;
+            _combat.ImpactDealt += OnImpactDealt;
             _bow.HitDealt += OnArrowHit;
             _bow.Fired += OnBowFired;
             _health.Damaged += OnDamageTaken;
             _health.Died += OnDamageTaken;
+            _controller.Staggered += OnStaggered;
+            _context.PerfectDodged += OnPerfectDodged;
         }
 
         private void OnDestroy()
@@ -79,7 +79,7 @@ namespace DeadCells.Player
             if (_context != null)
                 _context.Stomped -= OnStomped;
             if (_combat != null)
-                _combat.StrikeHit -= OnStrikeHit;
+                _combat.ImpactDealt -= OnImpactDealt;
             if (_bow != null)
             {
                 _bow.HitDealt -= OnArrowHit;
@@ -90,6 +90,10 @@ namespace DeadCells.Player
                 _health.Damaged -= OnDamageTaken;
                 _health.Died -= OnDamageTaken;
             }
+            if (_controller != null)
+                _controller.Staggered -= OnStaggered;
+            if (_context != null)
+                _context.PerfectDodged -= OnPerfectDodged;
         }
 
         private void Update()
@@ -101,22 +105,19 @@ namespace DeadCells.Player
             }
         }
 
-        private void OnStrikeHit(int hits, bool critical)
+        private void OnImpactDealt(int hits, bool critical, bool fatal, int direction)
         {
-            if (_hitStop != null)
-                _hitStop.Trigger(_hitStopDuration);
-            if (_camera != null)
-                _camera.Shake(_hitShakeAmplitude, _hitShakeDuration);
+            float hitStop = fatal ? KillHitStop : critical ? CritHitStop : LightHitStop;
+            float punchAmp = fatal ? 0.26f : critical ? 0.22f : 0.12f;
+            float punchDur = fatal ? 0.13f : critical ? 0.11f : 0.08f;
+            float shakeAmp = fatal ? 0.18f : critical ? 0.14f : 0.06f;
+            float shakeDur = fatal ? 0.14f : critical ? 0.12f : 0.08f;
+            Vector2 punchDir = direction != 0 ? new Vector2(direction, 0f) : Vector2.down;
 
-            if (!critical)
-                return;
-            if (_hitStop != null)
-            {
-                _hitStop.Trigger(_critFreeze);
-                _hitStop.Slow(Mathf.Max(_critFreeze, _hitStopDuration) + _critSlowDuration, _critSlowScale);
-            }
-            if (_camera != null)
-                _camera.Shake(_critShakeAmplitude, _critShakeDuration);
+            TriggerCameraAndStop(hitStop, punchDir, punchAmp, punchDur, shakeAmp, shakeDur);
+
+            if (critical && _hitStop != null)
+                _hitStop.Slow(Mathf.Max(_critFreeze, hitStop) + _critSlowDuration, _critSlowScale);
         }
 
         private void OnKill(int kills)
@@ -135,7 +136,13 @@ namespace DeadCells.Player
                 _camera.Shake(_stompShakeAmplitude, _stompShakeDuration);
         }
 
-        private void OnArrowHit(DamageInfo damage) => OnStrikeHit(1, damage.IsCritical);
+        private void OnArrowHit(DamageInfo damage)
+        {
+            float hitStop = damage.IsCritical ? ArrowCritHitStop : ArrowHitStop;
+            int dir = damage.Direction != 0 ? damage.Direction : (_context != null ? _context.FacingDirection : 1);
+            TriggerCameraAndStop(hitStop, new Vector2(dir, 0f), 0.10f, 0.07f, 0f, 0f);
+            CombatAudioHub.Play(SfxId.ArrowHit, 0.75f);
+        }
 
         // A small kick when the heavy third shot of the bow combo leaves the string.
         private void OnBowFired(Vector2 muzzle, int facing, bool heavy)
@@ -146,14 +153,54 @@ namespace DeadCells.Player
 
         private void OnDamageTaken(DamageInfo info)
         {
+            if (_hitStop != null)
+                _hitStop.Trigger(HurtHitStop);
             if (_camera != null)
-                _camera.Shake(_hurtShakeAmplitude, _hurtShakeDuration);
+                _camera.Shake(0.24f, 0.18f);
+            TriggerFlash(0.10f);
+            bool dead = _health != null && !_health.IsAlive;
+            CombatAudioHub.Play(dead ? SfxId.PlayerDeath : SfxId.PlayerHurt, 0.85f);
+        }
+
+        private void OnStaggered(int direction)
+        {
+            Vector2 punchDir = direction != 0 ? new Vector2(direction, 0f) : Vector2.left;
+            TriggerCameraAndStop(StaggerHitStop, punchDir, 0.18f, 0.10f, 0.10f, 0.10f);
+            TriggerFlash(0.08f);
+            CombatAudioHub.Play(SfxId.ShieldClang, 0.85f);
+        }
+
+        private void OnPerfectDodged()
+        {
+            if (_hitStop != null)
+                _hitStop.Trigger(PerfectDodgeHitStop);
+            TriggerFlash(0.06f);
+        }
+
+        private void TriggerCameraAndStop(float hitStop, Vector2 punchDir, float punchAmp, float punchDur, float shakeAmp, float shakeDur)
+        {
+            if (_hitStop != null)
+                _hitStop.Trigger(hitStop);
+            if (_camera != null)
+            {
+                if (punchAmp > 0f && punchDur > 0f)
+                    _camera.Punch(punchDir, punchAmp, punchDur);
+                if (shakeAmp > 0f && shakeDur > 0f)
+                    _camera.Shake(shakeAmp, shakeDur);
+            }
+        }
+
+        private void TriggerFlash(float duration)
+        {
             SetFlash(1f);
-            _flashUntil = Time.unscaledTime + _flashDuration;
+            _flashUntil = Time.unscaledTime + duration;
         }
 
         private void SetFlash(float amount)
         {
+            if (_sprite == null)
+                return;
+            _block ??= new MaterialPropertyBlock();
             _sprite.GetPropertyBlock(_block);
             _block.SetFloat(FlashId, amount);
             _sprite.SetPropertyBlock(_block);

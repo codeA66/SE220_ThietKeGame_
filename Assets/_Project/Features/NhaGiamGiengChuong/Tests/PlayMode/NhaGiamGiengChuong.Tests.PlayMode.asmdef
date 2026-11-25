@@ -1,0 +1,29 @@
+{
+    "name": "NhaGiamGiengChuong.Tests.PlayMode",
+    "rootNamespace": "DeadCells.NhaGiamGiengChuong.Tests",
+    "references": [
+        "NhaGiamGiengChuong",
+        "Core",
+        "Combat",
+        "Currency",
+        "Enemies",
+        "Player",
+        "HUD",
+        "CameraSystem",
+        "VFX",
+        "Unity.InputSystem",
+        "Unity.InputSystem.TestFramework",
+        "UnityEngine.UI",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
+}

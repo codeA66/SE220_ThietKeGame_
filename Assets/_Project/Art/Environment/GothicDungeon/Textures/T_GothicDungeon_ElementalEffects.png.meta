@@ -1,0 +1,2011 @@
+fileFormatVersion: 2
+guid: 3be7fc3eaecd24a409db7a725d07dc46
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 3557163061920461621
+    second: T_GothicDungeon_ElementalEffects_0
+  - first:
+      213: 7587590069568378382
+    second: T_GothicDungeon_ElementalEffects_1
+  - first:
+      213: 6597500209990112756
+    second: T_GothicDungeon_ElementalEffects_2
+  - first:
+      213: 3235333429778244122
+    second: T_GothicDungeon_ElementalEffects_3
+  - first:
+      213: -3924170744362379600
+    second: T_GothicDungeon_ElementalEffects_4
+  - first:
+      213: -199238436747121319
+    second: T_GothicDungeon_ElementalEffects_5
+  - first:
+      213: -4919612801803835590
+    second: T_GothicDungeon_ElementalEffects_6
+  - first:
+      213: -2456873972606364700
+    second: T_GothicDungeon_ElementalEffects_7
+  - first:
+      213: 1239690884143024429
+    second: T_GothicDungeon_ElementalEffects_8
+  - first:
+      213: 1667910696147475353
+    second: T_GothicDungeon_ElementalEffects_9
+  - first:
+      213: 6972044600777729630
+    second: T_GothicDungeon_ElementalEffects_10
+  - first:
+      213: 4195715641916858261
+    second: T_GothicDungeon_ElementalEffects_11
+  - first:
+      213: -5498753566962821219
+    second: T_GothicDungeon_ElementalEffects_12
+  - first:
+      213: 2001346679049817372
+    second: T_GothicDungeon_ElementalEffects_13
+  - first:
+      213: 4229483679819014047
+    second: T_GothicDungeon_ElementalEffects_14
+  - first:
+      213: -6277304686507456791
+    second: T_GothicDungeon_ElementalEffects_15
+  - first:
+      213: 8770197060358451985
+    second: T_GothicDungeon_ElementalEffects_16
+  - first:
+      213: -5047400404344601848
+    second: T_GothicDungeon_ElementalEffects_17
+  - first:
+      213: 2918266530680494572
+    second: T_GothicDungeon_ElementalEffects_18
+  - first:
+      213: -5555819369173801154
+    second: T_GothicDungeon_ElementalEffects_19
+  - first:
+      213: -726630066662203172
+    second: T_GothicDungeon_ElementalEffects_20
+  - first:
+      213: 4278060207521118617
+    second: T_GothicDungeon_ElementalEffects_21
+  - first:
+      213: -4949053002419019685
+    second: T_GothicDungeon_ElementalEffects_22
+  - first:
+      213: 3432752201330352617
+    second: T_GothicDungeon_ElementalEffects_23
+  - first:
+      213: -2467502897815918291
+    second: T_GothicDungeon_ElementalEffects_24
+  - first:
+      213: 8501682371695321266
+    second: T_GothicDungeon_ElementalEffects_25
+  - first:
+      213: -6055601187814784492
+    second: T_GothicDungeon_ElementalEffects_26
+  - first:
+      213: 5747628655396128863
+    second: T_GothicDungeon_ElementalEffects_27
+  - first:
+      213: -5764231444562444554
+    second: T_GothicDungeon_ElementalEffects_28
+  - first:
+      213: 5547657212608905386
+    second: T_GothicDungeon_ElementalEffects_29
+  - first:
+      213: 8938466482458334060
+    second: T_GothicDungeon_ElementalEffects_30
+  - first:
+      213: -743108358245411106
+    second: T_GothicDungeon_ElementalEffects_31
+  - first:
+      213: -4780795838573547549
+    second: T_GothicDungeon_ElementalEffects_32
+  - first:
+      213: -7514860495498703848
+    second: T_GothicDungeon_ElementalEffects_33
+  - first:
+      213: -6100629181834827917
+    second: T_GothicDungeon_ElementalEffects_34
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 0
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 8192
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: TorchVariant_001
+      rect:
+        serializedVersion: 2
+        x: 49
+        y: 969
+        width: 38
+        height: 90
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: -2, y: 44}
+        - {x: -2, y: 40}
+        - {x: -6, y: 38}
+        - {x: -9, y: 38}
+        - {x: -12, y: 33}
+        - {x: -12, y: 26}
+        - {x: -14, y: 23}
+        - {x: -14, y: 20}
+        - {x: -16, y: 16}
+        - {x: -16, y: 10}
+        - {x: -18, y: 8}
+        - {x: -18, y: 0}
+        - {x: -17, y: -1}
+        - {x: -16, y: -7}
+        - {x: -10, y: -13}
+        - {x: -11, y: -14}
+        - {x: -11, y: -20}
+        - {x: -9, y: -22}
+        - {x: -10, y: -23}
+        - {x: -10, y: -26}
+        - {x: -7, y: -32}
+        - {x: -7, y: -38}
+        - {x: -3, y: -43}
+        - {x: 2, y: -43}
+        - {x: 6, y: -37}
+        - {x: 6, y: -32}
+        - {x: 8, y: -28}
+        - {x: 8, y: -23}
+        - {x: 10, y: -20}
+        - {x: 10, y: -14}
+        - {x: 9, y: -12}
+        - {x: 12, y: -10}
+        - {x: 15, y: -4}
+        - {x: 15, y: -2}
+        - {x: 17, y: 1}
+        - {x: 17, y: 7}
+        - {x: 14, y: 10}
+        - {x: 14, y: 12}
+        - {x: 15, y: 13}
+        - {x: 14, y: 22}
+        - {x: 11, y: 27}
+        - {x: 11, y: 31}
+        - {x: 10, y: 32}
+        - {x: 10, y: 35}
+        - {x: 8, y: 37}
+        - {x: 8, y: 39}
+        - {x: 2, y: 44}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 94b3939977294ea410d84c5e8a57a8d6
+      internalID: -26057801
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TorchVariant_002
+      rect:
+        serializedVersion: 2
+        x: 113
+        y: 970
+        width: 38
+        height: 88
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 6, y: 43}
+        - {x: 3, y: 43}
+        - {x: -2, y: 40}
+        - {x: -5, y: 42}
+        - {x: -7, y: 42}
+        - {x: -9, y: 40}
+        - {x: -9, y: 36}
+        - {x: -11, y: 34}
+        - {x: -12, y: 26}
+        - {x: -15, y: 18}
+        - {x: -15, y: 10}
+        - {x: -18, y: 7}
+        - {x: -18, y: 1}
+        - {x: -16, y: -1}
+        - {x: -16, y: -4}
+        - {x: -10, y: -11}
+        - {x: -11, y: -17}
+        - {x: -9, y: -21}
+        - {x: -9, y: -26}
+        - {x: -7, y: -28}
+        - {x: -6, y: -37}
+        - {x: -3, y: -42}
+        - {x: 3, y: -42}
+        - {x: 6, y: -37}
+        - {x: 6, y: -32}
+        - {x: 9, y: -27}
+        - {x: 10, y: -12}
+        - {x: 14, y: -7}
+        - {x: 15, y: -2}
+        - {x: 17, y: 1}
+        - {x: 17, y: 8}
+        - {x: 14, y: 11}
+        - {x: 15, y: 12}
+        - {x: 15, y: 18}
+        - {x: 14, y: 19}
+        - {x: 13, y: 28}
+        - {x: 10, y: 35}
+        - {x: 8, y: 37}
+        - {x: 8, y: 40}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7db0585aedd580e0d84682a4a9b6ce45
+      internalID: -338902634
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TorchVariant_003
+      rect:
+        serializedVersion: 2
+        x: 178
+        y: 970
+        width: 38
+        height: 90
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: -1, y: 44}
+        - {x: -2, y: 43}
+        - {x: -2, y: 39}
+        - {x: -3, y: 38}
+        - {x: -9, y: 38}
+        - {x: -13, y: 30}
+        - {x: -13, y: 21}
+        - {x: -15, y: 18}
+        - {x: -15, y: 11}
+        - {x: -17, y: 9}
+        - {x: -18, y: 3}
+        - {x: -17, y: 2}
+        - {x: -15, y: -6}
+        - {x: -9, y: -13}
+        - {x: -10, y: -14}
+        - {x: -10, y: -21}
+        - {x: -9, y: -22}
+        - {x: -9, y: -26}
+        - {x: -7, y: -29}
+        - {x: -5, y: -40}
+        - {x: -2, y: -43}
+        - {x: 2, y: -43}
+        - {x: 5, y: -40}
+        - {x: 5, y: -38}
+        - {x: 6, y: -37}
+        - {x: 6, y: -32}
+        - {x: 7, y: -31}
+        - {x: 7, y: -29}
+        - {x: 9, y: -27}
+        - {x: 9, y: -21}
+        - {x: 10, y: -20}
+        - {x: 10, y: -14}
+        - {x: 9, y: -13}
+        - {x: 13, y: -9}
+        - {x: 14, y: -5}
+        - {x: 17, y: 0}
+        - {x: 17, y: 8}
+        - {x: 14, y: 10}
+        - {x: 15, y: 12}
+        - {x: 15, y: 21}
+        - {x: 13, y: 23}
+        - {x: 13, y: 33}
+        - {x: 9, y: 39}
+        - {x: 7, y: 39}
+        - {x: 2, y: 42}
+        - {x: 2, y: 44}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9faddf48a6849e69bc827119b97e35f8
+      internalID: 1761231411
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TorchVariant_004
+      rect:
+        serializedVersion: 2
+        x: 243
+        y: 970
+        width: 38
+        height: 91
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: -1, y: 44.5}
+        - {x: -2, y: 43.5}
+        - {x: -2, y: 41.5}
+        - {x: -1, y: 40.5}
+        - {x: -2, y: 39.5}
+        - {x: -7, y: 39.5}
+        - {x: -13, y: 31.5}
+        - {x: -13, y: 29.5}
+        - {x: -14, y: 28.5}
+        - {x: -14, y: 20.5}
+        - {x: -16, y: 17.5}
+        - {x: -16, y: 9.5}
+        - {x: -18, y: 6.5}
+        - {x: -18, y: 2.5}
+        - {x: -17, y: 1.5}
+        - {x: -15, y: -6.5}
+        - {x: -10, y: -12.5}
+        - {x: -11, y: -18.5}
+        - {x: -9, y: -21.5}
+        - {x: -9, y: -26.5}
+        - {x: -7, y: -29.5}
+        - {x: -6, y: -38.5}
+        - {x: -3, y: -43.5}
+        - {x: 2, y: -43.5}
+        - {x: 6, y: -38.5}
+        - {x: 6, y: -31.5}
+        - {x: 9, y: -26.5}
+        - {x: 9, y: -21.5}
+        - {x: 10, y: -20.5}
+        - {x: 10, y: -14.5}
+        - {x: 9, y: -13.5}
+        - {x: 13, y: -8.5}
+        - {x: 15, y: -4.5}
+        - {x: 15, y: -1.5}
+        - {x: 17, y: 0.5}
+        - {x: 17, y: 7.5}
+        - {x: 14, y: 10.5}
+        - {x: 15, y: 11.5}
+        - {x: 15, y: 20.5}
+        - {x: 14, y: 21.5}
+        - {x: 15, y: 28.5}
+        - {x: 13, y: 31.5}
+        - {x: 13, y: 34.5}
+        - {x: 7, y: 41.5}
+        - {x: 4, y: 41.5}
+        - {x: 1, y: 44.5}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d226fee78431e030ffceb5f607877c69
+      internalID: -1057667270
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TorchVariant_005
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 970
+        width: 38
+        height: 90
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 3, y: 44}
+        - {x: 0, y: 44}
+        - {x: 0, y: 42}
+        - {x: -2, y: 40}
+        - {x: -7, y: 40}
+        - {x: -13, y: 32}
+        - {x: -13, y: 30}
+        - {x: -14, y: 29}
+        - {x: -14, y: 21}
+        - {x: -16, y: 17}
+        - {x: -15, y: 11}
+        - {x: -18, y: 7}
+        - {x: -18, y: 3}
+        - {x: -16, y: -1}
+        - {x: -16, y: -4}
+        - {x: -10, y: -12}
+        - {x: -9, y: -27}
+        - {x: -7, y: -30}
+        - {x: -6, y: -38}
+        - {x: -3, y: -43}
+        - {x: 2, y: -43}
+        - {x: 6, y: -37}
+        - {x: 6, y: -32}
+        - {x: 9, y: -26}
+        - {x: 9, y: -22}
+        - {x: 10, y: -21}
+        - {x: 10, y: -14}
+        - {x: 9, y: -13}
+        - {x: 14, y: -6}
+        - {x: 15, y: -1}
+        - {x: 17, y: 1}
+        - {x: 17, y: 7}
+        - {x: 15, y: 9}
+        - {x: 16, y: 19}
+        - {x: 14, y: 23}
+        - {x: 14, y: 29}
+        - {x: 12, y: 32}
+        - {x: 12, y: 35}
+        - {x: 10, y: 39}
+        - {x: 7, y: 42}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 187be321cf5add991437df9cdf1b3c15
+      internalID: -1539934415
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TorchVariant_006
+      rect:
+        serializedVersion: 2
+        x: 373
+        y: 970
+        width: 38
+        height: 90
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 5, y: 44}
+        - {x: 3, y: 44}
+        - {x: 1, y: 40}
+        - {x: -2, y: 38}
+        - {x: -3, y: 38}
+        - {x: -5, y: 41}
+        - {x: -8, y: 41}
+        - {x: -10, y: 39}
+        - {x: -13, y: 33}
+        - {x: -14, y: 21}
+        - {x: -16, y: 19}
+        - {x: -16, y: 12}
+        - {x: -15, y: 10}
+        - {x: -18, y: 7}
+        - {x: -18, y: 2}
+        - {x: -16, y: -1}
+        - {x: -16, y: -4}
+        - {x: -14, y: -8}
+        - {x: -10, y: -12}
+        - {x: -11, y: -14}
+        - {x: -11, y: -19}
+        - {x: -9, y: -21}
+        - {x: -9, y: -27}
+        - {x: -7, y: -30}
+        - {x: -7, y: -35}
+        - {x: -6, y: -36}
+        - {x: -5, y: -41}
+        - {x: -3, y: -43}
+        - {x: 2, y: -43}
+        - {x: 6, y: -37}
+        - {x: 6, y: -31}
+        - {x: 9, y: -26}
+        - {x: 9, y: -21}
+        - {x: 10, y: -20}
+        - {x: 10, y: -11}
+        - {x: 14, y: -6}
+        - {x: 15, y: -2}
+        - {x: 17, y: 1}
+        - {x: 17, y: 7}
+        - {x: 14, y: 10}
+        - {x: 16, y: 20}
+        - {x: 14, y: 25}
+        - {x: 14, y: 29}
+        - {x: 12, y: 32}
+        - {x: 12, y: 37}
+        - {x: 11, y: 39}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 283fab12ffde764751d070043fbfaa84
+      internalID: 1001293015
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: TorchVariant_007
+      rect:
+        serializedVersion: 2
+        x: 438
+        y: 970
+        width: 38
+        height: 91
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: -1, y: 44.5}
+        - {x: -1, y: 40.5}
+        - {x: -3, y: 39.5}
+        - {x: -4, y: 41.5}
+        - {x: -7, y: 41.5}
+        - {x: -9, y: 39.5}
+        - {x: -9, y: 37.5}
+        - {x: -13, y: 31.5}
+        - {x: -13, y: 24.5}
+        - {x: -14, y: 23.5}
+        - {x: -14, y: 19.5}
+        - {x: -16, y: 18.5}
+        - {x: -16, y: 9.5}
+        - {x: -18, y: 7.5}
+        - {x: -18, y: 0.5}
+        - {x: -16, y: -0.5}
+        - {x: -16, y: -5.5}
+        - {x: -10, y: -12.5}
+        - {x: -11, y: -13.5}
+        - {x: -11, y: -19.5}
+        - {x: -9, y: -22.5}
+        - {x: -9, y: -28.5}
+        - {x: -7, y: -31.5}
+        - {x: -6, y: -39.5}
+        - {x: -2, y: -43.5}
+        - {x: 2, y: -43.5}
+        - {x: 6, y: -37.5}
+        - {x: 6, y: -32.5}
+        - {x: 9, y: -26.5}
+        - {x: 9, y: -21.5}
+        - {x: 10, y: -20.5}
+        - {x: 10, y: -13.5}
+        - {x: 9, y: -12.5}
+        - {x: 15, y: -4.5}
+        - {x: 15, y: -0.5}
+        - {x: 17, y: 1.5}
+        - {x: 17, y: 7.5}
+        - {x: 14, y: 10.5}
+        - {x: 15, y: 11.5}
+        - {x: 15, y: 18.5}
+        - {x: 12, y: 23.5}
+        - {x: 12, y: 27.5}
+        - {x: 11, y: 28.5}
+        - {x: 11, y: 37.5}
+        - {x: 7, y: 41.5}
+        - {x: 3, y: 42.5}
+        - {x: 2, y: 44.5}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8a5c9dafa95b8e556aa34fe96835ffa9
+      internalID: 1545118042
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_001
+      rect:
+        serializedVersion: 2
+        x: 765
+        y: 965
+        width: 68
+        height: 92
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 6, y: 45}
+        - {x: 3, y: 45}
+        - {x: 0, y: 41}
+        - {x: 0, y: 37}
+        - {x: -3, y: 34}
+        - {x: -5, y: 34}
+        - {x: -5, y: 30}
+        - {x: -6, y: 29}
+        - {x: -7, y: 30}
+        - {x: -7, y: 35}
+        - {x: -8, y: 37}
+        - {x: -11, y: 37}
+        - {x: -14, y: 34}
+        - {x: -14, y: 31}
+        - {x: -20, y: 26}
+        - {x: -21, y: 23}
+        - {x: -23, y: 21}
+        - {x: -23, y: 19}
+        - {x: -25, y: 16}
+        - {x: -25, y: 13}
+        - {x: -27, y: 11}
+        - {x: -30, y: 11}
+        - {x: -33, y: 9}
+        - {x: -33, y: 3}
+        - {x: -31, y: 1}
+        - {x: -28, y: -6}
+        - {x: -14, y: -23}
+        - {x: -14, y: -26}
+        - {x: -13, y: -27}
+        - {x: -20, y: -35}
+        - {x: -20, y: -41}
+        - {x: -17, y: -43}
+        - {x: -11, y: -43}
+        - {x: -10, y: -44}
+        - {x: 11, y: -44}
+        - {x: 12, y: -43}
+        - {x: 16, y: -43}
+        - {x: 19, y: -41}
+        - {x: 19, y: -35}
+        - {x: 16, y: -31}
+        - {x: 14, y: -30}
+        - {x: 13, y: -25}
+        - {x: 15, y: -20}
+        - {x: 17, y: -19}
+        - {x: 17, y: -18}
+        - {x: 21, y: -14}
+        - {x: 26, y: -6}
+        - {x: 29, y: -3}
+        - {x: 29, y: -1}
+        - {x: 32, y: 2}
+        - {x: 32, y: 9}
+        - {x: 28, y: 11}
+        - {x: 26, y: 11}
+        - {x: 23, y: 13}
+        - {x: 22, y: 21}
+        - {x: 20, y: 24}
+        - {x: 20, y: 26}
+        - {x: 18, y: 30}
+        - {x: 16, y: 32}
+        - {x: 14, y: 32}
+        - {x: 13, y: 33}
+        - {x: 12, y: 38}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9376058415ec1f053afb597a96f8c4de
+      internalID: 1910228914
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_002
+      rect:
+        serializedVersion: 2
+        x: 853
+        y: 965
+        width: 67
+        height: 96
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 4.5, y: 47}
+        - {x: 1.5, y: 47}
+        - {x: -0.5, y: 45}
+        - {x: 0.5, y: 37}
+        - {x: -2.5, y: 34}
+        - {x: -5.5, y: 36}
+        - {x: -11.5, y: 37}
+        - {x: -11.5, y: 34}
+        - {x: -12.5, y: 33}
+        - {x: -13.5, y: 34}
+        - {x: -15.5, y: 34}
+        - {x: -18.5, y: 31}
+        - {x: -24.5, y: 19}
+        - {x: -24.5, y: 12}
+        - {x: -26.5, y: 10}
+        - {x: -31.5, y: 8}
+        - {x: -32.5, y: 6}
+        - {x: -32.5, y: 1}
+        - {x: -30.5, y: -1}
+        - {x: -28.5, y: -6}
+        - {x: -16.5, y: -20}
+        - {x: -12.5, y: -28}
+        - {x: -14.5, y: -32}
+        - {x: -19.5, y: -38}
+        - {x: -19.5, y: -42}
+        - {x: -18.5, y: -44}
+        - {x: -16.5, y: -45}
+        - {x: -12.5, y: -45}
+        - {x: -11.5, y: -46}
+        - {x: 9.5, y: -46}
+        - {x: 10.5, y: -45}
+        - {x: 16.5, y: -45}
+        - {x: 18.5, y: -43}
+        - {x: 18.5, y: -37}
+        - {x: 13.5, y: -31}
+        - {x: 12.5, y: -27}
+        - {x: 14.5, y: -24}
+        - {x: 14.5, y: -22}
+        - {x: 28.5, y: -6}
+        - {x: 28.5, y: -3}
+        - {x: 31.5, y: 1}
+        - {x: 31.5, y: 8}
+        - {x: 28.5, y: 10}
+        - {x: 26.5, y: 20}
+        - {x: 24.5, y: 24}
+        - {x: 17.5, y: 23}
+        - {x: 15.5, y: 25}
+        - {x: 15.5, y: 31}
+        - {x: 14.5, y: 32}
+        - {x: 14.5, y: 34}
+        - {x: 11.5, y: 38}
+        - {x: 10.5, y: 42}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b2fc839f27ced9775f897d6a67abf2c1
+      internalID: -505743702
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_003
+      rect:
+        serializedVersion: 2
+        x: 942
+        y: 965
+        width: 67
+        height: 100
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: -1.5, y: 49}
+        - {x: -2.5, y: 48}
+        - {x: -2.5, y: 42}
+        - {x: 0.5, y: 40}
+        - {x: -0.5, y: 35}
+        - {x: -3.5, y: 33}
+        - {x: -10.5, y: 42}
+        - {x: -14.5, y: 42}
+        - {x: -14.5, y: 39}
+        - {x: -12.5, y: 36}
+        - {x: -12.5, y: 32}
+        - {x: -15.5, y: 28}
+        - {x: -16.5, y: 29}
+        - {x: -16.5, y: 33}
+        - {x: -19.5, y: 33}
+        - {x: -22.5, y: 27}
+        - {x: -22.5, y: 24}
+        - {x: -24.5, y: 22}
+        - {x: -24.5, y: 20}
+        - {x: -25.5, y: 19}
+        - {x: -25.5, y: 10}
+        - {x: -27.5, y: 8}
+        - {x: -32.5, y: 6}
+        - {x: -32.5, y: -1}
+        - {x: -29.5, y: -5}
+        - {x: -27.5, y: -10}
+        - {x: -15.5, y: -25}
+        - {x: -15.5, y: -27}
+        - {x: -13.5, y: -30}
+        - {x: -16.5, y: -35}
+        - {x: -20.5, y: -39}
+        - {x: -20.5, y: -45}
+        - {x: -16.5, y: -47}
+        - {x: -11.5, y: -47}
+        - {x: -10.5, y: -48}
+        - {x: 10.5, y: -48}
+        - {x: 11.5, y: -47}
+        - {x: 15.5, y: -47}
+        - {x: 18.5, y: -45}
+        - {x: 18.5, y: -39}
+        - {x: 12.5, y: -32}
+        - {x: 13.5, y: -25}
+        - {x: 19.5, y: -19}
+        - {x: 31.5, y: -1}
+        - {x: 31.5, y: 5}
+        - {x: 29.5, y: 7}
+        - {x: 27.5, y: 7}
+        - {x: 23.5, y: 9}
+        - {x: 23.5, y: 14}
+        - {x: 21.5, y: 17}
+        - {x: 21.5, y: 21}
+        - {x: 16.5, y: 29}
+        - {x: 13.5, y: 29}
+        - {x: 12.5, y: 30}
+        - {x: 12.5, y: 39}
+        - {x: 8.5, y: 44}
+        - {x: 4.5, y: 46}
+        - {x: 1.5, y: 49}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 40e449fd38af653e7cc53fac7b141aa0
+      internalID: -2063334869
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_004
+      rect:
+        serializedVersion: 2
+        x: 1030
+        y: 965
+        width: 68
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: -8, y: 51.5}
+        - {x: -9, y: 49.5}
+        - {x: -11, y: 48.5}
+        - {x: -11, y: 45.5}
+        - {x: -13, y: 40.5}
+        - {x: -21, y: 33.5}
+        - {x: -22, y: 30.5}
+        - {x: -25, y: 26.5}
+        - {x: -25, y: 23.5}
+        - {x: -26, y: 22.5}
+        - {x: -26, y: 9.5}
+        - {x: -25, y: 7.5}
+        - {x: -27, y: 5.5}
+        - {x: -31, y: 4.5}
+        - {x: -33, y: 2.5}
+        - {x: -33, y: -2.5}
+        - {x: -31, y: -4.5}
+        - {x: -30, y: -8.5}
+        - {x: -20, y: -20.5}
+        - {x: -15, y: -27.5}
+        - {x: -15, y: -29.5}
+        - {x: -13, y: -31.5}
+        - {x: -13, y: -33.5}
+        - {x: -15, y: -36.5}
+        - {x: -20, y: -41.5}
+        - {x: -20, y: -47.5}
+        - {x: -19, y: -48.5}
+        - {x: -14, y: -49.5}
+        - {x: -13, y: -50.5}
+        - {x: 9, y: -50.5}
+        - {x: 10, y: -49.5}
+        - {x: 16, y: -49.5}
+        - {x: 19, y: -47.5}
+        - {x: 19, y: -42.5}
+        - {x: 12, y: -33.5}
+        - {x: 12, y: -31.5}
+        - {x: 14, y: -29.5}
+        - {x: 14, y: -26.5}
+        - {x: 28, y: -10.5}
+        - {x: 28, y: -8.5}
+        - {x: 32, y: -2.5}
+        - {x: 32, y: 2.5}
+        - {x: 29, y: 5.5}
+        - {x: 26, y: 5.5}
+        - {x: 22, y: 8.5}
+        - {x: 21, y: 10.5}
+        - {x: 21, y: 14.5}
+        - {x: 17, y: 21.5}
+        - {x: 16, y: 25.5}
+        - {x: 12, y: 28.5}
+        - {x: 8, y: 33.5}
+        - {x: 10, y: 34.5}
+        - {x: 10, y: 40.5}
+        - {x: 5, y: 46.5}
+        - {x: 5, y: 48.5}
+        - {x: 4, y: 49.5}
+        - {x: 1, y: 49.5}
+        - {x: 1, y: 46.5}
+        - {x: -3, y: 40.5}
+        - {x: -6, y: 44.5}
+        - {x: -5, y: 51.5}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d8fefae84cfa0acbf04377ee1ec28b50
+      internalID: 101640367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_005
+      rect:
+        serializedVersion: 2
+        x: 1119
+        y: 965
+        width: 68
+        height: 108
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 3, y: 53}
+        - {x: 0, y: 53}
+        - {x: -1, y: 51}
+        - {x: -3, y: 50}
+        - {x: -2, y: 41}
+        - {x: -5, y: 38}
+        - {x: -6, y: 39}
+        - {x: -6, y: 43}
+        - {x: -8, y: 47}
+        - {x: -11, y: 47}
+        - {x: -14, y: 44}
+        - {x: -14, y: 38}
+        - {x: -17, y: 35}
+        - {x: -21, y: 33}
+        - {x: -21, y: 31}
+        - {x: -25, y: 23}
+        - {x: -26, y: 11}
+        - {x: -23, y: 6}
+        - {x: -33, y: 2}
+        - {x: -33, y: -5}
+        - {x: -31, y: -6}
+        - {x: -28, y: -13}
+        - {x: -16, y: -27}
+        - {x: -13, y: -34}
+        - {x: -14, y: -37}
+        - {x: -20, y: -43}
+        - {x: -20, y: -49}
+        - {x: -16, y: -51}
+        - {x: -11, y: -51}
+        - {x: -10, y: -52}
+        - {x: 10, y: -52}
+        - {x: 11, y: -51}
+        - {x: 16, y: -51}
+        - {x: 19, y: -49}
+        - {x: 19, y: -42}
+        - {x: 17, y: -41}
+        - {x: 13, y: -35}
+        - {x: 14, y: -29}
+        - {x: 22, y: -20}
+        - {x: 28, y: -11}
+        - {x: 32, y: -3}
+        - {x: 32, y: 1}
+        - {x: 30, y: 3}
+        - {x: 25, y: 4}
+        - {x: 22, y: 6}
+        - {x: 22, y: 17}
+        - {x: 19, y: 21}
+        - {x: 18, y: 25}
+        - {x: 16, y: 28}
+        - {x: 18, y: 31}
+        - {x: 18, y: 36}
+        - {x: 16, y: 39}
+        - {x: 13, y: 39}
+        - {x: 12, y: 37}
+        - {x: 12, y: 34}
+        - {x: 13, y: 33}
+        - {x: 12, y: 32}
+        - {x: 10, y: 33}
+        - {x: 10, y: 39}
+        - {x: 8, y: 42}
+        - {x: 8, y: 45}
+        - {x: 6, y: 48}
+        - {x: 6, y: 50}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8e975642d59d8cd720b9338bd7fbdb64
+      internalID: -1431086326
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_006
+      rect:
+        serializedVersion: 2
+        x: 1208
+        y: 965
+        width: 66
+        height: 108
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 4, y: 53}
+        - {x: 0, y: 53}
+        - {x: -4, y: 50}
+        - {x: -5, y: 45}
+        - {x: -2, y: 41}
+        - {x: -4, y: 38}
+        - {x: -8, y: 37}
+        - {x: -11, y: 35}
+        - {x: -12, y: 36}
+        - {x: -13, y: 43}
+        - {x: -15, y: 43}
+        - {x: -19, y: 38}
+        - {x: -19, y: 36}
+        - {x: -22, y: 33}
+        - {x: -26, y: 23}
+        - {x: -25, y: 8}
+        - {x: -23, y: 6}
+        - {x: -26, y: 4}
+        - {x: -30, y: 3}
+        - {x: -32, y: 1}
+        - {x: -32, y: -4}
+        - {x: -30, y: -6}
+        - {x: -30, y: -8}
+        - {x: -28, y: -12}
+        - {x: -23, y: -17}
+        - {x: -14, y: -29}
+        - {x: -14, y: -33}
+        - {x: -13, y: -35}
+        - {x: -15, y: -37}
+        - {x: -16, y: -40}
+        - {x: -19, y: -42}
+        - {x: -20, y: -44}
+        - {x: -20, y: -48}
+        - {x: -16, y: -51}
+        - {x: -11, y: -51}
+        - {x: -10, y: -52}
+        - {x: 9, y: -52}
+        - {x: 10, y: -51}
+        - {x: 14, y: -51}
+        - {x: 19, y: -49}
+        - {x: 19, y: -43}
+        - {x: 18, y: -43}
+        - {x: 12, y: -35}
+        - {x: 12, y: -33}
+        - {x: 14, y: -31}
+        - {x: 14, y: -28}
+        - {x: 27, y: -13}
+        - {x: 27, y: -11}
+        - {x: 31, y: -4}
+        - {x: 31, y: 2}
+        - {x: 29, y: 4}
+        - {x: 27, y: 4}
+        - {x: 22, y: 7}
+        - {x: 22, y: 11}
+        - {x: 23, y: 12}
+        - {x: 23, y: 23}
+        - {x: 22, y: 24}
+        - {x: 20, y: 24}
+        - {x: 18, y: 21}
+        - {x: 17, y: 22}
+        - {x: 17, y: 26}
+        - {x: 18, y: 27}
+        - {x: 18, y: 35}
+        - {x: 16, y: 39}
+        - {x: 14, y: 41}
+        - {x: 12, y: 41}
+        - {x: 11, y: 42}
+        - {x: 10, y: 49}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fc14a347b4529a2c3eb212de09a48a61
+      internalID: -2133332001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_007
+      rect:
+        serializedVersion: 2
+        x: 1296
+        y: 965
+        width: 67
+        height: 107
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: 5.5, y: 52.5}
+        - {x: 2.5, y: 52.5}
+        - {x: -0.5, y: 49.5}
+        - {x: -1.5, y: 45.5}
+        - {x: 0.5, y: 42.5}
+        - {x: -2.5, y: 40.5}
+        - {x: -5.5, y: 42.5}
+        - {x: -4.5, y: 43.5}
+        - {x: -5.5, y: 48.5}
+        - {x: -6.5, y: 49.5}
+        - {x: -9.5, y: 49.5}
+        - {x: -13.5, y: 44.5}
+        - {x: -13.5, y: 40.5}
+        - {x: -12.5, y: 39.5}
+        - {x: -17.5, y: 32.5}
+        - {x: -20.5, y: 30.5}
+        - {x: -21.5, y: 24.5}
+        - {x: -23.5, y: 21.5}
+        - {x: -23.5, y: 14.5}
+        - {x: -22.5, y: 13.5}
+        - {x: -23.5, y: 12.5}
+        - {x: -23.5, y: 7.5}
+        - {x: -22.5, y: 6.5}
+        - {x: -32.5, y: 2.5}
+        - {x: -32.5, y: -4.5}
+        - {x: -22.5, y: -19.5}
+        - {x: -16.5, y: -25.5}
+        - {x: -12.5, y: -34.5}
+        - {x: -19.5, y: -42.5}
+        - {x: -19.5, y: -48.5}
+        - {x: -15.5, y: -50.5}
+        - {x: -11.5, y: -50.5}
+        - {x: -10.5, y: -51.5}
+        - {x: 10.5, y: -51.5}
+        - {x: 11.5, y: -50.5}
+        - {x: 15.5, y: -50.5}
+        - {x: 19.5, y: -47.5}
+        - {x: 19.5, y: -42.5}
+        - {x: 12.5, y: -34.5}
+        - {x: 13.5, y: -28.5}
+        - {x: 25.5, y: -14.5}
+        - {x: 31.5, y: -3.5}
+        - {x: 31.5, y: 1.5}
+        - {x: 29.5, y: 3.5}
+        - {x: 25.5, y: 4.5}
+        - {x: 21.5, y: 7.5}
+        - {x: 23.5, y: 11.5}
+        - {x: 23.5, y: 17.5}
+        - {x: 15.5, y: 27.5}
+        - {x: 15.5, y: 29.5}
+        - {x: 16.5, y: 30.5}
+        - {x: 16.5, y: 40.5}
+        - {x: 14.5, y: 44.5}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 356613328cebb3f2edd1a1cf8b5f20e4
+      internalID: 18435953
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: BrazierVariant_008
+      rect:
+        serializedVersion: 2
+        x: 677
+        y: 965
+        width: 67
+        height: 86
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline:
+      - - {x: -4.5, y: 42}
+        - {x: -6.5, y: 40}
+        - {x: -8.5, y: 40}
+        - {x: -13.5, y: 33}
+        - {x: -14.5, y: 26}
+        - {x: -18.5, y: 24}
+        - {x: -21.5, y: 16}
+        - {x: -32.5, y: 12}
+        - {x: -32.5, y: 5}
+        - {x: -30.5, y: 3}
+        - {x: -28.5, y: -2}
+        - {x: -24.5, y: -6}
+        - {x: -22.5, y: -10}
+        - {x: -13.5, y: -21}
+        - {x: -13.5, y: -25}
+        - {x: -19.5, y: -32}
+        - {x: -19.5, y: -38}
+        - {x: -16.5, y: -40}
+        - {x: -10.5, y: -40}
+        - {x: -9.5, y: -41}
+        - {x: 11.5, y: -41}
+        - {x: 12.5, y: -40}
+        - {x: 16.5, y: -40}
+        - {x: 18.5, y: -39}
+        - {x: 18.5, y: -32}
+        - {x: 17.5, y: -32}
+        - {x: 12.5, y: -25}
+        - {x: 12.5, y: -21}
+        - {x: 15.5, y: -17}
+        - {x: 15.5, y: -15}
+        - {x: 21.5, y: -10}
+        - {x: 24.5, y: -5}
+        - {x: 28.5, y: -1}
+        - {x: 28.5, y: 2}
+        - {x: 31.5, y: 6}
+        - {x: 31.5, y: 12}
+        - {x: 24.5, y: 16}
+        - {x: 24.5, y: 19}
+        - {x: 21.5, y: 24}
+        - {x: 20.5, y: 28}
+        - {x: 15.5, y: 30}
+        - {x: 15.5, y: 34}
+        - {x: 8.5, y: 42}
+        - {x: 4.5, y: 42}
+        - {x: 4.5, y: 38}
+        - {x: 3.5, y: 37}
+        - {x: 2.5, y: 38}
+        - {x: 0.5, y: 38}
+        - {x: -2.5, y: 42}
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 22665ac2bbd00fc2f4b9ff5887b568d4
+      internalID: -1023474526
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_PortalCyan_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 836
+        width: 365
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4da8ad0c855a17f70680b9e557d74942
+      internalID: -1116293015
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_PortalBlue_001
+      rect:
+        serializedVersion: 2
+        x: 365
+        y: 836
+        width: 365
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 23894af613b8e2a58338f693050ef864
+      internalID: -1741023029
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_PortalPurple_001
+      rect:
+        serializedVersion: 2
+        x: 730
+        y: 836
+        width: 360
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e7048e20358f1830ebcab9793f66357a
+      internalID: -1973219280
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_PortalViolet_001
+      rect:
+        serializedVersion: 2
+        x: 1090
+        y: 836
+        width: 358
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5dd5b4fb223c132d0fccadf8d0522550
+      internalID: 2023820790
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_RunePortal_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 716
+        width: 365
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f3202ab1bda0898364f84abda60ac581
+      internalID: -428010788
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_CrystalGlow_001
+      rect:
+        serializedVersion: 2
+        x: 365
+        y: 716
+        width: 335
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55bc07dd61ae6c2ec7aa40d1bab15d18
+      internalID: -1281994864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_ChestGold_001
+      rect:
+        serializedVersion: 2
+        x: 700
+        y: 716
+        width: 235
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2ccb7db2446860599f8c465ed4f98cde
+      internalID: -677749442
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_ChestRed_001
+      rect:
+        serializedVersion: 2
+        x: 935
+        y: 716
+        width: 250
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: de0c7d5e20e51a7e412d024737962e62
+      internalID: -1355770068
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_ChestPurple_001
+      rect:
+        serializedVersion: 2
+        x: 1185
+        y: 716
+        width: 263
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 79daabb180f496d65bc0c43cee7f0f69
+      internalID: 1035426468
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_Fire_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 606
+        width: 460
+        height: 100
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4297186177e2b7ab7dff403bfe9937b7
+      internalID: -1184996289
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_BlueFire_001
+      rect:
+        serializedVersion: 2
+        x: 460
+        y: 606
+        width: 500
+        height: 100
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 03a02f15c19520c21b83b1103c84552f
+      internalID: 446035242
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_PurpleFire_001
+      rect:
+        serializedVersion: 2
+        x: 960
+        y: 606
+        width: 488
+        height: 100
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ed25f2b0d1ab57e902b06cf096e15092
+      internalID: -532354598
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_Waterfall_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 491
+        width: 480
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0de11b137eb8ff54d47d7b05929ce5c0
+      internalID: 2007372327
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_WaterSplash_001
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 491
+        width: 520
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f6c1cb67eaa780b4346c344ab9ea3531
+      internalID: -1228932487
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_WaterImpact_001
+      rect:
+        serializedVersion: 2
+        x: 1000
+        y: 491
+        width: 448
+        height: 105
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8f4b6198682c4a1fd73f3bd66680a9d3
+      internalID: 1234559065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_IceBubble_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 391
+        width: 545
+        height: 95
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 45eccc48c02c6b1396e88dbc12ae0d43
+      internalID: 1533158508
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_IcicleDrops_001
+      rect:
+        serializedVersion: 2
+        x: 545
+        y: 391
+        width: 675
+        height: 95
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a51a256cfe4826783bddc58f44743a4c
+      internalID: -2024361178
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_WaterDrops_001
+      rect:
+        serializedVersion: 2
+        x: 1220
+        y: 391
+        width: 228
+        height: 95
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 94ea2582435481b0ccf6f3ba27a681e6
+      internalID: -1481104705
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_PurpleGround_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 306
+        width: 620
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a2b0b849d0043a52489ae48afaebefd4
+      internalID: -88628716
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_PurpleGroundWide_001
+      rect:
+        serializedVersion: 2
+        x: 620
+        y: 306
+        width: 828
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 067a60a46fbe11c962f0e867ecc8cf25
+      internalID: 399849238
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_SpikeVariants_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 206
+        width: 500
+        height: 95
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 08a7e5764c417b89cecf9c4ccf1b02a7
+      internalID: 1974305092
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_StoneProjectile_001
+      rect:
+        serializedVersion: 2
+        x: 500
+        y: 206
+        width: 490
+        height: 95
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: be18d3d4055559aeea2f9968b716d716
+      internalID: 519515778
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_FireProjectile_001
+      rect:
+        serializedVersion: 2
+        x: 990
+        y: 206
+        width: 458
+        height: 95
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 430b29ec688581aee7eeb063f7056aa3
+      internalID: 1801689483
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_Poison_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 106
+        width: 490
+        height: 90
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 724b248f646504f44115cde7637a3d0e
+      internalID: -705502049
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_Smoke_001
+      rect:
+        serializedVersion: 2
+        x: 490
+        y: 106
+        width: 440
+        height: 90
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d3745e88dd6f9327ab5d08d0625fd41a
+      internalID: 1025675600
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_FireSmoke_001
+      rect:
+        serializedVersion: 2
+        x: 930
+        y: 106
+        width: 518
+        height: 90
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3ca5c17e2fafdd3243b22f1e38019447
+      internalID: 1709544418
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_VioletFlame_001
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 330
+        height: 101
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0cd059841cd43126d0231f6fe32aa2a6
+      internalID: -1029630274
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_BlueFlame_001
+      rect:
+        serializedVersion: 2
+        x: 330
+        y: 0
+        width: 400
+        height: 101
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 08fd08218b030a6f04e6b6919b99bb8c
+      internalID: -2012990207
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Strip_Explosion_001
+      rect:
+        serializedVersion: 2
+        x: 730
+        y: 0
+        width: 718
+        height: 101
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d44270eeddc663f385f191c378321146
+      internalID: -1658369333
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 59b088aeff3c9554d96e033415455ba6
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      BrazierVariant_001: 1910228914
+      BrazierVariant_002: -505743702
+      BrazierVariant_003: -2063334869
+      BrazierVariant_004: 101640367
+      BrazierVariant_005: -1431086326
+      BrazierVariant_006: -2133332001
+      BrazierVariant_007: 18435953
+      BrazierVariant_008: -1023474526
+      Strip_BlueFire_001: 446035242
+      Strip_BlueFlame_001: -2012990207
+      Strip_ChestGold_001: -677749442
+      Strip_ChestPurple_001: 1035426468
+      Strip_ChestRed_001: -1355770068
+      Strip_CrystalGlow_001: -1281994864
+      Strip_Explosion_001: -1658369333
+      Strip_FireProjectile_001: 1801689483
+      Strip_FireSmoke_001: 1709544418
+      Strip_Fire_001: -1184996289
+      Strip_IceBubble_001: 1533158508
+      Strip_IcicleDrops_001: -2024361178
+      Strip_Poison_001: -705502049
+      Strip_PortalBlue_001: -1741023029
+      Strip_PortalCyan_001: -1116293015
+      Strip_PortalPurple_001: -1973219280
+      Strip_PortalViolet_001: 2023820790
+      Strip_PurpleFire_001: -532354598
+      Strip_PurpleGroundWide_001: 399849238
+      Strip_PurpleGround_001: -88628716
+      Strip_RunePortal_001: -428010788
+      Strip_Smoke_001: 1025675600
+      Strip_SpikeVariants_001: 1974305092
+      Strip_StoneProjectile_001: 519515778
+      Strip_VioletFlame_001: -1029630274
+      Strip_WaterDrops_001: -1481104705
+      Strip_WaterImpact_001: 1234559065
+      Strip_WaterSplash_001: -1228932487
+      Strip_Waterfall_001: 2007372327
+      TorchVariant_001: -26057801
+      TorchVariant_002: -338902634
+      TorchVariant_003: 1761231411
+      TorchVariant_004: -1057667270
+      TorchVariant_005: -1539934415
+      TorchVariant_006: 1001293015
+      TorchVariant_007: 1545118042
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

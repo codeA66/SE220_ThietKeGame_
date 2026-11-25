@@ -22,9 +22,12 @@ namespace DeadCells.VFX
             {
                 if (s_material == null)
                 {
-                    var probe = new GameObject("MaterialProbe");
+                    var probe = new GameObject("MaterialProbe") { hideFlags = HideFlags.HideAndDontSave };
                     s_material = probe.AddComponent<SpriteRenderer>().sharedMaterial;
-                    Object.Destroy(probe);
+                    if (Application.isPlaying)
+                        Object.Destroy(probe);
+                    else
+                        Object.DestroyImmediate(probe);
                 }
                 return s_material;
             }

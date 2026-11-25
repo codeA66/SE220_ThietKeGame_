@@ -27,11 +27,13 @@ namespace DeadCells.Player
         private static readonly int BowCrouchReleaseHash = Animator.StringToHash("Bow.BowCrouchRelease");
         private static readonly int BowReleaseSpeedHash = Animator.StringToHash("BowReleaseSpeed");
         private static readonly int SpawnPhaseHash = Animator.StringToHash("SpawnPhase");
+        private static readonly int WallClingingHash = Animator.StringToHash("WallClinging");
 
         [SerializeField] private Animator _animator;
         private int _bowLayer;
         private float _bowReleaseLength;
         private float _bowCrouchReleaseLength;
+        private bool _hasWallClingingParam;
 
         public float RebirthLength { get; private set; }
 
@@ -45,6 +47,16 @@ namespace DeadCells.Player
             _bowCrouchReleaseLength = GetClipLength("Player_BowCrouchRelease");
             if (_bowReleaseLength <= 0f || _bowCrouchReleaseLength <= 0f)
                 throw new System.InvalidOperationException("Player Animator requires both bow release clips.");
+
+            _hasWallClingingParam = false;
+            foreach (var param in _animator.parameters)
+            {
+                if (param.nameHash == WallClingingHash)
+                {
+                    _hasWallClingingParam = true;
+                    break;
+                }
+            }
         }
 
         public void DrawBow(bool crouching, float normalizedTime)
@@ -81,6 +93,12 @@ namespace DeadCells.Player
         public void SetRollAnimSpeed(float speed) => _animator.SetFloat(RollAnimSpeedHash, speed);
 
         public void SetClimbingChain(bool onChain) => _animator.SetBool(OnChainHash, onChain);
+
+        public void SetWallClinging(bool clinging)
+        {
+            if (_hasWallClingingParam && _animator != null)
+                _animator.SetBool(WallClingingHash, clinging);
+        }
 
         public void SetClimbAnimSpeed(float speed) => _animator.SetFloat(ClimbAnimSpeedHash, speed);
 

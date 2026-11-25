@@ -8,6 +8,8 @@ namespace DeadCells.Player
 
         private PowerScrollPickup _focused;
 
+        public bool HasFocusedScroll => isActiveAndEnabled && _focused != null && _focused.IsAvailable;
+
         public bool Tick(Vector2 position, bool canInteract, bool pressed, PlayerRunStats stats)
         {
             var nearest = canInteract ? FindNearest(position) : null;

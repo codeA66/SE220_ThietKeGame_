@@ -10,15 +10,44 @@ namespace DeadCells.Currency
         [SerializeField, Min(0.1f)] private float _magnetDistance = 5.25f;
         [SerializeField, Min(0.1f)] private float _magnetSpeed = 15f;
         [SerializeField] private LayerMask _sightBlockers;
+        // Authored scene coins (treasure caches) stay put until the magnet picks them up instead of falling.
+        [SerializeField] private bool _staticPlacement;
+        [SerializeField] private GoldWallet _wallet;
+        [SerializeField] private Health _player;
+        [SerializeField] private int _value;
 
         private Rigidbody2D _body;
-        private GoldWallet _wallet;
-        private Health _player;
-        private int _value;
         private float _attractAt;
         private bool _attracting;
 
-        private void Awake() => _body = GetComponent<Rigidbody2D>();
+        private void Awake()
+        {
+            _body = GetComponent<Rigidbody2D>();
+            if (_staticPlacement && _body != null)
+            {
+                _body.bodyType = RigidbodyType2D.Kinematic;
+                _body.linearVelocity = Vector2.zero;
+            }
+
+            EnsureVfxSortingLayer();
+        }
+
+        public void EnsureVfxSortingLayer()
+        {
+            int vfxLayerId = SortingLayer.NameToID("VFX");
+            if (vfxLayerId == 0)
+                return;
+
+            foreach (var sr in GetComponentsInChildren<SpriteRenderer>(true))
+            {
+                if (sr != null && sr.sortingLayerID == 0)
+                {
+                    sr.sortingLayerID = vfxLayerId;
+                    if (sr.sortingOrder < 5)
+                        sr.sortingOrder = 5;
+                }
+            }
+        }
 
         public void Launch(GoldWallet wallet, Health player, int value)
         {

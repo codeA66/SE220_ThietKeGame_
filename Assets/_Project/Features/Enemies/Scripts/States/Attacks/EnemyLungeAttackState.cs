@@ -31,10 +31,11 @@ namespace DeadCells.Enemies.States
 
         protected override void ExecuteFixedTick()
         {
-            if (ExecuteTime < Skill.TravelDuration && !Ctx.IsWallAhead(Ctx.Facing))
-                Ctx.SetHorizontalVelocity(_speedX);
-            else
-                Ctx.SetHorizontalVelocity(0f);
+            bool canAdvance = ExecuteTime < Skill.TravelDuration
+                && !Ctx.IsWallAhead(Ctx.Facing)
+                && (Ctx.IsGroundAhead(Ctx.Facing)
+                    || (!Ctx.IsGrounded && Ctx.Velocity.y > 0.5f && Ctx.CanStandAt(Ctx.Position + new Vector2(Ctx.Facing * 0.6f, 0f))));
+            Ctx.SetHorizontalVelocity(canAdvance ? _speedX : 0f);
         }
     }
 }

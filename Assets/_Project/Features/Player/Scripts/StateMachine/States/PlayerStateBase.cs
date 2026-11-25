@@ -43,7 +43,7 @@ namespace DeadCells.Player.StateMachine.States
         }
 
         /// <summary>
-        /// Stomp, attack, roll, ledge climb or air jump while airborne. Returns true if a transition started.
+        /// Stomp, attack, roll, climb, ledge climb, wall cling or air jump while airborne. Returns true if a transition started.
         /// </summary>
         protected bool TryAirActions()
         {
@@ -53,19 +53,22 @@ namespace DeadCells.Player.StateMachine.States
             if (Ctx.Config.AllowAirAttack && TryAttack())
                 return true;
 
-            return TryRoll() || TryClimb() || TryLedgeClimb() || TryAirJump();
+            return TryRoll() || TryClimb() || TryLedgeClimb() || TryWallCling() || TryAirJump();
         }
 
-        /// <summary>
-        /// Grab a chain or vine the player overlaps while holding up. Returns true if a transition started.
-        /// </summary>
-        protected bool TryClimb() =>
-            Ctx.IsUpHeld && Ctx.TryFindClimbable() && Machine.ChangeState(Machine.Climb);
+        protected bool TryWallCling() => Ctx.TryFindWall(out _) && Machine.ChangeState(Machine.WallCling);
 
         /// <summary>
-        /// Crouch when holding down on the ground. Returns true if a transition started.
+        /// Grab a chain or vine the player overlaps while holding up. A grab that would start at or
+        /// above the chain top is refused, because the trigger overhangs its deck by half a unit.
         /// </summary>
-        protected bool TryCrouch() => Ctx.IsDownHeld && Ctx.IsGrounded && Machine.ChangeState(Machine.Crouch);
+        protected bool TryClimb() =>
+            Ctx.IsUpHeld && Ctx.CanMountClimbableUpward() && Machine.ChangeState(Machine.Climb);
+
+        /// <summary>
+        /// Crouch when holding down or crouch on the ground. Returns true if a transition started.
+        /// </summary>
+        protected bool TryCrouch() => Ctx.IsCrouchHeld && Ctx.IsGrounded && Machine.ChangeState(Machine.Crouch);
 
         /// <summary>
         /// Idle or Run depending on input, or Fall when airborne.
@@ -111,6 +114,8 @@ namespace DeadCells.Player.StateMachine.States
 
         protected void ApplyAirControl()
         {
+            if (Ctx.IsWallJumpHorizontalLocked)
+                return;
             Ctx.FaceInput();
             Ctx.SetHorizontalVelocity(Ctx.Input.MoveX * Ctx.Config.AirSpeed);
         }

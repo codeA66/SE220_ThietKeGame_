@@ -105,6 +105,27 @@ namespace DeadCells.Player
         [Header("Chain / Vine Climb")]
         [Tooltip("Vertical speed on a chain or vine (units/s). Tuned by feel: no Dead Cells value found.")]
         [SerializeField] private float _climbSpeed = 4f;
+        [Tooltip("Horizontal body offset from chain center so hands grip chain links (units).")]
+        [SerializeField] private float _climbHandOffsetX = 0.24f;
+
+        [Header("Wall Cling & Wall Jump")]
+        [SerializeField] private bool _wallClingEnabled = true;
+        [Tooltip("Maximum downward slide speed while clinging to a solid wall (units/s).")]
+        [SerializeField] private float _wallSlideMaxSpeed = 2.8f;
+        [Tooltip("Wall-jump impulse away from the wall and upward (units/s).")]
+        [SerializeField] private Vector2 _wallJumpVelocity = new Vector2(9.5f, 13.2f);
+        [Tooltip("Maximum wall jumps allowed per airtime before touching ground or climbing.")]
+        [Min(0)]
+        [SerializeField] private int _maxWallJumpsPerAir = 3;
+        [Tooltip("Probe distance beyond collider side to detect solid walls (units).")]
+        [Min(0.01f)]
+        [SerializeField] private float _wallCheckDistance = 0.14f;
+        [Tooltip("Duration after a wall jump during which horizontal air input does not cancel kick-off (s).")]
+        [Min(0f)]
+        [SerializeField] private float _wallJumpHorizontalLockTime = 0.12f;
+        [Tooltip("Cooldown after a wall jump before re-clinging to a wall (s).")]
+        [Min(0f)]
+        [SerializeField] private float _wallRegrabCooldown = 0.14f;
 
         [Header("Perfect Dodge")]
         [Tooltip("Seconds a ghost stays where a roll started, catching hits as perfect dodges. " +
@@ -177,6 +198,14 @@ namespace DeadCells.Player
         public float StompSpeed => _stompSpeed;
         public float StompLandDuration => _stompLandDuration;
         public float ClimbSpeed => _climbSpeed;
+        public float ClimbHandOffsetX => _climbHandOffsetX;
+        public bool WallClingEnabled => _wallClingEnabled;
+        public float WallSlideMaxSpeed => _wallSlideMaxSpeed;
+        public Vector2 WallJumpVelocity => _wallJumpVelocity;
+        public int MaxWallJumpsPerAir => _maxWallJumpsPerAir;
+        public float WallCheckDistance => _wallCheckDistance;
+        public float WallJumpHorizontalLockTime => _wallJumpHorizontalLockTime;
+        public float WallRegrabCooldown => _wallRegrabCooldown;
         public float PerfectDodgeDuration => _perfectDodgeDuration;
         public bool CrouchShrinkCollider => _crouchShrinkCollider;
         public float CrouchColliderHeight => _crouchColliderHeight;
