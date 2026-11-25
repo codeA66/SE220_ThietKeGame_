@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 
 namespace DeadCells.Tools.Editor
 {
@@ -203,6 +207,169 @@ namespace DeadCells.Tools.Editor
                 assignedIds.Add(candidate);
                 return candidate;
             }
+        }
+    }
+
+    public static class ReleaseSettingsSetup
+    {
+        private const string SandboxPlayerScenePath = "Assets/_Project/Scenes/Sandbox_Player.unity";
+        private const string QualitySettingsAssetPath = "ProjectSettings/QualitySettings.asset";
+        private const string ProjectSettingsAssetPath = "ProjectSettings/ProjectSettings.asset";
+
+        [MenuItem("Tools/Project/Fix Sandbox_Player URP 2D Lighting")]
+        public static void ApplySandboxPlayerLighting()
+        {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
+            Scene scene = EditorSceneManager.OpenScene(SandboxPlayerScenePath, OpenSceneMode.Single);
+            if (!scene.IsValid())
+                throw new InvalidOperationException($"Failed to open '{SandboxPlayerScenePath}'.");
+
+            Camera mainCam = Camera.main ?? UnityEngine.Object.FindAnyObjectByType<Camera>();
+            if (mainCam == null)
+                throw new InvalidOperationException($"Main Camera missing in '{SandboxPlayerScenePath}'.");
+
+            bool changed = false;
+            if (!mainCam.TryGetComponent<UniversalAdditionalCameraData>(out var uacd))
+            {
+                uacd = mainCam.gameObject.AddComponent<UniversalAdditionalCameraData>();
+                EditorUtility.SetDirty(uacd);
+                changed = true;
+            }
+
+            bool hasGlobalLight = false;
+            Light2D[] lights = UnityEngine.Object.FindObjectsByType<Light2D>(FindObjectsInactive.Include);
+            for (int i = 0; i < lights.Length; i++)
+            {
+                if (lights[i] != null && lights[i].lightType == Light2D.LightType.Global)
+                {
+                    hasGlobalLight = true;
+                    break;
+                }
+            }
+
+            if (!hasGlobalLight)
+            {
+                var lightGo = new GameObject("Global Light 2D");
+                var globalLight = lightGo.AddComponent<Light2D>();
+                globalLight.lightType = Light2D.LightType.Global;
+                globalLight.intensity = 1f;
+                globalLight.color = Color.white;
+                EditorUtility.SetDirty(lightGo);
+                EditorUtility.SetDirty(globalLight);
+                changed = true;
+            }
+
+            if (changed)
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+            }
+
+            Debug.Log($"[ReleaseSettingsSetup] Sandbox_Player URP 2D lighting verified (changed={changed}).");
+        }
+
+        [MenuItem("Tools/Project/Apply Release Quality & WebGL Settings")]
+        public static void ApplyReleaseQualityAndWebGlSettings()
+        {
+            UnityEngine.Object[] qualityAssets = AssetDatabase.LoadAllAssetsAtPath(QualitySettingsAssetPath);
+            if (qualityAssets == null || qualityAssets.Length == 0 || qualityAssets[0] == null)
+                throw new InvalidOperationException($"Could not load '{QualitySettingsAssetPath}'.");
+
+            UnityEngine.Object qualityAsset = qualityAssets[0];
+            var soQuality = new SerializedObject(qualityAsset);
+            SerializedProperty levelsProp = soQuality.FindProperty("m_QualitySettings");
+            SerializedProperty perPlatformProp = soQuality.FindProperty("m_PerPlatformDefaultQuality");
+            if (levelsProp == null || !levelsProp.isArray || perPlatformProp == null || !perPlatformProp.isArray)
+                throw new InvalidOperationException("Unexpected QualitySettings serialization layout.");
+
+            int highIndex = FindQualityLevelIndex(levelsProp, "High");
+            int lowIndex = FindQualityLevelIndex(levelsProp, "Low");
+            if (highIndex < 0)
+                throw new InvalidOperationException("Quality level 'High' not found in QualitySettings.asset.");
+            if (lowIndex < 0)
+                throw new InvalidOperationException("Quality level 'Low' not found in QualitySettings.asset.");
+
+            SetQualityLevelVSync(levelsProp.GetArrayElementAtIndex(highIndex), 1);
+            SetQualityLevelVSync(levelsProp.GetArrayElementAtIndex(lowIndex), 0);
+
+            string standaloneKey = NamedBuildTarget.Standalone.TargetName;
+            string webGlKey = NamedBuildTarget.WebGL.TargetName;
+            SetPerPlatformDefaultQuality(perPlatformProp, standaloneKey, highIndex);
+            SetPerPlatformDefaultQuality(perPlatformProp, webGlKey, lowIndex);
+
+            SerializedProperty currentQualityProp = soQuality.FindProperty("m_CurrentQuality");
+            if (currentQualityProp != null)
+                currentQualityProp.intValue = highIndex;
+
+            soQuality.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(qualityAsset);
+
+            if (!QualitySettings.IsPlatformIncluded(standaloneKey, highIndex))
+                QualitySettings.TryIncludePlatformAt(standaloneKey, highIndex, out _);
+            if (!QualitySettings.IsPlatformIncluded(webGlKey, lowIndex))
+                QualitySettings.TryIncludePlatformAt(webGlKey, lowIndex, out _);
+
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.dataCaching = true;
+            PlayerSettings.stripEngineCode = true;
+
+            UnityEngine.Object[] projectAssets = AssetDatabase.LoadAllAssetsAtPath(ProjectSettingsAssetPath);
+            if (projectAssets != null && projectAssets.Length > 0 && projectAssets[0] != null)
+                EditorUtility.SetDirty(projectAssets[0]);
+
+            AssetDatabase.SaveAssets();
+
+            Debug.Log(
+                $"[ReleaseSettingsSetup] Quality & WebGL settings applied: " +
+                $"{standaloneKey}={highIndex} (High, vSync=1), {webGlKey}={lowIndex} (Low, vSync=0), " +
+                $"compression={PlayerSettings.WebGL.compressionFormat}, " +
+                $"decompressionFallback={PlayerSettings.WebGL.decompressionFallback}, " +
+                $"dataCaching={PlayerSettings.WebGL.dataCaching}, " +
+                $"stripEngineCode={PlayerSettings.stripEngineCode}");
+        }
+
+        private static int FindQualityLevelIndex(SerializedProperty levelsProp, string levelName)
+        {
+            for (int i = 0; i < levelsProp.arraySize; i++)
+            {
+                SerializedProperty nameProp = levelsProp.GetArrayElementAtIndex(i).FindPropertyRelative("name");
+                if (nameProp != null && string.Equals(nameProp.stringValue, levelName, StringComparison.Ordinal))
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private static void SetQualityLevelVSync(SerializedProperty levelProp, int vSyncCount)
+        {
+            SerializedProperty vsyncProp = levelProp.FindPropertyRelative("vSyncCount");
+            if (vsyncProp == null)
+                throw new InvalidOperationException("Property 'vSyncCount' not found on quality level.");
+
+            vsyncProp.intValue = vSyncCount;
+        }
+
+        private static void SetPerPlatformDefaultQuality(SerializedProperty mapProp, string platformKey, int qualityIndex)
+        {
+            for (int i = 0; i < mapProp.arraySize; i++)
+            {
+                SerializedProperty entry = mapProp.GetArrayElementAtIndex(i);
+                SerializedProperty keyProp = entry.FindPropertyRelative("first");
+                if (keyProp != null && string.Equals(keyProp.stringValue, platformKey, StringComparison.Ordinal))
+                {
+                    entry.FindPropertyRelative("second").intValue = qualityIndex;
+                    return;
+                }
+            }
+
+            int insertIdx = mapProp.arraySize;
+            mapProp.InsertArrayElementAtIndex(insertIdx);
+            SerializedProperty newEntry = mapProp.GetArrayElementAtIndex(insertIdx);
+            newEntry.FindPropertyRelative("first").stringValue = platformKey;
+            newEntry.FindPropertyRelative("second").intValue = qualityIndex;
         }
     }
 }
