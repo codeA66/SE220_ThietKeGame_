@@ -189,6 +189,17 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.IsTrue(sewerExit.TryInteract(), "[T1.5/SewerUnlockedInteract] Pressing [E] inside unlocked trigger must submit win.");
             Assert.IsTrue(run.ResolvePendingOutcome(Time.frameCount + 1));
             Assert.AreEqual(LevelOutcome.Win, run.Outcome);
+
+            // 5. Null Health hides both prompts, and Configure(..., promptIndicator: null) clears PromptIndicator cleanly.
+            var runNoHealth = Track(new GameObject("RunNoHealth")).AddComponent<LevelRunController>();
+            runNoHealth.Configure(null, null);
+            runNoHealth.TickIntro(new DummyPlayState(), 0f);
+            sewerExit.Configure("I15", "Toxic Sewers", runNoHealth, null, null, null, null, null, playerCol, null, null);
+            Assert.IsNull(sewerExit.PromptIndicator, "[T1.5/ConfigureClearPrompt]");
+            TickExitVisual(sewerExit);
+            Assert.IsFalse(sewerExit.PromptVisible, "[T1.5/NullHealthHidesPrompt]");
+            Assert.IsFalse(sewerExit.LockedPromptVisible, "[T1.5/NullHealthHidesLockedPrompt]");
+            Assert.IsFalse(sewerExit.TryInteract(), "[T1.5/NullHealthRejectsInteract]");
         }
 
         private static void TickExitVisual(SecondaryBiomeExitTrigger exit)

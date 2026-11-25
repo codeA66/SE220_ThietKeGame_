@@ -2891,7 +2891,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             StringAssert.Contains("khoảng nắng chẳng bao giờ tắt", inscription.Body);
             StringAssert.Contains("tình yêu thuần khiết và vĩnh hằng", inscription.Body);
 
-            // 4. Two VaultA PowerScrollPickups spaced >= 2.7u apart atop relic plinths inside Room_VaultA
+            // 4. Two VaultA PowerScrollPickups spaced >= 2.7u apart atop relic plinths (default dungeon vessel hidden, icon elevated >= 1.95u)
             var s1 = GameObject.Find("I20_Scroll_VaultA1");
             var s2 = GameObject.Find("I21_Scroll_VaultA2");
             Assert.IsNotNull(s1, "[A23/ScrollVaultA1]");
@@ -2900,6 +2900,18 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.AreEqual(29f, s1.transform.position.y, GeometryAuditHelper.Eps);
             Assert.AreEqual(202.3f, s2.transform.position.x, GeometryAuditHelper.Eps);
             Assert.AreEqual(29f, s2.transform.position.y, GeometryAuditHelper.Eps);
+            foreach (var scrollGo in new[] { s1, s2 })
+            {
+                var soScroll = new SerializedObject(scrollGo.GetComponent<PowerScrollPickup>());
+                var vesselSr = soScroll.FindProperty("_vessel")?.objectReferenceValue as SpriteRenderer;
+                var iconTr = soScroll.FindProperty("_icon")?.objectReferenceValue as Transform;
+                Assert.IsNotNull(iconTr, $"[A23/ScrollIcon/{scrollGo.name}]");
+                Assert.GreaterOrEqual(iconTr.localPosition.y, 1.95f,
+                    $"[A23/ScrollElevatedAbovePlinth/{scrollGo.name}] VaultA scroll icon must hover above VaultA_StonePlinth cap.");
+                if (vesselSr != null)
+                    Assert.IsFalse(vesselSr.gameObject.activeSelf,
+                        $"[A23/ScrollVesselHidden/{scrollGo.name}] Default prison scroll vat must be hidden so VaultA_StonePlinth is unobstructed.");
+            }
         }
 
         private readonly struct RoomVerticalSpan

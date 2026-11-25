@@ -379,7 +379,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsFalse(run.IsEnded, "[P10/PromenadeNoAutoWin] Standing at unlocked Promenade exit must wait for [E].");
             Assert.IsTrue(promenadeExit.PromptVisible, "[P10/PromenadePromptVisible] Unlocked Promenade exit must show [E] prompt.");
 
-            Assert.IsTrue(promenadeExit.TryInteract(), "[P10/PromenadeWinInteract]");
+            Press(_keyboard.eKey);
+            yield return null;
+            Release(_keyboard.eKey);
 
             yield return PlayModeTestHelper.WaitUntil(() => run.IsEnded && panel.IsVisible, 2f, "[P10/PromenadeWinSettle]");
             Assert.AreEqual(LevelOutcome.Win, run.Outcome);

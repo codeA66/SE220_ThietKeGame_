@@ -22,6 +22,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
         [UnityTest]
         public IEnumerator P08_SwitchDoorTeleportGateLoreTabletGoldDropAndSecondarySewerExitWinFlow()
         {
+            var keyboard = InputSystem.AddDevice<Keyboard>();
             yield return PlayModeTestHelper.LoadLevelScene();
 
             var run = Object.FindAnyObjectByType<LevelRunController>();
@@ -77,15 +78,21 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             yield return PlayModeTestHelper.WaitUntil(() => wallet.Balance >= 20, 2.5f, "[P08/GoldCollected] GoldPickup must credit GoldWallet.");
             Assert.GreaterOrEqual(wallet.Balance, 20);
 
-            // 3. Open SwitchDoor SD_1_EastVault at (144, 0): collider unlocks immediately, animation completes & hides barrier; then enter vault at (161, 0)
+            // 3. Open SwitchDoor SD_1_EastVault at (144, 0): collider unlocks immediately, animation plays & lifts barrier, then completes
             var sd1 = switchDoors.Single(d => d.name == "SD_1_EastVault");
+            float barrierStartY = sd1.DoorBarrierRoot.transform.position.y;
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(144f, 0f));
             yield return new WaitForFixedUpdate();
             yield return null;
             Assert.IsTrue(sd1.TryInteract(), "[P08/OpenSD1]");
+            Assert.IsTrue(sd1.IsAnimatingOpen, "[P08/OpenSD1Animating] Opening animation coroutine must start in PlayMode.");
             Assert.IsTrue(sd1.DoorBarrierRoot.GetComponentsInChildren<Collider2D>(true).All(c => !c.enabled),
                 "[P08/OpenSD1ColliderImmediate] Barrier colliders must disable immediately on frame 0.");
-            yield return PlayModeTestHelper.WaitUntil(() => !sd1.DoorBarrierRoot.activeInHierarchy, 1.5f,
+            yield return PlayModeTestHelper.WaitUntil(
+                () => !sd1.DoorBarrierRoot.activeInHierarchy || sd1.DoorBarrierRoot.transform.position.y > barrierStartY + 0.25f,
+                1.0f,
+                "[P08/OpenSD1BarrierLifts] Door barrier must visibly retract upward during opening animation.");
+            yield return PlayModeTestHelper.WaitUntil(() => !sd1.IsAnimatingOpen && !sd1.DoorBarrierRoot.activeInHierarchy, 1.5f,
                 "[P08/OpenSD1AnimComplete] Animated door retraction must complete and deactivate barrier.");
 
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(161f, 0f));
@@ -128,14 +135,16 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(sd2.TryInteract(), "[P08/OpenSD2]");
             Assert.IsTrue(sewerExit.IsUnlocked, "[P08/SewerExitUnlocked]");
 
-            // Stand in front of unlocked Sewer exit: must show [E] prompt and NOT auto-win on touch
+            // Stand in front of unlocked Sewer exit: must show [E] prompt, NOT auto-win on touch, and win via real Keyboard [E] press
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(224f, -16f));
             yield return new WaitForFixedUpdate();
             yield return null;
             Assert.IsFalse(run.IsEnded, "[P08/SewerNoAutoTouchWin] Standing on unlocked Sewer exit must wait for [E].");
             Assert.IsTrue(sewerExit.PromptVisible, "[P08/SewerPromptVisible] Unlocked Sewer exit must show [E] prompt.");
 
-            Assert.IsTrue(sewerExit.TryInteract(), "[P08/SewerWinInteract]");
+            Press(keyboard.eKey);
+            yield return null;
+            Release(keyboard.eKey);
             yield return PlayModeTestHelper.WaitUntil(() => run.IsEnded && panel.IsVisible, 2f, "[P08/SewerWinSettle]");
             Assert.AreEqual(LevelOutcome.Win, run.Outcome);
             Assert.AreEqual(ResultPanel.WinTitle, panel.TitleText.text);

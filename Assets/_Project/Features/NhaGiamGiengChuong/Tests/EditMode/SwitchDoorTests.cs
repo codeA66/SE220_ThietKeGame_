@@ -113,6 +113,13 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.IsFalse(sd.TryInteract(), "[U17/Repeat] Repeat press must return false.");
             Assert.AreEqual(1, openEvents);
             Assert.IsTrue(sd.IsOpen);
+
+            // 5. Re-configuring restores barrier active state, re-enables barrier Collider2D, and resets sprite.
+            sd.Configure("SD_1", run, null, trigger, barrierGo, switchSr, offSprite, onSprite, null, promptGo, health, playerCol);
+            Assert.IsFalse(sd.IsOpen, "[U17/ReconfigureResetOpen]");
+            Assert.IsTrue(barrierGo.activeSelf, "[U17/ReconfigureBarrierActive]");
+            Assert.IsTrue(barrierCol.enabled, "[U17/ReconfigureColliderReenabled]");
+            Assert.AreSame(offSprite, switchSr.sprite, "[U17/ReconfigureOffSprite]");
         }
 
         private GameObject Track(GameObject go)
