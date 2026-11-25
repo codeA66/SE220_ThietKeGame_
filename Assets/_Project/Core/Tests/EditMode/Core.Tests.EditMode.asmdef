@@ -2,7 +2,12 @@
     "name": "Core.Tests.EditMode",
     "rootNamespace": "DeadCells.Core.Tests",
     "references": [
+        "Combat",
         "Core",
+        "Enemies",
+        "HUD",
+        "Player",
+        "VFX",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
