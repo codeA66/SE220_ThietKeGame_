@@ -41,9 +41,34 @@ namespace DeadCells.RunFlow
 
             IsCompleted = true;
             if (_playerHealth != null)
+            {
                 _playerHealth.DamageFilter = BlockAllDamage;
+                LockPlayerGameplay(_playerHealth.gameObject);
+            }
             Completed?.Invoke();
             return true;
+        }
+
+        private static void LockPlayerGameplay(GameObject playerGo)
+        {
+            // Match by type name so RunFlow stays decoupled from Player assembly (no circular asmdef).
+            var behaviours = playerGo.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                MonoBehaviour behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+                string typeName = behaviour.GetType().Name;
+                if (typeName == "PlayerInputReader" || typeName == "PlayerController")
+                    behaviour.enabled = false;
+            }
+
+            if (playerGo.TryGetComponent<Rigidbody2D>(out var rb))
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+                rb.simulated = false;
+            }
         }
 
         private void OnPlayerDied(DamageInfo damage)
