@@ -14,14 +14,16 @@ namespace DeadCells.HUD
         [SerializeField] private ScrollPickupPresentation _presentation;
 
         private PlayerRunStats _stats;
+        private PlayerInputReader _playerInput;
         private Coroutine _reveal;
         private bool _hasPause;
+        private bool _disabledPlayerInput;
 
         private void Start() => Bind();
 
         private void OnEnable()
         {
-            if (_player.RunStats != null)
+            if (_player != null && _player.RunStats != null)
                 Bind();
         }
 
@@ -43,9 +45,10 @@ namespace DeadCells.HUD
 
         private void Bind()
         {
-            if (_stats != null)
+            if (_stats != null || _player == null || _player.RunStats == null)
                 return;
 
+            _playerInput = _player.GetComponent<PlayerInputReader>();
             _stats = _player.RunStats;
             _stats.ChoiceOpened += Open;
             _stats.Changed += RefreshLevels;
@@ -56,8 +59,18 @@ namespace DeadCells.HUD
         {
             foreach (var option in _options)
                 option.RenderPreview(_stats, _player.Health.Max);
-            _gameplayTime.SetMenuPaused(true);
-            _hasPause = true;
+            if (_playerInput == null && _player != null)
+                _playerInput = _player.GetComponent<PlayerInputReader>();
+            if (_playerInput != null && _playerInput.enabled)
+            {
+                _playerInput.enabled = false;
+                _disabledPlayerInput = true;
+            }
+            if (_gameplayTime != null)
+            {
+                _gameplayTime.SetMenuPaused(true);
+                _hasPause = true;
+            }
             _reveal = StartCoroutine(Reveal(pickup));
         }
 
@@ -83,6 +96,17 @@ namespace DeadCells.HUD
             if (_hasPause && _gameplayTime != null)
                 _gameplayTime.SetMenuPaused(false);
             _hasPause = false;
+            if (_disabledPlayerInput)
+            {
+                _disabledPlayerInput = false;
+                if (_playerInput != null &&
+                    _player != null &&
+                    _player.enabled &&
+                    (_gameplayTime == null || !_gameplayTime.IsMenuPaused))
+                {
+                    _playerInput.enabled = true;
+                }
+            }
         }
 
         private void Choose(CombatStat stat)
