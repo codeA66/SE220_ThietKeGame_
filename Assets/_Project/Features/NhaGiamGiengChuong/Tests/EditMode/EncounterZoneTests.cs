@@ -5,6 +5,7 @@ using DeadCells.Enemies;
 using DeadCells.Player.StateMachine;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
@@ -26,6 +27,12 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             public void FixedTick() { }
         }
 
+        [SetUp]
+        public void SetUp()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -35,6 +42,20 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
                     Object.DestroyImmediate(_created[i]);
             }
             _created.Clear();
+
+            LootPickup.ClearPoolForTests();
+            DamagePopup.ClearPoolForTests();
+            foreach (var loot in Object.FindObjectsByType<LootPickup>(FindObjectsInactive.Include))
+            {
+                if (loot != null)
+                    Object.DestroyImmediate(loot.gameObject);
+            }
+            foreach (var popup in Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include))
+            {
+                if (popup != null)
+                    Object.DestroyImmediate(popup.gameObject);
+            }
+
             Time.timeScale = 1f;
         }
 
