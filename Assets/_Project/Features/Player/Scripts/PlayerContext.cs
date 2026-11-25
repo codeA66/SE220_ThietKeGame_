@@ -336,10 +336,12 @@ namespace DeadCells.Player
 
         // ---------- Jumps ----------
 
+        public void ClearJumpBuffer() => _lastJumpPressedTime = float.NegativeInfinity;
+
         public void StartJump()
         {
             SetVerticalVelocity(Config.JumpBaseVelocity);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             _lastGroundedTime = float.NegativeInfinity;
             Jumped?.Invoke(Position);
         }
@@ -348,7 +350,7 @@ namespace DeadCells.Player
         {
             AirJumpsRemaining--;
             SetVerticalVelocity(Config.AirJumpVelocity);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             AirJumped?.Invoke(Position);
         }
 
@@ -456,7 +458,7 @@ namespace DeadCells.Player
             _ledgeIgnoredPlatform = _groundCollider;
             _dropRestoreTime = Time.time + Config.DropThroughDuration;
             Physics2D.IgnoreCollision(_collider, _droppedPlatform, true);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             _lastGroundedTime = float.NegativeInfinity;
             IsGrounded = false;
             return true;
@@ -610,7 +612,7 @@ namespace DeadCells.Player
             SetVerticalVelocity(Config.WallJumpVelocity.y);
             Face(awayDir);
             WallJumpsRemaining = Mathf.Max(0, WallJumpsRemaining - 1);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             _lastGroundedTime = float.NegativeInfinity;
             _wallJumpLockUntil = Time.time + Config.WallJumpHorizontalLockTime;
             _wallRegrabReadyAt = Time.time + Config.WallRegrabCooldown;
