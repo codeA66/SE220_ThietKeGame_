@@ -117,7 +117,16 @@ Shader "DeadCells/GroundMist2D"
                 half vBottom = smoothstep(0.0h, 0.16h, (half)input.uv.y);
                 half vTop = 1.0h - smoothstep(0.24h, 1.0h, (half)input.uv.y);
                 half vFade = vBottom * pow(max(vTop, 0.0001h), 1.25h);
-                half hFade = smoothstep(0.0h, 0.08h, (half)input.uv.x) * (1.0h - smoothstep(0.92h, 1.0h, (half)input.uv.x));
+                // World-space constant-width edge feathering (works even when SpriteRenderers are dynamically batched)
+                float duv = max(abs(ddx(input.uv.x)), 1e-6);
+                float stripWidth = clamp(abs(ddx(input.worldXY.x)) / duv, 4.0, 200.0);
+                float edgeSpanW = 3.8 + (float)fbm * 0.6;
+                float distL = input.uv.x * stripWidth;
+                float distR = (1.0 - input.uv.x) * stripWidth;
+                half hLeft = (half)smoothstep(0.0, edgeSpanW, distL);
+                half hRight = (half)smoothstep(0.0, edgeSpanW, distR);
+                // Complementary pow(0.72) keeps alpha-over brightness flat across 4u interior strip overlaps
+                half hFade = pow(max(hLeft * hRight, 0.0001h), 0.72h);
 
                 half4 col = _MistColor * input.color;
                 col.a = saturate(col.a * density * vFade * hFade * tex.a);
