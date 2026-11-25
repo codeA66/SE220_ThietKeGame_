@@ -18,7 +18,7 @@ Shader "DeadCells/GroundMist2D"
             "RenderPipeline" = "UniversalPipeline"
             "IgnoreProjector" = "True"
             "PreviewType" = "Plane"
-            "CanUseSpriteAtlas" = "True"
+            "CanUseSpriteAtlas" = "False"
         }
 
         Blend SrcAlpha OneMinusSrcAlpha

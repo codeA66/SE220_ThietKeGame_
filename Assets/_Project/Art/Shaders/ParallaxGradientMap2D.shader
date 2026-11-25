@@ -114,7 +114,7 @@ Shader "DeadCells/ParallaxGradientMap2D"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                float2 scrolledUv = input.uv + float2(_ScrollSpeed * _Time.y, 0.0);
+                float2 scrolledUv = input.uv + float2(frac(_ScrollSpeed * _Time.y), 0.0);
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_point_repeat, scrolledUv);
                 clip(tex.a - 0.001h);
 
@@ -124,6 +124,9 @@ Shader "DeadCells/ParallaxGradientMap2D"
                 half lum = pow(max(linearLum, 1e-4h), 1.0h / 2.2h);
                 half3 gradRgb = EvaluateGradient(lum) * input.color.rgb;
                 half alpha = tex.a * input.color.a;
+
+                if (_LitBlend <= 0.001h)
+                    return half4(gradRgb, alpha);
 
                 half4 mask = SAMPLE_TEXTURE2D(_MaskTex, sampler_MaskTex, scrolledUv);
                 half3 normalTS = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, scrolledUv));
@@ -136,6 +139,69 @@ Shader "DeadCells/ParallaxGradientMap2D"
                 half4 lit = CombinedShapeLightShared(surfaceData, inputData);
                 half3 finalRgb = lerp(gradRgb, lit.rgb, _LitBlend);
                 return half4(finalRgb, alpha);
+            }
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Tags { "LightMode" = "NormalsRendering" }
+
+            HLSLPROGRAM
+            #pragma vertex NormalsRenderingVertex
+            #pragma fragment NormalsRenderingFragment
+            #pragma multi_compile_instancing
+
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Core2D.hlsl"
+
+            struct Attributes
+            {
+                COMMON_2D_NORMALS_INPUTS
+                float4 color : COLOR;
+            };
+
+            struct Varyings
+            {
+                COMMON_2D_NORMALS_OUTPUTS
+                half4 color : COLOR;
+            };
+
+            // Normals2DCommon.hlsl declares _MainTex, sampler_MainTex, _NormalMap, sampler_NormalMap.
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/2D/Include/Normals2DCommon.hlsl"
+
+            SAMPLER(sampler_point_repeat);
+
+            // Identical layout across passes for 2D SRP Batcher compatibility; no _ST properties.
+            CBUFFER_START(UnityPerMaterial)
+                half4 _ColorDeep;
+                half4 _ColorMidDark;
+                half4 _ColorMidLight;
+                half4 _ColorHighlight;
+                float _ScrollSpeed;
+                half _LitBlend;
+            CBUFFER_END
+
+            Varyings NormalsRenderingVertex(Attributes input)
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                SetUpSpriteInstanceProperties();
+                input.positionOS = UnityFlipSprite(input.positionOS, unity_SpriteProps.xy);
+
+                Varyings output = CommonNormalsVertex(input);
+                output.color = input.color * unity_SpriteColor;
+                return output;
+            }
+
+            half4 NormalsRenderingFragment(Varyings input) : SV_Target
+            {
+                SetUpSpriteInstanceProperties();
+
+                float2 scrolledUv = input.uv + float2(frac(_ScrollSpeed * _Time.y), 0.0);
+                half4 mainTex = input.color * SAMPLE_TEXTURE2D(_MainTex, sampler_point_repeat, scrolledUv);
+                clip(mainTex.a - 0.001h);
+
+                half3 normalTS = UnpackNormal(SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, scrolledUv));
+                return NormalsRenderingShared(mainTex, normalTS, input.tangentWS.xyz, input.bitangentWS.xyz, input.normalWS.xyz);
             }
             ENDHLSL
         }
