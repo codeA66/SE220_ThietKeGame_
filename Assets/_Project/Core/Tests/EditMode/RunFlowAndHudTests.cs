@@ -1,11 +1,15 @@
+using System;
 using System.Reflection;
 using DeadCells.Combat;
+using DeadCells.Enemies;
 using DeadCells.HUD;
 using DeadCells.Player;
 using DeadCells.RunFlow;
+using DeadCells.VFX;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 
 namespace DeadCells.Core.Tests
 {
@@ -265,6 +269,221 @@ namespace DeadCells.Core.Tests
             Assert.Less(trailRect.GetSiblingIndex(), fillRect.GetSiblingIndex(),
                 "TrailFill must render BEHIND Fill (lower sibling index).");
             Assert.IsNotNull(trailRect.GetComponent<Image>(), "TrailFill must have a UI Image component.");
+        }
+
+        [Test]
+        public void EnemyImpactFeedback_DoesNotDuplicateHealthBarOrDamageNumber_WhileKeepingAudioAndVfx()
+        {
+            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            tex.SetPixels(new[] { Color.red, Color.red, Color.red, Color.red });
+            tex.Apply();
+            var sprite = Sprite.Create(tex, new Rect(0f, 0f, 2f, 2f), new Vector2(0.5f, 0.5f), 32f);
+            var bloodDef = VfxDefinition.Create("TestBlood", new[] { sprite }, 30f, 1f, 1, 1);
+            var flashDef = VfxDefinition.Create("TestFlash", new[] { sprite }, 30f, 1f, 1, 1);
+            var hitClip = AudioClip.Create("TestHit", 441, 1, 44100, false);
+
+            try
+            {
+                var enemyGo = new GameObject("Enemy");
+                enemyGo.transform.SetParent(_root.transform);
+                var body = enemyGo.AddComponent<BoxCollider2D>();
+                body.offset = new Vector2(0f, 0.75f);
+                body.size = new Vector2(1f, 1.5f);
+                var health = enemyGo.AddComponent<Health>();
+                health.Initialize(100, 0f);
+
+                var enemyBar = enemyGo.AddComponent<EnemyHealthBar>();
+                enemyBar.Setup(health, body);
+
+                var barRenderers = enemyGo.GetComponentsInChildren<SpriteRenderer>(true);
+                Assert.IsNotEmpty(barRenderers, "EnemyHealthBar.Setup must create bar SpriteRenderers.");
+                foreach (var sr in barRenderers)
+                {
+                    Assert.AreEqual("VFX", sr.sortingLayerName,
+                        $"EnemyHealthBar '{sr.name}' must render on VFX sorting layer.");
+                }
+
+                DamagePopup.Prewarm();
+                DamagePopup.Spawn(Vector3.zero, 15, 1, false);
+                var popups = Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include);
+                Assert.IsNotEmpty(popups, "DamagePopup must exist after Prewarm/Spawn.");
+                foreach (var popup in popups)
+                {
+                    Assert.AreEqual("VFX", popup.GetComponent<MeshRenderer>().sortingLayerName,
+                        "DamagePopup MeshRenderer must render on VFX sorting layer.");
+                }
+
+                var vfxGo = new GameObject("VfxSpawner");
+                vfxGo.transform.SetParent(_root.transform);
+                var vfx = vfxGo.AddComponent<VfxSpawner>();
+                SetPrivateField(vfx, "_prewarm", Array.Empty<VfxDefinition>());
+                InvokePrivateMethod(vfx, "Awake");
+
+                var numberPrefabGo = new GameObject("NumberTemplate");
+                numberPrefabGo.transform.SetParent(_root.transform);
+                numberPrefabGo.SetActive(false);
+                var labelText = new GameObject("Label").AddComponent<TextMesh>();
+                labelText.transform.SetParent(numberPrefabGo.transform);
+                var shadowText = new GameObject("Shadow").AddComponent<TextMesh>();
+                shadowText.transform.SetParent(numberPrefabGo.transform);
+                var numberPrefab = numberPrefabGo.AddComponent<FloatingDamageNumber>();
+                SetPrivateField(numberPrefab, "_label", labelText);
+                SetPrivateField(numberPrefab, "_shadow", shadowText);
+
+                var barGo = new GameObject("LegacyBar");
+                barGo.transform.SetParent(_root.transform);
+                barGo.SetActive(true);
+                var fillGo = new GameObject("Fill");
+                fillGo.transform.SetParent(barGo.transform);
+
+                var fbGo = new GameObject("EnemyImpactFeedback");
+                fbGo.transform.SetParent(_root.transform);
+                var audio = fbGo.AddComponent<AudioSource>();
+                var feedback = fbGo.AddComponent<EnemyImpactFeedback>();
+                SetPrivateField(feedback, "_target", health);
+                SetPrivateField(feedback, "_body", body);
+                SetPrivateField(feedback, "_vfx", vfx);
+                SetPrivateField(feedback, "_impactBlood", bloodDef);
+                SetPrivateField(feedback, "_defeatBlood", bloodDef);
+                SetPrivateField(feedback, "_impactFlash", flashDef);
+                SetPrivateField(feedback, "_audio", audio);
+                SetPrivateField(feedback, "_hitSound", hitClip);
+                SetPrivateField(feedback, "_fatalSound", hitClip);
+                SetPrivateField(feedback, "_numberPrefab", numberPrefab);
+                SetPrivateField(feedback, "_bar", barGo);
+                SetPrivateField(feedback, "_fill", fillGo.transform);
+
+                InvokePrivateMethod(feedback, "Awake");
+                Assert.IsFalse(barGo.activeSelf, "EnemyImpactFeedback.Awake must hide legacy _bar.");
+                InvokePrivateMethod(feedback, "OnEnable");
+
+                Assert.IsTrue(health.TakeDamage(new DamageInfo(25, 1, 0f, 0f, false, _root)));
+                Assert.IsFalse(barGo.activeSelf, "Legacy _bar must stay inactive on hit (EnemyHealthBar owns enemy bar).");
+                Assert.AreEqual(0, fbGo.GetComponentsInChildren<FloatingDamageNumber>(true).Length,
+                    "EnemyImpactFeedback must not instantiate FloatingDamageNumber children (DamagePopup owns numbers).");
+                Assert.GreaterOrEqual(vfxGo.transform.childCount, 2,
+                    "EnemyImpactFeedback must still play blood and impact flash VFX.");
+
+                Assert.IsTrue(health.TakeDamage(new DamageInfo(200, 1, 0f, 0f, true, _root)));
+                Assert.IsFalse(barGo.activeSelf, "Legacy _bar must stay inactive on defeat.");
+                Assert.AreEqual(0, fbGo.GetComponentsInChildren<FloatingDamageNumber>(true).Length);
+
+                InvokePrivateMethod(feedback, "OnDisable");
+            }
+            finally
+            {
+                DamagePopup.ClearPoolForTests();
+                foreach (var popup in Object.FindObjectsByType<DamagePopup>(FindObjectsInactive.Include))
+                {
+                    if (popup != null)
+                        Object.DestroyImmediate(popup.gameObject);
+                }
+                VfxRecolor.ClearCacheAndDestroy();
+                Object.DestroyImmediate(hitClip);
+                Object.DestroyImmediate(flashDef);
+                Object.DestroyImmediate(bloodDef);
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void VfxRecolor_ClearCacheAndDestroy_DestroysProceduralTexturesSpritesAndDefinitions()
+        {
+            VfxRecolor.ClearCacheAndDestroy();
+
+            var sourceTex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            sourceTex.SetPixels(new[] { Color.red, Color.red, Color.red, Color.red });
+            sourceTex.Apply();
+            var sourceSprite = Sprite.Create(sourceTex, new Rect(0f, 0f, 2f, 2f), new Vector2(0.5f, 0.5f), 32f);
+            var sourceDef = VfxDefinition.Create("SourceRedVfx", new[] { sourceSprite }, 24f, 1f, 2, 1);
+
+            try
+            {
+                VfxDefinition blueDef = VfxRecolor.Blue(sourceDef);
+                Assert.IsNotNull(blueDef);
+                Assert.AreNotSame(sourceDef, blueDef);
+                Assert.AreEqual(1, blueDef.Frames.Length);
+
+                Sprite blueSprite = blueDef.Frames[0];
+                Texture2D blueTex = blueSprite != null ? blueSprite.texture : null;
+                Assert.IsNotNull(blueSprite);
+                Assert.IsNotNull(blueTex);
+                Assert.AreEqual(HideFlags.HideAndDontSave, blueSprite.hideFlags);
+                Assert.AreEqual(HideFlags.HideAndDontSave, blueTex.hideFlags);
+                Assert.IsFalse(blueTex.isReadable, "Recolored texture must release CPU memory via makeNoLongerReadable.");
+
+                VfxRecolor.ClearCacheAndDestroy();
+                Assert.IsTrue(blueDef == null, "ClearCacheAndDestroy must destroy cached VfxDefinition.");
+                Assert.IsTrue(blueSprite == null, "ClearCacheAndDestroy must destroy cached recolored Sprite.");
+                Assert.IsTrue(blueTex == null, "ClearCacheAndDestroy must destroy cached recolored Texture2D.");
+            }
+            finally
+            {
+                VfxRecolor.ClearCacheAndDestroy();
+                Object.DestroyImmediate(sourceDef);
+                Object.DestroyImmediate(sourceSprite);
+                Object.DestroyImmediate(sourceTex);
+            }
+        }
+
+        [Test]
+        public void DarkFantasyHud_ReusesHealthBarTrailFill_AndProvidesFallbackFont()
+        {
+            var rootRect = new GameObject("HealthBarRoot", typeof(RectTransform)).GetComponent<RectTransform>();
+            rootRect.SetParent(_root.transform, false);
+
+            var frameGo = new GameObject("Frame", typeof(RectTransform), typeof(Image));
+            frameGo.transform.SetParent(rootRect, false);
+
+            var trackGo = new GameObject("Track", typeof(RectTransform), typeof(Image));
+            trackGo.transform.SetParent(rootRect, false);
+
+            var trailGo = new GameObject("TrailFill", typeof(RectTransform), typeof(Image));
+            trailGo.transform.SetParent(trackGo.transform, false);
+            var trailRect = trailGo.GetComponent<RectTransform>();
+            var trailImage = trailGo.GetComponent<Image>();
+            trailImage.color = Color.white;
+
+            var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+            fillGo.transform.SetParent(trackGo.transform, false);
+            var fillRect = fillGo.GetComponent<RectTransform>();
+            var fillImage = fillGo.GetComponent<Image>();
+            fillImage.color = Color.white;
+
+            var highlightGo = new GameObject("Highlight", typeof(RectTransform), typeof(Image));
+            highlightGo.transform.SetParent(trackGo.transform, false);
+
+            var valueGo = new GameObject("Value", typeof(RectTransform));
+            valueGo.transform.SetParent(rootRect, false);
+            var valueText = valueGo.AddComponent<Text>();
+
+            var view = rootRect.gameObject.AddComponent<HealthBarView>();
+            SetPrivateField(view, "_fill", fillRect);
+            SetPrivateField(view, "_trailFill", trailRect);
+            SetPrivateField(view, "_value", valueText);
+            Assert.AreSame(trailRect, view.TrailFill, "HealthBarView.TrailFill must expose _trailFill.");
+
+            var hudGo = new GameObject("DarkFantasyHud");
+            hudGo.transform.SetParent(_root.transform, false);
+            var hud = hudGo.AddComponent<DarkFantasyHud>();
+
+            try
+            {
+                InvokePrivateMethod(hud, "Start");
+
+                Assert.IsNull(trackGo.transform.Find("DamageTrail"),
+                    "DarkFantasyHud must not create a duplicate DamageTrail child.");
+                Assert.AreEqual((Color)new Color32(196, 88, 30, 255), trailImage.color,
+                    "DarkFantasyHud must tint HealthBarView.TrailFill to Ember.");
+                Assert.IsNotNull(valueText.font, "DarkFantasyHud must resolve a non-null fallback or OS font.");
+            }
+            finally
+            {
+                typeof(DarkFantasyHud)
+                    .GetMethod("ResetStatics", BindingFlags.Static | BindingFlags.NonPublic)
+                    ?.Invoke(null, null);
+            }
         }
 
         private static void SetPrivateField(object target, string fieldName, object value)
