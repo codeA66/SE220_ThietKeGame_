@@ -1,32 +1,47 @@
 namespace DeadCells.Core.StateMachine
 {
     /// <summary>
-    /// Synchronous single-state machine. Accepts one transition per frame; ForceChangeState is for
+    /// Synchronous single-state machine. Accepts one transition per Tick; ForceChangeState is for
     /// interrupts that must not be lost (damage, death).
     /// </summary>
     public class StateMachine
     {
-        private int _lastTransitionFrame = -1;
+        private bool _inTick;
+        private bool _transitionedInTick;
 
         public IState Current { get; private set; }
 
         public bool ChangeState(IState next)
         {
-            int frame = UnityEngine.Time.frameCount;
-            if (frame == _lastTransitionFrame)
+            if (_inTick && _transitionedInTick)
                 return false;
-            _lastTransitionFrame = frame;
+            if (_inTick)
+                _transitionedInTick = true;
             Switch(next);
             return true;
         }
 
         public void ForceChangeState(IState next)
         {
-            _lastTransitionFrame = UnityEngine.Time.frameCount;
+            if (_inTick)
+                _transitionedInTick = true;
             Switch(next);
         }
 
-        public void Tick() => Current?.Tick();
+        public void Tick()
+        {
+            _inTick = true;
+            _transitionedInTick = false;
+            try
+            {
+                Current?.Tick();
+            }
+            finally
+            {
+                _inTick = false;
+                _transitionedInTick = false;
+            }
+        }
 
         public void FixedTick() => Current?.FixedTick();
 

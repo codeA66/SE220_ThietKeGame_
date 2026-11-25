@@ -9,7 +9,8 @@ namespace DeadCells.Player.StateMachine
     /// </summary>
     public class PlayerStateMachine
     {
-        private int _lastTransitionFrame = -1;
+        private bool _inTick;
+        private bool _transitionedInTick;
 
         public PlayerStateMachine(PlayerContext context)
         {
@@ -55,26 +56,27 @@ namespace DeadCells.Player.StateMachine
         public PlayerScriptedWalkState ScriptedWalk { get; }
 
         /// <summary>
-        /// Switches state. Only one transition is accepted per frame.
-        /// Returns false if a transition already happened this frame.
+        /// Switches state. Only one transition is accepted per Tick.
+        /// Returns false if a transition already happened in the current Tick.
         /// </summary>
         public bool ChangeState(IPlayerState next)
         {
-            int frame = UnityEngine.Time.frameCount;
-            if (frame == _lastTransitionFrame)
+            if (_inTick && _transitionedInTick)
                 return false;
-            _lastTransitionFrame = frame;
+            if (_inTick)
+                _transitionedInTick = true;
             Switch(next);
             return true;
         }
 
         /// <summary>
-        /// Switches state even if a transition already happened this frame. Only for interrupts that
+        /// Switches state even if a transition already happened in this Tick. Only for interrupts that
         /// must not be lost (taking damage, dying).
         /// </summary>
         public void ForceChangeState(IPlayerState next)
         {
-            _lastTransitionFrame = UnityEngine.Time.frameCount;
+            if (_inTick)
+                _transitionedInTick = true;
             Switch(next);
         }
 
@@ -86,7 +88,20 @@ namespace DeadCells.Player.StateMachine
             Current.Enter();
         }
 
-        public void Tick() => Current?.Tick();
+        public void Tick()
+        {
+            _inTick = true;
+            _transitionedInTick = false;
+            try
+            {
+                Current?.Tick();
+            }
+            finally
+            {
+                _inTick = false;
+                _transitionedInTick = false;
+            }
+        }
 
         public void FixedTick() => Current?.FixedTick();
     }

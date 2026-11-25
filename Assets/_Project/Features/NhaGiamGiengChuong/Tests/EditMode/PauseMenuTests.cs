@@ -395,7 +395,6 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
 
             var machine = GetPrivateField<PlayerStateMachine>(player, "_machine");
             machine.ForceChangeState(machine.Idle);
-            SetPrivateField(machine, "_lastTransitionFrame", -1);
 
             var keyboard = InputSystem.AddDevice<Keyboard>();
             try
@@ -416,7 +415,6 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
 
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                 InputSystem.Update();
-                SetPrivateField(machine, "_lastTransitionFrame", -1);
                 InvokeMethod(player, "Update");
                 Assert.AreSame(machine.Crouch, player.CurrentState,
                     "Disabling PlayerInputReader must keep player crouched instead of polling zeroes.");
@@ -424,7 +422,6 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
                 // Re-enabling PlayerInputReader with keys released lets PlayerController resume polling and stand up.
                 input.enabled = true;
                 InvokeMethod(input, "OnEnable");
-                SetPrivateField(machine, "_lastTransitionFrame", -1);
                 InvokeMethod(player, "Update");
                 Assert.AreSame(machine.Idle, player.CurrentState,
                     "Re-enabling PlayerInputReader without held crouch keys must restore Idle.");

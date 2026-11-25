@@ -1923,7 +1923,6 @@ namespace DeadCells.Core.Tests
                 Assert.IsTrue(ctx.CanWalk(-ctx.DirectionToPlayer), "Precondition: room behind must allow Backstep.");
 
                 machine.ForceChangeState(machine.Chase);
-                SetPrivateField(machine, "_lastTransitionFrame", -1);
 
                 var chase = (EnemyChaseState)machine.Chase;
                 for (int i = 0; i < 3; i++)
@@ -1935,7 +1934,6 @@ namespace DeadCells.Core.Tests
                     "Within TurnDelay (0.15s < 0.6s), Enemy_Shield must keep facing +1 (right) instead of snap-turning.");
 
                 // Once TurnDelay completes, Enemy_Shield turns toward player and enters Backstep normally.
-                SetPrivateField(machine, "_lastTransitionFrame", -1);
                 chase.Tick(0.50f);
                 Assert.AreEqual(-1, ctx.Facing, "After TurnDelay elapses, Enemy_Shield must turn toward player (-1).");
                 Assert.AreSame(machine.Backstep, machine.Current,
@@ -2051,7 +2049,6 @@ namespace DeadCells.Core.Tests
 
                 // 1. Backstep exits cleanly once BackstepDuration + MaxGroundedWait (1.0s) is exceeded.
                 machine.ForceChangeState(machine.Backstep);
-                SetPrivateField(machine, "_lastTransitionFrame", -1);
                 var backstep = (EnemyBackstepState)machine.Backstep;
 
                 backstep.Tick(0.25f);
@@ -2069,7 +2066,6 @@ namespace DeadCells.Core.Tests
                 // 2. Lunge exits cleanly through Recover -> Chase once TravelDuration + MaxGroundedWait (1.0s) is exceeded.
                 var lunge = (EnemyLungeAttackState)machine.Skills[0];
                 machine.ForceChangeState(lunge);
-                SetPrivateField(machine, "_lastTransitionFrame", -1);
 
                 lunge.Tick(0.01f); // Charge (0f) -> Execute
                 lunge.Tick(0.40f); // TravelDuration elapsed, still airborne
@@ -2436,14 +2432,12 @@ namespace DeadCells.Core.Tests
                 $"The {label} pop cannot exceed the analytic apex {predicted:F4} u; measured {measured:F4} u.");
         }
 
-        /// <summary>Opens the one-transition-per-frame slot that a real frame boundary provides.</summary>
-        private static void BeginSimulatedFrame(PlayerStateMachine machine) =>
-            SetPrivateField(machine, "_lastTransitionFrame", -1);
+        /// <summary>Marks a simulated frame boundary (transitions now unlock per Tick).</summary>
+        private static void BeginSimulatedFrame(PlayerStateMachine machine) { }
 
         private static void ForceState(PlayerStateMachine machine, IPlayerState state)
         {
             machine.ForceChangeState(state);
-            SetPrivateField(machine, "_lastTransitionFrame", -1);
         }
 
         private static FieldInfo FindPrivateField(System.Type type, string fieldName)

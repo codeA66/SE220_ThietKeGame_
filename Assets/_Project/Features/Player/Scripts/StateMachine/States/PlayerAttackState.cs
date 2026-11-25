@@ -98,13 +98,19 @@ namespace DeadCells.Player.StateMachine.States
                 _hitDone = true;
                 StartLunge();
                 // The first active frame owns the swing event: one slash VFX and one sword whoosh.
-                ApplyAirHitStall(Ctx.Combat.PerformStrike(_strike, Ctx.FacingDirection));
+                int hits = Ctx.Combat.PerformStrike(_strike, Ctx.FacingDirection);
+                if (Machine.Current != this)
+                    return;
+                ApplyAirHitStall(hits);
             }
             else if (_hitDone && _timer <= _hitTime + ActiveHitWindow)
             {
                 // Keep re-resolving for the rest of the active arc so a target that walks in mid-swing is
                 // still caught. HitQuery._alreadyHit keeps every target to a single hit per swing.
-                ApplyAirHitStall(Ctx.Combat.PerformStrike(_strike, Ctx.FacingDirection, emitSwingEvent: false));
+                int hits = Ctx.Combat.PerformStrike(_strike, Ctx.FacingDirection, emitSwingEvent: false);
+                if (Machine.Current != this)
+                    return;
+                ApplyAirHitStall(hits);
             }
 
             float normalized = _duration > 0f ? _timer / _duration : 1f;

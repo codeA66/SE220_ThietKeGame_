@@ -639,7 +639,6 @@ namespace DeadCells.Core.Tests
         private static void ForceTestState(PlayerStateMachine machine, IPlayerState state)
         {
             machine.ForceChangeState(state);
-            CombatSetPrivateField(machine, "_lastTransitionFrame", -1);
         }
 
         private static void InvestScroll(Transform parent, PlayerRunStats stats, CombatStat stat)
