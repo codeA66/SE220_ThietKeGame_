@@ -49,12 +49,12 @@ namespace DeadCells.Enemies
             _targets = targets;
             _ground = ground;
             _query = new HitQuery(targets);
-            _baseColor = _renderer.color;
-            if (_mode == Mode.Straight)
+            _baseColor = _renderer != null ? _renderer.color : Color.white;
+            if (_mode == Mode.Straight && _renderer != null)
             {
                 // Hostile arrows streak ember-to-red so they read apart from the player's cream ones.
                 _trail = gameObject.AddComponent<TrailRibbon>();
-                _trail.Setup(new Color32(255, 150, 70, 255), new Color32(190, 30, 30, 255), 2f / 32f, 0.1f, _renderer);
+                _trail.Setup(new Color32(255, 150, 70, 255), new Color32(190, 30, 30, 255), 2f / 32f, 0.1f, _renderer, unlit: true);
             }
         }
 
@@ -62,7 +62,7 @@ namespace DeadCells.Enemies
         {
             Begin(position, velocity, damage, knockback, owner);
             _body.gravityScale = 0f;
-            transform.right = velocity.sqrMagnitude > 0f ? (Vector3)velocity.normalized : Vector3.right;
+            AlignToVelocity(velocity);
         }
 
         public void LaunchLob(Vector2 position, Vector2 velocity, int damage, float fuse, float blastRadius,
@@ -74,6 +74,8 @@ namespace DeadCells.Enemies
             _blastRadius = blastRadius;
             _blastVfx = blastVfx;
             transform.rotation = Quaternion.identity;
+            if (_renderer != null)
+                _renderer.flipY = false;
         }
 
         private void Begin(Vector2 position, Vector2 velocity, int damage, float knockback, GameObject owner)
@@ -86,7 +88,8 @@ namespace DeadCells.Enemies
             _fuseTimer = 0f;
             _landed = false;
             _live = true;
-            _renderer.color = _baseColor;
+            if (_renderer != null)
+                _renderer.color = _baseColor;
             gameObject.SetActive(true);
             _body.linearVelocity = velocity;
             _body.angularVelocity = 0f;
@@ -133,7 +136,23 @@ namespace DeadCells.Enemies
         private void FixedUpdate()
         {
             if (_live && _mode == Mode.Straight && _body.linearVelocity.sqrMagnitude > 0.01f)
-                transform.right = _body.linearVelocity.normalized;
+                AlignToVelocity(_body.linearVelocity);
+        }
+
+        private void AlignToVelocity(Vector2 velocity)
+        {
+            if (velocity.sqrMagnitude <= 1e-6f)
+            {
+                transform.rotation = Quaternion.identity;
+                if (_renderer != null)
+                    _renderer.flipY = false;
+                return;
+            }
+
+            float angle = Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            if (_renderer != null)
+                _renderer.flipY = velocity.x < 0f;
         }
 
         private void OnTriggerEnter2D(Collider2D other)
