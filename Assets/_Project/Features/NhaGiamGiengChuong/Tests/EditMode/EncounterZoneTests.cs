@@ -271,6 +271,24 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             return wakes;
         }
 
+        [Test]
+        public void PlayerPrefab_HasRoundedBottomEdgeRadius_PreservingOuterBoundsAndExactFeet()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Features/Player/Prefabs/Player.prefab");
+            Assert.IsNotNull(prefab, "Missing Player.prefab.");
+            var col = prefab.GetComponent<BoxCollider2D>();
+            Assert.IsNotNull(col, "Player.prefab missing BoxCollider2D.");
+            Assert.Greater(col.edgeRadius, 0f,
+                "Player BoxCollider2D must use a small edgeRadius to prevent Box2D ghost-vertex snagging on floor seams.");
+            Assert.AreEqual(0.8f, col.size.x + col.edgeRadius * 2f, 0.001f, "Total outer width must stay 0.8u.");
+            Assert.AreEqual(1.6f, col.size.y + col.edgeRadius * 2f, 0.001f, "Total outer height must stay 1.6u.");
+
+            var inst = Track(Object.Instantiate(prefab, Vector3.zero, Quaternion.identity));
+            Vector2 feet = EncounterZone.GetColliderFeet(inst.GetComponent<BoxCollider2D>());
+            Assert.AreEqual(0f, feet.x, 0.001f);
+            Assert.AreEqual(0f, feet.y, 0.001f, "GetColliderFeet must stay flush at y=0 with edgeRadius.");
+        }
+
         private (LevelRunController run, GameObject player, BoxCollider2D col, Health health, EncounterZone zone, EnemyController[] enemies, Dictionary<EnemyController, int> wakeCounts)
             CreateRoomERun(Vector2 min, Vector2 max)
         {
