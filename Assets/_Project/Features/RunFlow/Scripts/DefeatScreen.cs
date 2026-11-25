@@ -17,7 +17,8 @@ namespace DeadCells.RunFlow
         [SerializeField] private Button _retry;
         [SerializeField] private Text _heading;
         [SerializeField] private Text _description;
-        [SerializeField, Min(0f)] private float _revealDelay = 0.4f;
+        [Tooltip("Seconds after death before the screen appears; long enough for the scarf to float away on the beam.")]
+        [SerializeField, Min(0f)] private float _revealDelay = 1.7f;
 
         private bool _pendingReveal;
         private float _revealElapsedUnscaled;

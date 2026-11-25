@@ -22,6 +22,8 @@ namespace DeadCells.Combat
 
         public event Action<DamageInfo> Damaged;
         public event Action<DamageInfo> Died;
+        /// <summary>A hit was vetoed by DamageFilter (a shield, a roll, a perfect dodge...).</summary>
+        public event Action<DamageInfo> Blocked;
         /// <summary>Arguments: current, max.</summary>
         public event Action<int, int> Changed;
 
@@ -45,7 +47,10 @@ namespace DeadCells.Combat
             if (!IsAlive || IsInvulnerable || info.Amount <= 0)
                 return false;
             if (DamageFilter != null && !DamageFilter(info))
+            {
+                Blocked?.Invoke(info);
                 return false;
+            }
 
             Current = Mathf.Max(0, Current - info.Amount);
             _invulnerableUntil = Time.time + _invulnerabilityAfterHit;

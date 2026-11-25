@@ -22,6 +22,8 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.SetHorizontalVelocity(dir * Mathf.Max(hit.Knockback, Ctx.Config.HurtMinKnockback));
             Ctx.SetVerticalVelocity(Ctx.Config.HurtKnockUp);
             Ctx.Animator.SetHurt(true);
+            if (hit.Stun > 0f)
+                Ctx.NotifyStunned(Mathf.Max(Ctx.Config.HurtLockDuration, hit.Stun));
         }
 
         public override void Exit() => Ctx.Animator.SetHurt(false);

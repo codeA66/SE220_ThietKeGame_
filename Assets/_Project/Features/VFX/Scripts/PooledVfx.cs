@@ -36,11 +36,14 @@ namespace DeadCells.VFX
                 _renderer.sortingLayerID = vfxLayerId;
             transform.localScale = Vector3.one * definition.Scale;
             _renderer.color = definition.Tint;
+            if (definition.Unlit && RuntimeSprites.UnlitMaterial != null)
+                _renderer.sharedMaterial = RuntimeSprites.UnlitMaterial;
         }
 
-        public void Play(Vector3 position, bool flipX)
+        public void Play(Vector3 position, bool flipX, float angle = 0f, float scale = 1f)
         {
-            transform.position = position;
+            transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, angle));
+            transform.localScale = Vector3.one * (Definition.Scale * scale);
             _renderer.flipX = flipX;
             _timer = 0f;
             _frame = 0;

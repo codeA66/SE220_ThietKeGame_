@@ -21,6 +21,22 @@ namespace DeadCells.VFX
         [Tooltip("Instances created up front so playing never allocates.")]
         [Min(1)]
         [SerializeField] private int _prewarmCount = 3;
+        [Tooltip("Draw with an unlit material so scene lighting cannot dim the frames, for effects that are light themselves.")]
+        [SerializeField] private bool _unlit;
+
+        /// <summary>Builds a definition at runtime from generated frames, for effects that have no asset.</summary>
+        public static VfxDefinition Create(string definitionName, Sprite[] frames, float fps, float scale, int sortingOrder, int prewarmCount)
+        {
+            var definition = CreateInstance<VfxDefinition>();
+            definition.name = definitionName;
+            definition.hideFlags = HideFlags.HideAndDontSave;
+            definition._frames = frames;
+            definition._fps = fps;
+            definition._scale = scale;
+            definition._sortingOrder = sortingOrder;
+            definition._prewarmCount = prewarmCount;
+            return definition;
+        }
 
         public Sprite[] Frames => _frames;
         public float Fps => _fps;
@@ -28,5 +44,13 @@ namespace DeadCells.VFX
         public Color Tint => _tint;
         public int SortingOrder => _sortingOrder;
         public int PrewarmCount => _prewarmCount;
+        public bool Unlit => _unlit;
+
+        /// <summary>Marks a runtime-built definition as unlit and returns it.</summary>
+        public VfxDefinition AsUnlit()
+        {
+            _unlit = true;
+            return this;
+        }
     }
 }

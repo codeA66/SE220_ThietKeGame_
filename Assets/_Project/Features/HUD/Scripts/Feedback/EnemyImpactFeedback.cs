@@ -67,7 +67,8 @@ namespace DeadCells.HUD
         private void PlayContact(DamageInfo damage, VfxDefinition blood, AudioClip sound)
         {
             Vector3 position = _target.transform.position + Vector3.up * _body.offset.y;
-            _vfx.Play(blood, position, damage.Direction < 0);
+            // The baked blood sprites are drawn red; enemy blood is blue, so play a recoloured copy.
+            _vfx.Play(VfxRecolor.Blue(blood), position, damage.Direction < 0);
             _vfx.Play(_impactFlash, position);
             _audio.PlayOneShot(sound, 0.75f);
             var number = Instantiate(_numberPrefab, transform);

@@ -30,6 +30,10 @@ namespace DeadCells.Player
         public bool CanShoot => _pool != null && Ammo > 0 && Time.time >= _readyAt;
         public event Action<int, int> AmmoChanged;
         public event Action<DamageInfo> HitDealt;
+        /// <summary>An arrow left the bow. Arguments: muzzle position, facing, combo finisher.</summary>
+        public event Action<Vector2, int, bool> Fired;
+        /// <summary>An arrow hit a wall or floor. Arguments: impact point, flight direction, combo finisher.</summary>
+        public event Action<Vector2, int, bool> ArrowWorldHit;
 
         public void Initialize(LayerMask targets, LayerMask ground, PlayerRunStats stats)
         {
@@ -72,6 +76,8 @@ namespace DeadCells.Player
             offset.x *= facing;
             Vector2 origin = feet + offset;
             Vector2 aimDir = ResolveAimDirection(origin, feet, facing, crouching);
+            // The last shot of the combo is the heavy finisher (DC: 60 damage vs 35 and 40).
+            bool heavy = _data.ShotCount > 1 && _nextShot == _data.ShotCount - 1;
             var arrow = _pool.Get();
             _activeArrows.Add(arrow);
             Ammo--;
@@ -79,8 +85,9 @@ namespace DeadCells.Player
             _comboExpiresAt = Time.time + _data.ComboResetTime;
             _readyAt = Time.time + shot.Cooldown;
             int damage = _stats.ScaleDamage(shot.Damage, _data.ScalingStat);
-            arrow.Launch(origin, aimDir, _data, damage, _targets, _ground, gameObject);
+            arrow.Launch(origin, aimDir, _data, damage, _targets, _ground, gameObject, heavy);
             CombatAudioHub.Play(SfxId.BowRelease, 0.80f);
+            Fired?.Invoke(origin, facing, heavy);
             AmmoChanged?.Invoke(Ammo, _data.AmmoCapacity);
             return true;
         }
@@ -185,10 +192,13 @@ namespace DeadCells.Player
             arrow.gameObject.SetActive(false);
             arrow.Initialize(OnArrowReturned);
             arrow.HitDealt += OnArrowHit;
+            arrow.WorldHit += OnArrowWorldHit;
             return arrow;
         }
 
         private void OnArrowHit(DamageInfo damage) => HitDealt?.Invoke(damage);
+
+        private void OnArrowWorldHit(Vector2 point, int direction, bool heavy) => ArrowWorldHit?.Invoke(point, direction, heavy);
 
         private void OnArrowReturned(RecoverableArrow arrow)
         {

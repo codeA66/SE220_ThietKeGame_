@@ -38,7 +38,11 @@ namespace DeadCells.Combat
             public Vector2 RangeOffsetCells;
             [Tooltip("Horizontal knockback speed given to the target (units/s). DC: props.bump (unit not verified).")]
             public float Knockback;
-            [Tooltip("DC: canCrit.")]
+            // Crit feedback (off for every starter-sword strike, per the DC data). A crit hit gets a gold
+            // impact flare with an X glint, a one-frame freeze then a short slow-motion and a bigger shake.
+            // A crit KILL also throws a crimson gore burst: ~120 blood drops that land on floors and run
+            // down walls, plus a blood mist. Crits deal normal damage: no crit multiplier exists yet.
+            [Tooltip("DC: canCrit. On: hits from this strike are critical: gold flare, freeze + slow-motion, bigger shake; a crit kill throws a crimson gore burst (blood drops that land on floors and walls, plus mist). Damage is unchanged.")]
             public bool CanCrit;
             [Tooltip("DC: charge. Recorded for reference; timing uses HitFrame.")]
             public float Charge;

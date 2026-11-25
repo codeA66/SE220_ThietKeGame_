@@ -3,8 +3,10 @@
     "rootNamespace": "DeadCells.HUD",
     "references": [
         "Combat",
+        "Core",
         "Currency",
         "Player",
+        "Unity.InputSystem",
         "Unity.RenderPipelines.Universal.2D.Runtime",
         "UnityEngine.UI",
         "VFX"

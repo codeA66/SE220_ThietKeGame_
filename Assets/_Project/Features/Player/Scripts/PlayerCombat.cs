@@ -88,7 +88,7 @@ namespace DeadCells.Player
             int scaledDamage = _stats != null
                 ? _stats.ScaleDamage(damage, MeleeWeapon != null ? MeleeWeapon.ScalingStat : CombatStat.Brutality)
                 : damage;
-            var info = new DamageInfo(scaledDamage, 0, 0f, stun, false, _owner.gameObject);
+            var info = new DamageInfo(scaledDamage, 0, 0f, stun, false, _owner.gameObject, isStomp: true);
             _anyFatalInStrike = false;
             int hits = _query.Strike(center, area, info, _onTargetHit);
             if (hits > 0)

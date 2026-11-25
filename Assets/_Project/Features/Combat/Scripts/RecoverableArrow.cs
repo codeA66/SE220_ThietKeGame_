@@ -1,4 +1,5 @@
 using System;
+using DeadCells.VFX;
 using UnityEngine;
 
 namespace DeadCells.Combat
@@ -6,6 +7,8 @@ namespace DeadCells.Combat
     /// <summary>
     /// Sweeps the travelled segment to avoid tunnelling. An embedded arrow returns on target death
     /// or expiry; a missed arrow returns when its flight lifetime ends. The pool owns ammunition.
+    /// Visuals: a streak trails the arrow in flight (gold for a heavy shot), and an arrow that sticks
+    /// in a wall quivers for a moment.
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
     public class RecoverableArrow : MonoBehaviour
@@ -14,6 +17,17 @@ namespace DeadCells.Combat
 
         public const float WallImpactLifetime = 0.6f;
         private static readonly Vector2 TargetBoxSize = new Vector2(0.24f, 0.28f);
+
+        private const float TrailDuration = 0.1f;
+        private const float QuiverTime = 0.3f;
+        private const float QuiverSpeed = 55f;
+        private const float QuiverAngle = 7f;
+        private const float Px = 1f / 32f;
+
+        private static readonly Color32 TrailHead = new Color32(255, 245, 215, 255);
+        private static readonly Color32 TrailTail = new Color32(255, 200, 120, 255);
+        private static readonly Color32 HeavyTrailHead = new Color32(255, 236, 150, 255);
+        private static readonly Color32 HeavyTrailTail = new Color32(255, 150, 40, 255);
 
         private readonly RaycastHit2D[] _hits = new RaycastHit2D[16];
         private Action<RecoverableArrow> _release;
@@ -28,7 +42,14 @@ namespace DeadCells.Combat
         private float _remainingLifetime;
         private float _embeddedLifetime;
         private Phase _phase;
+        private TrailRibbon _trail;
+        private bool _isHeavy;
+        private float _impactTime;
+        private Quaternion _impactRotation;
+
         public event Action<DamageInfo> HitDealt;
+        /// <summary>Hit a wall or floor. Arguments: impact point, flight direction (-1 or 1), heavy shot.</summary>
+        public event Action<Vector2, int, bool> WorldHit;
 
         public void Initialize(Action<RecoverableArrow> release)
         {
@@ -42,14 +63,19 @@ namespace DeadCells.Combat
                         sr.sortingLayerID = vfxLayerId;
                 }
             }
+            if (_trail == null)
+            {
+                _trail = gameObject.AddComponent<TrailRibbon>();
+                _trail.Setup(TrailHead, TrailTail, 2f * Px, TrailDuration, GetComponent<SpriteRenderer>());
+            }
         }
 
         public void Launch(Vector2 origin, int direction, BowWeaponData data, int damage,
-            LayerMask targets, LayerMask ground, GameObject owner) =>
-            Launch(origin, Vector2.right * direction, data, damage, targets, ground, owner);
+            LayerMask targets, LayerMask ground, GameObject owner, bool heavy = false) =>
+            Launch(origin, Vector2.right * direction, data, damage, targets, ground, owner, heavy);
 
         public void Launch(Vector2 origin, Vector2 direction, BowWeaponData data, int damage,
-            LayerMask targets, LayerMask ground, GameObject owner)
+            LayerMask targets, LayerMask ground, GameObject owner, bool heavy = false)
         {
             Vector2 dir = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
             int hitDirection = dir.x >= 0f ? 1 : -1;
@@ -73,6 +99,13 @@ namespace DeadCells.Combat
             _remainingLifetime = data.FlightLifetime;
             _embeddedLifetime = data.EmbeddedLifetime;
             _phase = Phase.Flying;
+            _isHeavy = heavy;
+            _trail.Clear();
+            if (heavy)
+                _trail.SetStyle(HeavyTrailHead, HeavyTrailTail, 3.5f * Px);
+            else
+                _trail.SetStyle(TrailHead, TrailTail, 2f * Px);
+            _trail.Emitting = true;
             gameObject.SetActive(true);
         }
 
@@ -83,6 +116,8 @@ namespace DeadCells.Combat
             if (_phase == Phase.Inactive)
                 return;
             _phase = Phase.Inactive;
+            if (_trail != null)
+                _trail.Emitting = false;
             DetachVictim();
             _release(this);
         }
@@ -105,6 +140,8 @@ namespace DeadCells.Combat
                 Vector2 offset = flipped ? new Vector2(-_victimOffset.x, _victimOffset.y) : _victimOffset;
                 transform.position = (Vector2)_victim.transform.position + offset;
             }
+            else if (_phase == Phase.WorldImpact && _impactTime < QuiverTime)
+                Quiver();
         }
 
         private void FixedUpdate()
@@ -155,6 +192,8 @@ namespace DeadCells.Combat
             if (hasTargetHit)
             {
                 transform.position = nearestTarget.distance > 0f ? nearestTarget.point : origin;
+                if (_trail != null)
+                    _trail.Emitting = false;
                 bool damaged = nearestHealth.TakeDamage(_damage);
                 if (!damaged || !nearestHealth.IsAlive)
                 {
@@ -176,8 +215,13 @@ namespace DeadCells.Combat
             else if (hasGroundHit)
             {
                 transform.position = nearestGround.point;
+                if (_trail != null)
+                    _trail.Emitting = false;
                 _remainingLifetime = Mathf.Min(_remainingLifetime, WallImpactLifetime);
                 _phase = Phase.WorldImpact;
+                _impactTime = 0f;
+                _impactRotation = transform.rotation;
+                WorldHit?.Invoke(nearestGround.point, _velocity.x >= 0f ? 1 : -1, _isHeavy);
             }
             else
             {
@@ -186,6 +230,15 @@ namespace DeadCells.Combat
         }
 
         private void OnDestroy() => DetachVictim();
+
+        // Wobbles around the stuck angle, dying out over QuiverTime.
+        private void Quiver()
+        {
+            _impactTime += Time.deltaTime;
+            float strength = 1f - Mathf.Clamp01(_impactTime / QuiverTime);
+            float angle = Mathf.Sin(_impactTime * QuiverSpeed) * QuiverAngle * strength;
+            transform.rotation = _impactRotation * Quaternion.Euler(0f, 0f, angle);
+        }
 
         private void OnVictimDied(DamageInfo damage) => Recall();
 

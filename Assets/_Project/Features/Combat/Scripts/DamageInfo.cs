@@ -18,9 +18,11 @@ namespace DeadCells.Combat
         public readonly GameObject Source;
         /// <summary>True for arrows, grenades and other projectiles (shields don't stagger their shooter).</summary>
         public readonly bool IsProjectile;
+        /// <summary>True for the player's air-stomp landing, which hits from above and has no push direction.</summary>
+        public readonly bool IsStomp;
 
         public DamageInfo(int amount, int direction, float knockback, float stun, bool isCritical, GameObject source,
-            bool isProjectile = false)
+            bool isProjectile = false, bool isStomp = false)
         {
             Amount = amount;
             Direction = direction;
@@ -29,6 +31,7 @@ namespace DeadCells.Combat
             IsCritical = isCritical;
             Source = source;
             IsProjectile = isProjectile;
+            IsStomp = isStomp;
         }
     }
 }

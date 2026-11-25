@@ -1,5 +1,6 @@
 using System;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.VFX;
 using UnityEngine;
 
@@ -18,6 +19,7 @@ namespace DeadCells.Enemies
         [SerializeField] private LayerMask _groundMask;
         [Tooltip("Layers this enemy's attacks can hit (the player).")]
         [SerializeField] private LayerMask _attackTargets;
+        [SerializeField] private bool _showHealthBar = true;
 
         [Header("Scene references (optional if a spawner calls Initialize)")]
         [SerializeField] private Transform _player;
@@ -48,6 +50,10 @@ namespace DeadCells.Enemies
             _health.Died += OnDied;
             if (_data.HasFrontShield)
                 _health.DamageFilter = FilterShieldBlock;
+            if (_showHealthBar)
+                gameObject.AddComponent<EnemyHealthBar>().Setup(_health, GetComponent<BoxCollider2D>());
+            gameObject.AddComponent<EnemyDamageNumbers>().Setup(_health, GetComponent<BoxCollider2D>());
+            gameObject.AddComponent<EnemyVfx>().Setup(_health, _context, GetComponent<BoxCollider2D>());
             Initialize(_player, _projectiles, _vfx);
         }
 
@@ -128,6 +134,8 @@ namespace DeadCells.Enemies
         {
             _context.LastDamage = info;
             _machine.ForceChangeState(_machine.Dead);
+            LootDropper.Drop(_data, _context.Bounds.center, _context.Player, _groundMask);
+            KillCounter.AddKill();
             Died?.Invoke(this);
         }
     }

@@ -20,6 +20,9 @@ namespace DeadCells.HUD
         public float CurrentFillFraction => _currentFraction;
         public float TrailFillFraction => _trailFraction;
 
+        public RectTransform Fill => _fill;
+        public Text Value => _value;
+
         public void Render(int current, int max)
         {
             float fraction = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;

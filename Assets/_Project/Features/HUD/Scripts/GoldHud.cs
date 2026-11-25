@@ -9,6 +9,8 @@ namespace DeadCells.HUD
         [SerializeField] private GoldWallet _wallet;
         [SerializeField] private Text _amount;
 
+        public Text Amount => _amount;
+
         private void OnEnable()
         {
             _wallet.Changed += Render;

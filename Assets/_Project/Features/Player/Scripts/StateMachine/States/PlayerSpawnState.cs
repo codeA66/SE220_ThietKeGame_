@@ -43,7 +43,10 @@ namespace DeadCells.Player.StateMachine.States
 
             _timer -= Time.deltaTime;
             if (_timer <= 0f)
+            {
                 Machine.ChangeState(Machine.Idle);
+                Ctx.NotifyAwakened();
+            }
         }
 
         public override void FixedTick()

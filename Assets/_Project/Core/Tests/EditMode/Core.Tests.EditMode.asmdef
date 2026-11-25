@@ -2,9 +2,9 @@
     "name": "Core.Tests.EditMode",
     "rootNamespace": "DeadCells.Core.Tests",
     "references": [
-        "Core",
         "CameraSystem",
         "Combat",
+        "Core",
         "Currency",
         "Enemies",
         "HUD",
