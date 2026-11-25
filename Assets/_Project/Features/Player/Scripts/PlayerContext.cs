@@ -205,7 +205,7 @@ namespace DeadCells.Player
                 if (bounds.max.y < platformBounds.min.y || bounds.max.x < platformBounds.min.x || bounds.min.x > platformBounds.max.x)
                     _ledgeIgnoredPlatform = null;
             }
-            var hit = CastFeet(bounds.center.x, bounds.min.y);
+            var hit = CastFeet(bounds.center.x, bounds.min.y - _collider.edgeRadius);
 
             bool grounded = hit.collider != null
                             && hit.collider != _droppedPlatform
@@ -244,7 +244,9 @@ namespace DeadCells.Player
         /// </summary>
         private RaycastHit2D CastFeet(float centerX, float feetY)
         {
-            var size = new Vector2(_collider.bounds.size.x * FeetProbeWidthRatio, FeetProbeHeight);
+            // Unity 6 BoxCollider2D.bounds excludes edgeRadius; add 2*edgeRadius so the feet probe matches outer width.
+            float outerWidth = _collider.bounds.size.x + _collider.edgeRadius * 2f;
+            var size = new Vector2(outerWidth * FeetProbeWidthRatio, FeetProbeHeight);
             var origin = new Vector2(centerX, feetY + FeetProbeHeight * 0.5f);
             // On a slope the box only has to re-acquire the surface it is already standing on.
             float probeDist = _wasOnSlope
