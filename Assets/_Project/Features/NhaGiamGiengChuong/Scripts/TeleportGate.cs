@@ -304,22 +304,16 @@ namespace DeadCells.NhaGiamGiengChuong
             if (p != null && p.RunStats != null && p.RunStats.BlocksGameplayInput)
                 return true;
 
-            if (_powerScrolls != null && _powerScrolls.HasFocusedScroll)
-                return true;
-
-            if (p != null)
-            {
-                var childScrolls = p.GetComponentInChildren<PowerScrollInteraction>();
-                if (childScrolls != null && childScrolls.HasFocusedScroll)
-                    return true;
-            }
-
             if (_powerScrolls == null)
             {
-                _powerScrolls = UnityEngine.Object.FindAnyObjectByType<PowerScrollInteraction>();
-                if (_powerScrolls != null && _powerScrolls.HasFocusedScroll)
-                    return true;
+                if (p != null)
+                    _powerScrolls = p.GetComponentInChildren<PowerScrollInteraction>();
+                if (_powerScrolls == null)
+                    _powerScrolls = UnityEngine.Object.FindAnyObjectByType<PowerScrollInteraction>();
             }
+
+            if (_powerScrolls != null)
+                return _powerScrolls.HasFocusedScroll;
 
             return false;
         }

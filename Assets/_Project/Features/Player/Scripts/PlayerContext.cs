@@ -60,6 +60,8 @@ namespace DeadCells.Player
         private float _wallJumpLockUntil = float.NegativeInfinity;
         private float _wallRegrabReadyAt = float.NegativeInfinity;
         private bool _wasOnSlope;
+        private Collider2D _lastEffectorCollider;
+        private PlatformEffector2D _lastEffector;
 
         public PlayerContext(
             Rigidbody2D body,
@@ -453,7 +455,7 @@ namespace DeadCells.Player
         {
             if (!IsDownHeld || !Input.JumpPressed || _groundCollider == null)
                 return false;
-            if (!_groundCollider.TryGetComponent<PlatformEffector2D>(out _))
+            if (!TryGetCachedPlatformEffector(_groundCollider, out _))
                 return false;
 
             _droppedPlatform = _groundCollider;
@@ -724,9 +726,28 @@ namespace DeadCells.Player
             return TryGetLedgeStandPoint(bounds, side.point.x, top.point.y, out standPoint);
         }
 
-        private static bool IsOneWayPlatform(Collider2D collider) =>
-            collider.usedByEffector && collider.TryGetComponent<PlatformEffector2D>(out var effector)
+        private bool IsOneWayPlatform(Collider2D collider) =>
+            collider != null && collider.usedByEffector
+            && TryGetCachedPlatformEffector(collider, out var effector)
             && effector.isActiveAndEnabled && effector.useOneWay;
+
+        private bool TryGetCachedPlatformEffector(Collider2D collider, out PlatformEffector2D effector)
+        {
+            if (collider == null)
+            {
+                effector = null;
+                return false;
+            }
+
+            if (collider != _lastEffectorCollider)
+            {
+                _lastEffectorCollider = collider;
+                collider.TryGetComponent(out _lastEffector);
+            }
+
+            effector = _lastEffector;
+            return effector != null;
+        }
 
         private bool TryGetLedgeStandPoint(Bounds bounds, float edgeX, float topY, out Vector2 standPoint)
         {
