@@ -8,7 +8,9 @@ using DeadCells.Enemies;
 using DeadCells.Tools.Editor;
 using DeadCells.VFX;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace DeadCells.Core.Tests
 {
@@ -446,6 +448,86 @@ namespace DeadCells.Core.Tests
             MethodInfo lateUpdate = type.GetMethod("LateUpdate", flags);
             Assert.IsNotNull(lateUpdate, $"{type.Name}.LateUpdate method missing.");
             lateUpdate.Invoke(system, null);
+        }
+
+        [Test]
+        public void ScrollFocusBlurShader_CompilesInUrpWithClampedUvsAndVertexColorAlpha()
+        {
+            const string shaderName = "DeadCells/UI/Scroll Focus Blur";
+            const string shaderPath = "Assets/_Project/Features/HUD/Shaders/ScrollFocusBlur.shader";
+
+            Shader shader = Shader.Find(shaderName);
+            Assert.IsNotNull(shader, $"Missing shader '{shaderName}'.");
+            Assert.IsFalse(ShaderUtil.ShaderHasError(shader), $"Shader '{shaderName}' has compile errors.");
+
+            string source = File.ReadAllText(shaderPath);
+            StringAssert.Contains("\"RenderPipeline\" = \"UniversalPipeline\"", source);
+            StringAssert.Contains("HLSLPROGRAM", source);
+            StringAssert.Contains("TEXTURE2D(_MainTex)", source);
+            StringAssert.Contains("SAMPLE_TEXTURE2D(_MainTex", source);
+            StringAssert.Contains("clamp(", source);
+            StringAssert.Contains("COLOR", source);
+            StringAssert.Contains("input.color.a", source);
+            StringAssert.DoesNotContain("CGPROGRAM", source);
+            StringAssert.DoesNotContain("UnityCG.cginc", source);
+        }
+
+        [Test]
+        public void GroundMist2DShader_DisablesSpriteAtlasPackingAndCompilesCleanly()
+        {
+            const string shaderName = "DeadCells/GroundMist2D";
+            const string shaderPath = "Assets/_Project/Art/Shaders/GroundMist2D.shader";
+
+            Shader shader = Shader.Find(shaderName);
+            Assert.IsNotNull(shader, $"Missing shader '{shaderName}'.");
+            Assert.IsFalse(ShaderUtil.ShaderHasError(shader), $"Shader '{shaderName}' has compile errors.");
+
+            string source = File.ReadAllText(shaderPath);
+            StringAssert.Contains("\"CanUseSpriteAtlas\" = \"False\"", source);
+            StringAssert.DoesNotContain("\"CanUseSpriteAtlas\" = \"True\"", source);
+        }
+
+        [Test]
+        public void ParallaxGradientMap2DShader_CompilesWithNormalsRenderingPassFracScrollAndUnlitShortCircuit()
+        {
+            const string shaderName = "DeadCells/ParallaxGradientMap2D";
+            const string shaderPath = "Assets/_Project/Art/Shaders/ParallaxGradientMap2D.shader";
+
+            Shader shader = Shader.Find(shaderName);
+            Assert.IsNotNull(shader, $"Missing shader '{shaderName}'.");
+            Assert.IsFalse(ShaderUtil.ShaderHasError(shader), $"Shader '{shaderName}' has compile errors.");
+
+            string source = File.ReadAllText(shaderPath);
+            StringAssert.Contains("\"LightMode\" = \"Universal2D\"", source);
+            StringAssert.Contains("\"LightMode\" = \"NormalsRendering\"", source);
+            StringAssert.Contains("frac(", source);
+            StringAssert.Contains("_LitBlend <= 0.001h", source);
+        }
+
+        [Test]
+        public void UniversalRpAsset_EnablesHdrColorGradingMode()
+        {
+            const string assetPath = "Assets/Settings/UniversalRP.asset";
+            var urpAsset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(assetPath);
+            Assert.IsNotNull(urpAsset, $"Missing UniversalRenderPipelineAsset at '{assetPath}'.");
+            Assert.AreEqual(ColorGradingMode.HighDynamicRange, urpAsset.colorGradingMode,
+                "UniversalRP.asset must use HighDynamicRange color grading so highlights reach ACES tonemapping unclipped.");
+        }
+
+        [Test]
+        public void ReleaseSettingsSetup_ExposesHeadlessStaticEntryPoints()
+        {
+            MethodInfo lightingMethod = typeof(ReleaseSettingsSetup).GetMethod(
+                nameof(ReleaseSettingsSetup.ApplySandboxPlayerLighting),
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(lightingMethod, "ApplySandboxPlayerLighting must exist as public static.");
+            Assert.AreEqual(0, lightingMethod.GetParameters().Length);
+
+            MethodInfo qualityMethod = typeof(ReleaseSettingsSetup).GetMethod(
+                nameof(ReleaseSettingsSetup.ApplyReleaseQualityAndWebGlSettings),
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(qualityMethod, "ApplyReleaseQualityAndWebGlSettings must exist as public static.");
+            Assert.AreEqual(0, qualityMethod.GetParameters().Length);
         }
     }
 }
