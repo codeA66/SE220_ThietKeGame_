@@ -27,6 +27,7 @@ namespace DeadCells.HUD
         private const float KeyZoomStep = 0.5f;
 
         private static bool s_sceneHookRegistered;
+        private static MinimapHud s_active;
 
         [Header("Grid & Exploration")]
         [Tooltip("World units per minimap cell (0.5 = 2 cells per world unit for crisp Dead Cells silhouettes).")]
@@ -40,6 +41,7 @@ namespace DeadCells.HUD
         [SerializeField, Min(0.03f)] private float _refreshInterval = 0.1f;
 
         private PlayerController _player;
+        private PlayerInputReader _playerInput;
         private Transform _target;
         private HitStop _hitStop;
         private Canvas _gameplayHudCanvas;
@@ -61,9 +63,21 @@ namespace DeadCells.HUD
         private readonly List<MinimapMarker> _markers = new(64);
         private float _nextRefresh;
         private bool _ownsPause;
+        private bool _disabledPlayerInput;
+
+        public static MinimapHud Active => s_active;
+        public static bool IsAnyFullMapOpen => s_active != null && s_active.IsFullMapOpen;
+        public static int LastEscapeCloseFrame { get; private set; } = -1;
 
         public MinimapMapData MapData => _mapData;
         public bool IsFullMapOpen => _view != null && _view.IsFullMapOpen;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            s_active = null;
+            LastEscapeCloseFrame = -1;
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void RegisterSceneHook()
@@ -87,16 +101,25 @@ namespace DeadCells.HUD
             new GameObject("MinimapHud").AddComponent<MinimapHud>();
         }
 
+        private void OnEnable()
+        {
+            s_active = this;
+        }
+
         private void Start()
         {
             _player = FindAnyObjectByType<PlayerController>();
             if (_player == null)
             {
+                if (s_active == this)
+                    s_active = null;
                 GameDebug.LogWarning("No player in the scene, so the minimap has nothing to follow.", LogTopic.UI);
                 enabled = false;
                 return;
             }
 
+            s_active = this;
+            _playerInput = _player.GetComponent<PlayerInputReader>();
             _target = _player.transform;
             _hitStop = FindAnyObjectByType<HitStop>();
 
@@ -142,16 +165,18 @@ namespace DeadCells.HUD
 
         private void OnDisable()
         {
+            if (s_active == this)
+                s_active = null;
             ReleaseMenuPause();
         }
 
         private void OnDestroy()
         {
+            if (s_active == this)
+                s_active = null;
             ReleaseMenuPause();
-            if (_cornerTexture != null)
-                Destroy(_cornerTexture);
-            if (_fullTexture != null)
-                Destroy(_fullTexture);
+            DestroyTexture(_cornerTexture);
+            DestroyTexture(_fullTexture);
         }
 
         public void ToggleFullMap()
@@ -193,6 +218,7 @@ namespace DeadCells.HUD
 
             if (kb != null && kb.escapeKey.wasPressedThisFrame)
             {
+                LastEscapeCloseFrame = Time.frameCount;
                 SetFullMapOpen(false);
                 return;
             }
@@ -304,8 +330,7 @@ namespace DeadCells.HUD
 
             if (_fullTexture == null || _fullWidth != desiredWidth || _fullHeight != desiredHeight)
             {
-                if (_fullTexture != null)
-                    Destroy(_fullTexture);
+                DestroyTexture(_fullTexture);
                 _fullWidth = desiredWidth;
                 _fullHeight = desiredHeight;
                 _fullTexture = CreateMapTexture("DeadCellsFullMap", _fullWidth, _fullHeight);
@@ -333,7 +358,7 @@ namespace DeadCells.HUD
 
         private bool IsBlockedByOtherUi()
         {
-            if (_player == null)
+            if (_player == null || !_player.enabled)
                 return true;
             if (_player.Health != null && !_player.Health.IsAlive)
                 return true;
@@ -343,27 +368,62 @@ namespace DeadCells.HUD
                 return true;
             if (_gameplayHudCanvas != null && !_gameplayHudCanvas.enabled)
                 return true;
+            if (_hitStop != null && _hitStop.IsMenuPaused && !_ownsPause)
+                return true;
             return false;
         }
 
         private void AcquireMenuPause()
         {
-            if (_ownsPause || _hitStop == null)
-                return;
-            // Do not fight another menu that already froze timeScale.
-            if (Time.timeScale == 0f)
-                return;
-            _hitStop.SetMenuPaused(true);
-            _ownsPause = true;
+            if (!_ownsPause)
+            {
+                if (_hitStop != null)
+                    _hitStop.SetMenuPaused(true);
+                else
+                    Time.timeScale = 0f;
+                _ownsPause = true;
+            }
+
+            if (!_disabledPlayerInput && _playerInput != null && _playerInput.enabled)
+            {
+                _playerInput.enabled = false;
+                _disabledPlayerInput = true;
+            }
         }
 
         private void ReleaseMenuPause()
         {
-            if (!_ownsPause)
+            if (_ownsPause)
+            {
+                _ownsPause = false;
+                if (_hitStop != null)
+                    _hitStop.SetMenuPaused(false);
+                else
+                    Time.timeScale = 1f;
+            }
+
+            if (_disabledPlayerInput)
+            {
+                _disabledPlayerInput = false;
+                if (_playerInput != null &&
+                    _player != null &&
+                    _player.enabled &&
+                    (_player.RunStats == null || !_player.RunStats.BlocksGameplayInput) &&
+                    (_hitStop == null || !_hitStop.IsMenuPaused))
+                {
+                    _playerInput.enabled = true;
+                }
+            }
+        }
+
+        private static void DestroyTexture(Texture2D texture)
+        {
+            if (texture == null)
                 return;
-            _ownsPause = false;
-            if (_hitStop != null)
-                _hitStop.SetMenuPaused(false);
+            if (Application.isPlaying)
+                Destroy(texture);
+            else
+                DestroyImmediate(texture);
         }
 
         private static Texture2D CreateMapTexture(string textureName, int width, int height) =>
