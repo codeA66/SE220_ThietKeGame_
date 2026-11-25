@@ -87,8 +87,11 @@ namespace DeadCells.NhaGiamGiengChuong
                 _isPaused = false;
                 if (_hitStop != null)
                     _hitStop.SetMenuPaused(false);
-                Time.timeScale = 1f;
-                if (_playerInput != null && (_run == null || (_run.IsPlaying && !_run.GameplayLocked)))
+                else
+                    Time.timeScale = 1f;
+                if (_playerInput != null &&
+                    (_hitStop == null || !_hitStop.IsMenuPaused) &&
+                    (_run == null || (_run.IsPlaying && !_run.GameplayLocked)))
                     _playerInput.enabled = true;
             }
         }
@@ -101,7 +104,19 @@ namespace DeadCells.NhaGiamGiengChuong
             bool escPressed = Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
             bool startPressed = Gamepad.current != null && Gamepad.current.startButton.wasPressedThisFrame;
             if (escPressed || startPressed)
-                TogglePause();
+                HandlePauseInput(escPressed);
+        }
+
+        public bool HandlePauseInput(bool escPressed)
+        {
+            if (escPressed && DeadCells.HUD.MinimapHud.IsAnyFullMapOpen)
+            {
+                DeadCells.HUD.MinimapHud.Active.SetFullMapOpen(false);
+                return false;
+            }
+            if (escPressed && DeadCells.HUD.MinimapHud.LastEscapeCloseFrame == Time.frameCount)
+                return false;
+            return TogglePause();
         }
 
         public bool TogglePause() => _isPaused ? Resume() : OpenPause();
@@ -118,7 +133,8 @@ namespace DeadCells.NhaGiamGiengChuong
                 _playerInput.enabled = false;
             if (_hitStop != null)
                 _hitStop.SetMenuPaused(true);
-            Time.timeScale = 0f;
+            else
+                Time.timeScale = 0f;
 
             if (_resumeButton != null)
             {
@@ -139,9 +155,12 @@ namespace DeadCells.NhaGiamGiengChuong
                 _panelRoot.SetActive(false);
             if (_hitStop != null)
                 _hitStop.SetMenuPaused(false);
-            Time.timeScale = 1f;
+            else
+                Time.timeScale = 1f;
 
-            if (_playerInput != null && (_run == null || (_run.IsPlaying && !_run.GameplayLocked)))
+            if (_playerInput != null &&
+                (_hitStop == null || !_hitStop.IsMenuPaused) &&
+                (_run == null || (_run.IsPlaying && !_run.GameplayLocked)))
                 _playerInput.enabled = true;
 
             return true;
