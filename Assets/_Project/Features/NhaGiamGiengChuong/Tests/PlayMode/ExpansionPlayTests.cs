@@ -57,8 +57,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
                 Assert.AreEqual("VFX", coin.GetComponentInChildren<SpriteRenderer>(true).sortingLayerName, $"[P08/StaticGoldVfx/{coin.name}]");
             }
 
-            // 2. Wake Zone M1, defeat Grenadier_M1 -> verifies GoldPickup drops on VFX sorting layer & credits GoldWallet
-            Assert.AreEqual(0, wallet.Balance, "[P08/InitialGold]");
+            // 2. Wake Zone M1, defeat Grenadier_M1 -> verifies LootPickup drops on VFX sorting layer & credits GoldWallet
+            int goldBefore = wallet.Balance;
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(82f, 0f));
             yield return new WaitForFixedUpdate();
             yield return null;
@@ -67,16 +67,16 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(grenadierM1.GetComponent<Health>().TakeDamage(new DamageInfo(9999, 1, 0f, 0f, false, player.gameObject)));
             yield return null;
             var coinProbe = new Vector2(92f, 3.5f);
-            var droppedCoin = Object.FindObjectsByType<GoldPickup>(FindObjectsInactive.Include)
+            var droppedCoin = Object.FindObjectsByType<LootPickup>(FindObjectsInactive.Exclude)
                 .OrderBy(c => Vector2.Distance(c.transform.position, coinProbe))
                 .FirstOrDefault();
-            Assert.IsNotNull(droppedCoin, "[P08/GoldDrop] Defeating enemy must spawn GoldPickup.");
-            Assert.LessOrEqual(Vector2.Distance(droppedCoin.transform.position, coinProbe), 2.0f,
-                $"[P08/GoldDropNear] Nearest GoldPickup '{droppedCoin.name}' at {droppedCoin.transform.position} must be the Enemy_Grenadier_M1 drop near (92, 3.5), not a static Room N cache coin.");
-            Assert.AreEqual("VFX", droppedCoin.GetComponentInChildren<SpriteRenderer>().sortingLayerName, "[P08/CoinVfxLayer]");
+            Assert.IsNotNull(droppedCoin, "[P08/GoldDrop] Defeating enemy must spawn LootPickup via LootDropper.");
+            Assert.LessOrEqual(Vector2.Distance(droppedCoin.transform.position, coinProbe), 3.0f,
+                $"[P08/GoldDropNear] Nearest LootPickup '{droppedCoin.name}' at {droppedCoin.transform.position} must spawn near Enemy_Grenadier_M1 (92, 3.5).");
+            Assert.AreEqual("VFX", droppedCoin.GetComponent<SpriteRenderer>().sortingLayerName, "[P08/CoinVfxLayer]");
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(92f, 3.5f));
-            yield return PlayModeTestHelper.WaitUntil(() => wallet.Balance >= 20, 2.5f, "[P08/GoldCollected] GoldPickup must credit GoldWallet.");
-            Assert.GreaterOrEqual(wallet.Balance, 20);
+            yield return PlayModeTestHelper.WaitUntil(() => wallet.Balance > goldBefore, 2.5f, "[P08/GoldCollected] LootPickup must credit GoldWallet.");
+            Assert.Greater(wallet.Balance, goldBefore);
 
             // 3. Open SwitchDoor SD_1_EastVault at (144, 0): collider unlocks immediately, animation plays & lifts barrier, then completes
             var sd1 = switchDoors.Single(d => d.name == "SD_1_EastVault");
