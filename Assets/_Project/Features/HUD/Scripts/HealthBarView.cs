@@ -21,6 +21,7 @@ namespace DeadCells.HUD
         public float TrailFillFraction => _trailFraction;
 
         public RectTransform Fill => _fill;
+        public RectTransform TrailFill => _trailFill;
         public Text Value => _value;
 
         public void Render(int current, int max)
