@@ -180,11 +180,17 @@ namespace DeadCells.NhaGiamGiengChuong
 
             if (_doorBarrierRoot != null)
             {
+                bool hasBarrierBounds = TryCaptureBarrierBounds(_doorBarrierRoot, out Bounds barrierBounds);
                 // Always unlock physics passage immediately on frame 0
                 foreach (var barrierCol in _doorBarrierRoot.GetComponentsInChildren<Collider2D>(true))
                 {
                     if (barrierCol != null)
                         barrierCol.enabled = false;
+                }
+                if (hasBarrierBounds)
+                {
+                    Physics2D.SyncTransforms();
+                    DeadCells.HUD.MinimapHud.NotifyWorldGeometryChanged(barrierBounds);
                 }
             }
 
@@ -406,6 +412,35 @@ namespace DeadCells.NhaGiamGiengChuong
             Sprite target = _isOpen ? _switchOnSprite : _switchOffSprite;
             if (target != null)
                 _switchRenderer.sprite = target;
+        }
+
+        internal static bool TryCaptureBarrierBounds(GameObject root, out Bounds combined)
+        {
+            combined = default;
+            if (root == null)
+                return false;
+
+            bool hasAny = false;
+            Collider2D[] colliders = root.GetComponentsInChildren<Collider2D>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider2D col = colliders[i];
+                if (col == null)
+                    continue;
+
+                Bounds bounds = GetWorldBounds(col);
+                if (!hasAny)
+                {
+                    combined = bounds;
+                    hasAny = true;
+                }
+                else
+                {
+                    combined.Encapsulate(bounds);
+                }
+            }
+
+            return hasAny;
         }
 
         private static Bounds GetWorldBounds(Collider2D collider)

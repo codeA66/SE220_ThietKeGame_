@@ -103,8 +103,14 @@ namespace DeadCells.NhaGiamGiengChuong
         private void OpenGate()
         {
             _isOpen = true;
+            bool hasBounds = SwitchDoor.TryCaptureBarrierBounds(_gateBarrierRoot, out Bounds barrierBounds);
             if (_gateBarrierRoot != null)
                 _gateBarrierRoot.SetActive(false);
+            if (hasBounds)
+            {
+                Physics2D.SyncTransforms();
+                DeadCells.HUD.MinimapHud.NotifyWorldGeometryChanged(barrierBounds);
+            }
             Opened?.Invoke();
         }
 

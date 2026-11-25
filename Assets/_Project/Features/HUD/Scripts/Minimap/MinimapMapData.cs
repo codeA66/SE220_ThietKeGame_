@@ -133,11 +133,28 @@ namespace DeadCells.HUD
         {
             Vector2Int center = WorldToCell(worldCenter);
             int radiusCells = Mathf.CeilToInt(radiusUnits / CellSize);
-            for (int dy = -radiusCells; dy <= radiusCells; dy++)
+            InvalidateSamples(
+                center.x - radiusCells,
+                center.y - radiusCells,
+                center.x + radiusCells,
+                center.y + radiusCells);
+        }
+
+        /// <summary>
+        /// Clears cached samples inside an inclusive cell rectangle. Exploration state is preserved.
+        /// </summary>
+        public void InvalidateSamples(int minX, int minY, int maxX, int maxY)
+        {
+            if (minX > maxX)
+                (minX, maxX) = (maxX, minX);
+            if (minY > maxY)
+                (minY, maxY) = (maxY, minY);
+
+            for (int cy = minY; cy <= maxY; cy++)
             {
-                for (int dx = -radiusCells; dx <= radiusCells; dx++)
+                for (int cx = minX; cx <= maxX; cx++)
                 {
-                    if (TryGetChunk(center.x + dx, center.y + dy, out Chunk chunk, out int localIndex))
+                    if (TryGetChunk(cx, cy, out Chunk chunk, out int localIndex))
                         chunk.Sampled[localIndex] = false;
                 }
             }

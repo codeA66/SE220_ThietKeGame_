@@ -72,6 +72,21 @@ namespace DeadCells.HUD
         public MinimapMapData MapData => _mapData;
         public bool IsFullMapOpen => _view != null && _view.IsFullMapOpen;
 
+        /// <summary>
+        /// Invalidates cached minimap terrain samples intersecting <paramref name="worldBounds"/>
+        /// (expanded by 1 cell margin) and schedules an immediate refresh on the next frame.
+        /// </summary>
+        public static void NotifyWorldGeometryChanged(Bounds worldBounds)
+        {
+            if (s_active == null || s_active._mapData == null)
+                return;
+
+            Vector2Int minCell = s_active._mapData.WorldToCell(worldBounds.min);
+            Vector2Int maxCell = s_active._mapData.WorldToCell(worldBounds.max);
+            s_active._mapData.InvalidateSamples(minCell.x - 1, minCell.y - 1, maxCell.x + 1, maxCell.y + 1);
+            s_active._nextRefresh = 0f;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
         {
