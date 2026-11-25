@@ -77,13 +77,16 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             yield return PlayModeTestHelper.WaitUntil(() => wallet.Balance >= 20, 2.5f, "[P08/GoldCollected] GoldPickup must credit GoldWallet.");
             Assert.GreaterOrEqual(wallet.Balance, 20);
 
-            // 3. Open SwitchDoor SD_1_EastVault at (144, 0), enter vault at (161, 0) to discover TP_1, warp back to TP_0 (15.5, 0)
+            // 3. Open SwitchDoor SD_1_EastVault at (144, 0): collider unlocks immediately, animation completes & hides barrier; then enter vault at (161, 0)
             var sd1 = switchDoors.Single(d => d.name == "SD_1_EastVault");
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(144f, 0f));
             yield return new WaitForFixedUpdate();
             yield return null;
             Assert.IsTrue(sd1.TryInteract(), "[P08/OpenSD1]");
-            Assert.IsFalse(sd1.DoorBarrierRoot.activeInHierarchy);
+            Assert.IsTrue(sd1.DoorBarrierRoot.GetComponentsInChildren<Collider2D>(true).All(c => !c.enabled),
+                "[P08/OpenSD1ColliderImmediate] Barrier colliders must disable immediately on frame 0.");
+            yield return PlayModeTestHelper.WaitUntil(() => !sd1.DoorBarrierRoot.activeInHierarchy, 1.5f,
+                "[P08/OpenSD1AnimComplete] Animated door retraction must complete and deactivate barrier.");
 
             PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(161f, 0f));
             yield return new WaitForFixedUpdate();
@@ -125,7 +128,14 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(sd2.TryInteract(), "[P08/OpenSD2]");
             Assert.IsTrue(sewerExit.IsUnlocked, "[P08/SewerExitUnlocked]");
 
-            Assert.IsTrue(sewerExit.TrySubmitForCollider(player.GetComponent<BoxCollider2D>(), Time.frameCount), "[P08/SewerWinSubmit]");
+            // Stand in front of unlocked Sewer exit: must show [E] prompt and NOT auto-win on touch
+            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(224f, -16f));
+            yield return new WaitForFixedUpdate();
+            yield return null;
+            Assert.IsFalse(run.IsEnded, "[P08/SewerNoAutoTouchWin] Standing on unlocked Sewer exit must wait for [E].");
+            Assert.IsTrue(sewerExit.PromptVisible, "[P08/SewerPromptVisible] Unlocked Sewer exit must show [E] prompt.");
+
+            Assert.IsTrue(sewerExit.TryInteract(), "[P08/SewerWinInteract]");
             yield return PlayModeTestHelper.WaitUntil(() => run.IsEnded && panel.IsVisible, 2f, "[P08/SewerWinSettle]");
             Assert.AreEqual(LevelOutcome.Win, run.Outcome);
             Assert.AreEqual(ResultPanel.WinTitle, panel.TitleText.text);

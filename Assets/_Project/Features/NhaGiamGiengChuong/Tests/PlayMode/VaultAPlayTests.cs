@@ -98,7 +98,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
                 "[P11/SeqFinished] Framing sequence did not finish cleanly.");
 
             Assert.IsTrue(seq.HasPlayed, "[P11/SeqMarkedPlayed]");
-            Assert.AreEqual(190f, player.transform.position.x, 0.35f, "[P11/PlayerStopX]");
+            Assert.AreEqual(188.8f, player.transform.position.x, 0.35f, "[P11/PlayerStopX]");
             Assert.AreEqual(29f, player.transform.position.y, 0.25f, "[P11/PlayerGroundedAfterAirborneTrigger]");
             Assert.IsFalse(camFollow.IsFocusOverrideActive, "[P11/CameraRestored]");
             Assert.IsTrue(pauseMenu.CanPause, "[P11/PauseRestored]");
@@ -106,7 +106,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(seq.ChamberAudio.isPlaying, "[P11/PianoContinuesAfterSeq]");
 
             // 6. Tap real Keyboard [E] at inscription beneath tapestry, then walk away to auto-close
-            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(191.5f, 29f));
+            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(190.0f, 29f));
             yield return new WaitForFixedUpdate();
             yield return null;
             Press(keyboard.eKey);
@@ -116,7 +116,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsTrue(inscription.IsReading, "[P11/RealETapOpensQuote]");
             Assert.IsTrue(inscription.BannerRoot.activeSelf);
 
-            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(198.5f, 29f));
+            PlayModeTestHelper.PositionPlayerAtFeet(player, new Vector2(199.6f, 29f));
             yield return new WaitForFixedUpdate();
             yield return null;
             Assert.IsFalse(inscription.IsReading, "[P11/InscriptionAutoClose]");
@@ -130,7 +130,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
             Assert.IsNotNull(scrollInteraction, "[P11/PowerScrollInteraction]");
             Assert.IsTrue(scroll1.IsAvailable, "[P11/Scroll1Available]");
             Assert.IsTrue(scroll2.IsAvailable, "[P11/Scroll2Available]");
-            Assert.IsTrue(scrollInteraction.Tick(new Vector2(198.5f, 29f), true, true, player.RunStats), "[P11/BeginScrollChoice]");
+            Assert.IsTrue(scrollInteraction.Tick(new Vector2(199.6f, 29f), true, true, player.RunStats), "[P11/BeginScrollChoice]");
             yield return null;
             scrollMenu.ChooseBrutality();
             yield return null;
