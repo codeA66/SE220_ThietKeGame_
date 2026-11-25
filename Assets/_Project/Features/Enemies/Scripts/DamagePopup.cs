@@ -93,6 +93,9 @@ namespace DeadCells.Enemies
 
             var renderer = go.GetComponent<MeshRenderer>();
             renderer.sharedMaterial = s_font.material;
+            int vfxLayer = SortingLayer.NameToID("VFX");
+            if (vfxLayer != 0)
+                renderer.sortingLayerID = vfxLayer;
             renderer.sortingOrder = SortingOrder;
 
             DamagePopup popup = go.AddComponent<DamagePopup>();
