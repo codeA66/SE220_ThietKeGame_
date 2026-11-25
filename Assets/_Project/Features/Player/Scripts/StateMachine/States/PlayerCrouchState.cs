@@ -41,8 +41,29 @@ namespace DeadCells.Player.StateMachine.States
         /// </summary>
         public void Tick(float deltaTime)
         {
-            if (TryGroundedActions())
-                return;
+            bool canStand = Ctx.CanStandUp();
+            if (canStand)
+            {
+                if (TryGroundedActions())
+                    return;
+            }
+            else
+            {
+                if (TryRoll() || (Ctx.Weapons != null && Ctx.Weapons.Equipped == PlayerWeaponSlot.Bow && TryAttack()))
+                    return;
+
+                if (Ctx.TryDropThrough())
+                {
+                    Machine.ChangeState(Machine.Fall);
+                    return;
+                }
+
+                if (!Ctx.IsGrounded)
+                {
+                    Machine.ChangeState(Machine.Fall);
+                    return;
+                }
+            }
 
             _holdTimer += deltaTime;
             if (_holdTimer >= DescendHoldTime && Ctx.IsDownHeld && !Ctx.Input.JumpHeld
@@ -53,7 +74,7 @@ namespace DeadCells.Player.StateMachine.States
                 return;
             }
 
-            if (!Ctx.IsCrouchHeld)
+            if (canStand && !Ctx.IsCrouchHeld)
                 ReturnToDefault();
         }
 

@@ -637,6 +637,21 @@ namespace DeadCells.Player
             }
         }
 
+        public bool CanStandUp()
+        {
+            if (!Config.CrouchShrinkCollider)
+                return true;
+            float r = _collider.edgeRadius;
+            float crouchTopY = Config.CrouchColliderHeight;
+            float standTopY = _standingColliderOffset.y + _standingColliderSize.y * 0.5f + r;
+            float headHeight = standTopY - crouchTopY;
+            if (headHeight <= 0.02f)
+                return true;
+            float width = Mathf.Max(0.05f, (_standingColliderSize.x + r * 2f) - 0.04f);
+            Vector2 center = Position + new Vector2(_standingColliderOffset.x, crouchTopY + headHeight * 0.5f + 0.01f);
+            return Physics2D.OverlapBox(center, new Vector2(width, headHeight - 0.02f), 0f, _solidWallMask) == null;
+        }
+
         // ---------- Ledge ----------
 
         /// <summary>
