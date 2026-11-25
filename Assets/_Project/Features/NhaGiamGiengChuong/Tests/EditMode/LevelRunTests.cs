@@ -247,7 +247,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
         }
 
         [Test]
-        public void U16_InputActions_GamepadRollAndCrouchBindings_DoNotCollide()
+        public void InputActions_GamepadRollAndCrouchBindings_DoNotCollide()
         {
             const string inputActionsPath = "Assets/_Project/Settings/Input/InputSystem_Actions.inputactions";
             var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(inputActionsPath);
