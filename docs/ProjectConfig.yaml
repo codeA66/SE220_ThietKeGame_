@@ -3,7 +3,7 @@
 
 project_name: "SE220_ThietKeGame_"
 genre: "2D roguelite action-platformer (Dead Cells-like)"
-target_platforms: [Windows, WebGL, Android]
+target_platforms: [Windows, WebGL]
 
 # Unity
 unity_version: "6000.6.9f1"

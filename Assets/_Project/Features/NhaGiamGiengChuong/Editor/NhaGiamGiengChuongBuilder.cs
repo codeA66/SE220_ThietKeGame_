@@ -236,7 +236,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // 3. Build and save target scene
             BuildScene(spriteLit, particlesUnlit, palette);
 
-            // 4. Register scene in EditorBuildSettings (keeping Main_Level at index 0)
+            // 4. Register scene in EditorBuildSettings at index 0
             EnsureSceneInBuildSettings(ScenePath);
 
             AssetDatabase.SaveAssets();
@@ -3615,13 +3615,22 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
         {
             var scenes = EditorBuildSettings.scenes.ToList();
             int existingIndex = scenes.FindIndex(s => string.Equals(s.path, scenePath, StringComparison.OrdinalIgnoreCase));
-            if (existingIndex >= 0)
+            var entry = existingIndex >= 0
+                ? scenes[existingIndex]
+                : new EditorBuildSettingsScene(scenePath, true);
+            entry.enabled = true;
+            if (existingIndex > 0)
             {
-                scenes[existingIndex].enabled = true;
+                scenes.RemoveAt(existingIndex);
+                scenes.Insert(0, entry);
+            }
+            else if (existingIndex < 0)
+            {
+                scenes.Insert(0, entry);
             }
             else
             {
-                scenes.Add(new EditorBuildSettingsScene(scenePath, true));
+                scenes[0] = entry;
             }
             EditorBuildSettings.scenes = scenes.ToArray();
         }
