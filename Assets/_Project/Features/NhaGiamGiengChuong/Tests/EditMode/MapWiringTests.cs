@@ -1029,9 +1029,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.AreEqual(34, enemies.Length);
             Assert.AreEqual(5, enemies.Count(e => e.name.Contains("Grenadier")), "[A13/GrenadierCount] Expected 5 Enemy_Grenadier instances.");
 
-            // 1. 3 Scrolls of Power + ScrollAura_R5_* under _icon + _glow pointing to Scroll glow + PowerScrollInteraction + ScrollUpgradeMenu + ScrollPickupPresentation
+            // 1. 5 Scrolls of Power (3 main + 2 VaultA) + ScrollAura_R5_* under _icon + _glow pointing to Scroll glow + PowerScrollInteraction + ScrollUpgradeMenu + ScrollPickupPresentation
             var scrolls = Object.FindObjectsByType<PowerScrollPickup>(FindObjectsInactive.Include);
-            Assert.AreEqual(3, scrolls.Length, "[A13/ScrollCount] Expected 3 PowerScrollPickup instances.");
+            Assert.AreEqual(5, scrolls.Length, "[A13/ScrollCount] Expected 5 PowerScrollPickup instances.");
             foreach (var scroll in scrolls)
             {
                 var soScroll = new SerializedObject(scroll);
@@ -1072,8 +1072,10 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.AreEqual(40f, highBastionScroll.transform.position.y, GeometryAuditHelper.Eps, "[A13/I17ScrollY]");
             var soScrollInteraction = new SerializedObject(scrollInteraction);
             var registeredScrolls = soScrollInteraction.FindProperty("_scrolls");
-            Assert.AreEqual(3, registeredScrolls.arraySize, "[A13/ScrollRegistered] PowerScrollInteraction._scrolls must register all 3 scrolls.");
+            Assert.AreEqual(5, registeredScrolls.arraySize, "[A13/ScrollRegistered] PowerScrollInteraction._scrolls must register all 5 scrolls.");
             Assert.AreEqual(highBastionScroll, registeredScrolls.GetArrayElementAtIndex(2).objectReferenceValue, "[A13/ScrollRegisteredI17]");
+            Assert.AreEqual(scrolls.Single(s => s.name == "I20_Scroll_VaultA1"), registeredScrolls.GetArrayElementAtIndex(3).objectReferenceValue, "[A13/ScrollRegisteredI20]");
+            Assert.AreEqual(scrolls.Single(s => s.name == "I21_Scroll_VaultA2"), registeredScrolls.GetArrayElementAtIndex(4).objectReferenceValue, "[A13/ScrollRegisteredI21]");
 
             // 2. GoldWallet + EnemyGoldDrops (all 34 enemies registered) + GoldHud + GoldPickup Vfx sorting
             var wallet = Object.FindAnyObjectByType<DeadCells.Currency.GoldWallet>();
@@ -2803,6 +2805,84 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 foreach (var seg in chainSegs)
                     Assert.IsFalse(OverlapsAabb(seg.bounds, bay14, -0.02f, -0.02f), $"[A22/BibliChainBay14Clash/{seg.name}]");
             }
+        }
+
+        [Test]
+        public void A23_RoomVaultAWiring()
+        {
+            EditorSceneManager.OpenScene(GeometryAuditHelper.ScenePath, OpenSceneMode.Single);
+
+            // 1. Room A cracked masonry & Wall_A_West solid Ground collider intact
+            var masonry = Object.FindAnyObjectByType<CrackedMasonry>(FindObjectsInactive.Include);
+            Assert.IsNotNull(masonry, "[A23/CrackedMasonry] Missing I22_WallA_Masonry.");
+            Assert.IsNotNull(masonry.WallHealth, "[A23/MasonryHealth]");
+            Assert.AreEqual(1, masonry.WallHealth.Max, "[A23/MasonryMaxHp]");
+            Assert.IsNotNull(masonry.HurtboxCollider, "[A23/MasonryHurtbox]");
+            Assert.AreEqual(8, masonry.HurtboxCollider.gameObject.layer, "[A23/MasonryHurtboxLayer] Must sit on layer 8 (Enemy).");
+            Assert.IsTrue(masonry.HurtboxCollider.isTrigger, "[A23/MasonryHurtboxTrigger]");
+            var wallAWest = GameObject.Find("Wall_A_West")?.GetComponent<BoxCollider2D>();
+            Assert.IsNotNull(wallAWest, "[A23/WallAWestIntact]");
+            Assert.AreEqual(GeometryAuditHelper.LayerGround, wallAWest.gameObject.layer);
+
+            // 2. Room_VaultA prefab instance exists, starts inactive at rest, uses VaultVisualGrid & WallTapestry_04 (48 PPU)
+            var roomsRoot = GameObject.Find("Rooms");
+            Assert.IsNotNull(roomsRoot, "[A23/RoomsRoot]");
+            var vaultTr = roomsRoot.transform.Find("Room_VaultA");
+            Assert.IsNotNull(vaultTr, "[A23/RoomVaultAMissing]");
+            Assert.IsFalse(vaultTr.gameObject.activeSelf, "[A23/RoomVaultAInactiveAtRest]");
+
+            var vaultGrid = vaultTr.GetComponentInChildren<Grid>(true);
+            Assert.IsNotNull(vaultGrid, "[A23/VaultVisualGrid]");
+            Assert.AreEqual("VaultVisualGrid", vaultGrid.name);
+
+            var tapestrySr = vaultTr.GetComponentsInChildren<SpriteRenderer>(true)
+                .SingleOrDefault(sr => sr.sprite != null && sr.sprite.name == "WallTapestry_04");
+            Assert.IsNotNull(tapestrySr, "[A23/WallTapestry04]");
+            Assert.AreEqual(48f, tapestrySr.sprite.pixelsPerUnit, 0.01f, "[A23/Tapestry48Ppu]");
+            Assert.AreEqual(191.5f, tapestrySr.transform.position.x, 0.05f, "[A23/TapestryX]");
+            Assert.AreEqual(37.2f, tapestrySr.transform.position.y, 0.05f, "[A23/TapestryY]");
+
+            var vaultLights = vaultTr.GetComponentsInChildren<Light2D>(true)
+                .Where(l => l.lightType == Light2D.LightType.Point && l.intensity > 0.2f)
+                .ToArray();
+            Assert.GreaterOrEqual(vaultLights.Length, 3, "[A23/VaultALights]");
+
+            // 3. Entry/Exit PassageTransitions, ScreenFadeOverlay, ChamberFramingSequence & WallInscription
+            var passages = Object.FindObjectsByType<PassageTransition>(FindObjectsInactive.Include);
+            Assert.AreEqual(2, passages.Length, "[A23/PassageCount]");
+            var entry = passages.Single(p => p.name == "I22_VaultA_Entry");
+            var exit = passages.Single(p => p.name == "I23_VaultA_Exit");
+            Assert.AreEqual(entry, masonry.EntryPassage, "[A23/MasonryEntryLink]");
+            Assert.IsNotNull(entry.Fader, "[A23/EntryFader]");
+            Assert.IsNotNull(exit.Fader, "[A23/ExitFader]");
+            Assert.IsNotNull(entry.CameraFollow, "[A23/EntryCamera]");
+            Assert.IsNotNull(exit.CameraFollow, "[A23/ExitCamera]");
+
+            var seq = Object.FindAnyObjectByType<ChamberFramingSequence>(FindObjectsInactive.Include);
+            Assert.IsNotNull(seq, "[A23/FramingSequence]");
+            Assert.IsNotNull(seq.ChamberAudio, "[A23/ChamberAudio]");
+            Assert.IsNotNull(seq.ChamberAudio.clip, "[A23/ChamberAudioClip]");
+            Assert.AreEqual("RoomAmbient_VaultA", seq.ChamberAudio.clip.name, "[A23/ChamberAudioClipName]");
+            Assert.AreEqual(191.5f, seq.CameraFocusPoint.x, 0.05f);
+            Assert.AreEqual(37.2f, seq.CameraFocusPoint.y, 0.05f);
+            Assert.AreEqual(5.2f, seq.FocusOrthoSize, 0.05f);
+
+            var inscription = Object.FindAnyObjectByType<WallInscription>(FindObjectsInactive.Include);
+            Assert.IsNotNull(inscription, "[A23/WallInscription]");
+            Assert.AreEqual(inscription, seq.Inscription, "[A23/SeqInscriptionLink]");
+            Assert.IsFalse(inscription.IsUnlocked, "[A23/InscriptionStartsLocked]");
+            StringAssert.Contains("khoảng nắng chẳng bao giờ tắt", inscription.Body);
+            StringAssert.Contains("tình yêu thuần khiết và vĩnh hằng", inscription.Body);
+
+            // 4. Two VaultA PowerScrollPickups spaced >= 2.7u apart inside Room_VaultA
+            var s1 = GameObject.Find("I20_Scroll_VaultA1");
+            var s2 = GameObject.Find("I21_Scroll_VaultA2");
+            Assert.IsNotNull(s1, "[A23/ScrollVaultA1]");
+            Assert.IsNotNull(s2, "[A23/ScrollVaultA2]");
+            Assert.AreEqual(198.5f, s1.transform.position.x, GeometryAuditHelper.Eps);
+            Assert.AreEqual(29f, s1.transform.position.y, GeometryAuditHelper.Eps);
+            Assert.AreEqual(201.2f, s2.transform.position.x, GeometryAuditHelper.Eps);
+            Assert.AreEqual(29f, s2.transform.position.y, GeometryAuditHelper.Eps);
         }
 
         private readonly struct RoomVerticalSpan

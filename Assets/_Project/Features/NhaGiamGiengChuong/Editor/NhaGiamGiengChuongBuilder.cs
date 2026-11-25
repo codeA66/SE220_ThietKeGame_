@@ -31,7 +31,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
     /// builds Rooms/{CD,AB,G,HJK,ELF}.prefab, UI/ResultPanel.prefab,
     /// Assets/_Project/Scenes/NhaGiamGiengChuong.unity, and registers the scene in EditorBuildSettings.
     /// </summary>
-    public static class NhaGiamGiengChuongBuilder
+    public static partial class NhaGiamGiengChuongBuilder
     {
         public const string FeatureRoot = "Assets/_Project/Features/NhaGiamGiengChuong";
         public const string RoomsFolder = FeatureRoot + "/Rooms";
@@ -212,9 +212,10 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             if (particlesUnlit == null)
                 throw new InvalidOperationException("Missing material: " + ParticlesUnlitMatPath);
 
+            ConfigureVaultASpriteImporters();
             var palette = LoadPrisonPalette();
 
-            // 1. Build 9 Room Prefabs (5 Core Spine + 4 Expansion Wings)
+            // 1. Build 9 Room Prefabs (5 Core Spine + 4 Expansion Wings) + VaultA Chamber Prefab
             SaveRoomPrefab("CD", root => BuildRoomCD(root, spriteLit, spriteUnlit, palette));
             SaveRoomPrefab("AB", root => BuildRoomAB(root, spriteLit, spriteUnlit, palette));
             SaveRoomPrefab("G", root => BuildRoomG(root, spriteLit, spriteUnlit, palette));
@@ -224,6 +225,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             SaveRoomPrefab("W2_SewerCistern", root => BuildRoomW2_SewerCistern(root, spriteLit, spriteUnlit, palette));
             SaveRoomPrefab("W3_WestBastion", root => BuildRoomW3_WestBastion(root, spriteLit, spriteUnlit, palette));
             SaveRoomPrefab("U1_UpperPromenade", root => BuildRoomU1_UpperPromenade(root, spriteLit, spriteUnlit, palette));
+            SaveRoomPrefab("VaultA", root => BuildRoomVaultA(root, spriteLit, spriteUnlit, particlesUnlit, palette));
             EditorUtility.UnloadUnusedAssetsImmediate(true);
             GC.Collect();
 
@@ -2435,6 +2437,22 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // 10. Expanded Round 5/6 Atmosphere, 5x4 ParallaxFar, 4-tier ParallaxMid, 8 Mushrooms, 6 Mist, 6 Casters & Final Light2D Isolation
             BuildRound5SceneAtmosphereAndLighting(cam.transform, spriteLit, pal, playerGo, enemiesRoot);
 
+            // 11. Room A Weathered Masonry Alcove & Sunlit VaultA Chamber (saved inactive at rest)
+            var spriteUnlit = AssetDatabase.LoadAssetAtPath<Material>(SpriteUnlitMatPath);
+            BuildVaultAInScene(
+                roomsRoot,
+                interactionsRoot,
+                runController,
+                playerCtrl,
+                playerHealth,
+                playerCol,
+                inputActions,
+                camFollow,
+                playerHudGo,
+                spriteLit,
+                spriteUnlit,
+                particlesUnlit);
+
             EditorSceneManager.MarkSceneDirty(scene);
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
                 throw new InvalidOperationException("Failed to save scene: " + ScenePath);
@@ -2774,13 +2792,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 var scrollEast = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I11_Scroll_EastCourtyard", new Vector3(156.5f, 0f, 0f), 0, pal);
                 var scrollWest = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I12_Scroll_WestArmory", new Vector3(-95f, 24f, 0f), 1, pal);
                 var scrollHighBastion = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I17_Scroll_HighBastion", new Vector3(114f, 40f, 0f), 2, pal);
+                var scrollVaultA1 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I20_Scroll_VaultA1", new Vector3(198.5f, 29f, 0f), 3, pal);
+                var scrollVaultA2 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I21_Scroll_VaultA2", new Vector3(201.2f, 29f, 0f), 4, pal);
 
                 var soInteraction = new SerializedObject(scrollInteraction);
                 var scrollsProp = soInteraction.FindProperty("_scrolls");
-                scrollsProp.arraySize = 3;
+                scrollsProp.arraySize = 5;
                 scrollsProp.GetArrayElementAtIndex(0).objectReferenceValue = scrollEast;
                 scrollsProp.GetArrayElementAtIndex(1).objectReferenceValue = scrollWest;
                 scrollsProp.GetArrayElementAtIndex(2).objectReferenceValue = scrollHighBastion;
+                scrollsProp.GetArrayElementAtIndex(3).objectReferenceValue = scrollVaultA1;
+                scrollsProp.GetArrayElementAtIndex(4).objectReferenceValue = scrollVaultA2;
                 soInteraction.ApplyModifiedPropertiesWithoutUndo();
 
                 var soPlayer = new SerializedObject(playerCtrl);
