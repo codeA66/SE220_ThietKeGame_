@@ -122,14 +122,16 @@ namespace DeadCells.NhaGiamGiengChuong
             var health = ResolvePlayerHealth();
             var col = ResolvePlayerCollider();
             bool inTrigger = IsColliderInTrigger(col);
+            bool inputBlocked = IsInputBlocked();
             _promptVisible = !_consumed
                 && _run != null && _run.IsPlaying
+                && !inputBlocked
                 && health != null && health.IsAlive
                 && health.Current < health.Max
                 && inTrigger;
 
             if (_fullHealthFeedback != null &&
-                (!inTrigger || _consumed || _run == null || !_run.IsPlaying || health == null || !health.IsAlive || health.Current < health.Max))
+                (!inTrigger || _consumed || _run == null || !_run.IsPlaying || inputBlocked || health == null || !health.IsAlive || health.Current < health.Max))
             {
                 _fullHealthFeedback.SetActive(false);
             }
@@ -172,7 +174,7 @@ namespace DeadCells.NhaGiamGiengChuong
             if (_consumed || _isGranting)
                 return false;
 
-            if (_run == null || !_run.IsPlaying)
+            if (_run == null || !_run.IsPlaying || IsInputBlocked())
                 return false;
 
             var expectedCollider = ResolvePlayerCollider();
@@ -280,6 +282,12 @@ namespace DeadCells.NhaGiamGiengChuong
 
         private PlayerController ResolvePlayer() =>
             _player != null ? _player : (_run != null ? _run.Player : null);
+
+        private bool IsInputBlocked()
+        {
+            var p = ResolvePlayer();
+            return p != null && ((p.RunStats != null && p.RunStats.BlocksGameplayInput) || p.IsInScriptedSequence);
+        }
 
         private BoxCollider2D ResolvePlayerCollider()
         {
