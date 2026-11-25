@@ -72,3 +72,12 @@ Thumbs.db
 /*MASTER PROMPT*.md
 /tools/caveman-posttooluse.patch
 /tools/fortress/
+/.agents/
+/.codex/
+/codegraph.json
+/.graphifyignore
+/docs/superpowers/
+/docs/Fortress/
+/docs/Prompt-Lap-Plan-Nha-Giam-Gieng-Chuong.md
+/docs/Plan-Trien-Khai-Nha-Giam-Gieng-Chuong.md
+/docs/UnityConnection.md
