@@ -49,9 +49,12 @@ namespace DeadCells.Enemies.States
             Ctx.StartSkillCooldown(_skillIndex);
         }
 
-        public override void Tick()
+        public override void Tick() => Tick(Time.deltaTime);
+
+        /// <summary>Deterministic overload for EditMode tests driving Charge / Execute / Recover timers.</summary>
+        public void Tick(float deltaTime)
         {
-            _phaseTimer += Time.deltaTime;
+            _phaseTimer += deltaTime;
             switch (_phase)
             {
                 case Phase.Charge:

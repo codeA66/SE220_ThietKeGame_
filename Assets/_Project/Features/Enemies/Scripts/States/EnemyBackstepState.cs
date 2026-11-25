@@ -11,6 +11,7 @@ namespace DeadCells.Enemies.States
     {
         private static readonly int BackstepAnim = Animator.StringToHash("Backstep");
         private const float HopSpeed = 3f;
+        private const float MaxGroundedWait = 1.0f;
 
         private float _timer;
         private int _awayDir;
@@ -28,10 +29,13 @@ namespace DeadCells.Enemies.States
 
         public override void Exit() => Ctx.NextBackstepTime = Time.time + Ctx.Data.BackstepCooldown;
 
-        public override void Tick()
+        public override void Tick() => Tick(Time.deltaTime);
+
+        /// <summary>Deterministic overload for EditMode tests driving BackstepDuration and MaxGroundedWait.</summary>
+        public void Tick(float deltaTime)
         {
-            _timer += Time.deltaTime;
-            if (_timer >= Ctx.Data.BackstepDuration && Ctx.IsGrounded)
+            _timer += deltaTime;
+            if (_timer >= Ctx.Data.BackstepDuration && (Ctx.IsGrounded || _timer >= Ctx.Data.BackstepDuration + MaxGroundedWait))
                 Machine.ChangeState(Machine.Chase);
         }
 
