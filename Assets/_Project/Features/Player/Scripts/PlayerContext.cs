@@ -624,9 +624,10 @@ namespace DeadCells.Player
                 return;
             if (crouching)
             {
-                float h = Config.CrouchColliderHeight;
-                _collider.size = new Vector2(_standingColliderSize.x, h);
-                _collider.offset = new Vector2(_standingColliderOffset.x, h * 0.5f);
+                float r = _collider.edgeRadius;
+                float innerH = Mathf.Max(0.05f, Config.CrouchColliderHeight - r * 2f);
+                _collider.size = new Vector2(_standingColliderSize.x, innerH);
+                _collider.offset = new Vector2(_standingColliderOffset.x, innerH * 0.5f + r);
             }
             else
             {
