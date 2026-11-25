@@ -123,6 +123,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             public Sprite ArchJamb;
             public Sprite[] ArchSills;
             public Sprite[] ArchJambs;
+            public Sprite[] StoneWalls;
             public Sprite ArchSpandrel;
             public Sprite ArchMullion;
             public Sprite[] ShelfVials;
@@ -360,6 +361,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                     LoadSpriteAtPath(PrisonPropSpriteGenerator.ArchJamb01AssetPath),
                     LoadSpriteAtPath(PrisonPropSpriteGenerator.ArchJamb02AssetPath),
                 },
+                StoneWalls = Enumerable.Range(0, 4).Select(i => LoadPrisonSprite($"stoneWall_{i}_00.png")).ToArray(),
                 ArchSpandrel = LoadSpriteAtPath(PrisonPropSpriteGenerator.ArchSpandrelAssetPath),
                 ArchMullion = LoadSpriteAtPath(PrisonPropSpriteGenerator.ArchMullionAssetPath),
                 ShelfVials = new[]
@@ -765,6 +767,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonOuterWall(solidTm, pal, -30.5f, -30f, 28f, 31f);
             PaintPrisonCeiling(solidTm, rimTm, pal, -16f, 22f, 22.5f, 23f);
             PaintPrisonCeiling(solidTm, rimTm, pal, -30f, -16f, 30.5f, 31f);
+            PaintVisualDirtSkirt(solidTm, pal, -30, -16, 31, 45);
 
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_H_EastUpper_22", 22f, 14f, 22.5f);
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_HJ_Header_6", 6f, 20f, 22.5f);
@@ -857,9 +860,11 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonOuterWall(solidTm, pal, 38f, 38.5f, 28f, 39f);
             PaintPrisonCeiling(solidTm, rimTm, pal, 22f, 38f, 38.5f, 39f);
 
-            // Wall_F_West [-0.5, 0]x[31, 38.5]: cy=31 belongs to Ceiling_E_West (-1, 31), so tile cy=32..38.5 + seamless sprite beam [31..38.5]
+            // Wall_F_West [-0.5, 0]x[31, 38.5]: fill full exterior bedrock [-16..0, 31..45] first so cx=-1 has zero 0.5u slit, then dress carved wall face
+            PaintVisualDirtSkirt(solidTm, pal, -16, 0, 31, 45);
+            PaintVisualDirtSkirt(solidTm, pal, 0, 38, 39, 45);
             PaintPrisonOuterWall(solidTm, pal, -0.5f, 0f, 32f, 38.5f);
-            AddSolidBeamSprite(artRoot, "Beam_F_West", pal.DirtSprite, mat, -0.25f, 31f, 38.5f);
+            AddCarvedDividerWall(artRoot, "Beam_F_West", pal, mat, -0.25f, 31f, 38.5f);
             PaintPrisonCeiling(solidTm, rimTm, pal, 0f, 22f, 38f, 38.5f);
 
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_EL_Header_22", 22f, 28f, 31f);
@@ -898,25 +903,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddFloorJunkCluster(artRoot, "Art_L_JunkMid", pal, mat, 29.8f, 24f, 3);
             AddFloorJunkCluster(artRoot, "Art_L_JunkEast", pal, mat, 35.2f, 24f, 5);
 
-            // Room F Exit Arch + Grounded PortalBackOut_0_00 Emissive HDR Glow + Warm Beacon Light2D (A08 compatible)
+            // Room F Exit Arch + Warm Beacon Light2D (closed gate visual; zero glowing fake-room square box over door)
             AddGroundedPrisonSprite(artRoot, "Art_F_ExitArch", pal.ExitDoor, mat, 5f, 32f, 0.80f, -5, Color.white);
             var exitGlowGo = CreateChild(artRoot, "Art_F_ExitGlow");
-            const float exitGlowScale = 0.55f;
-            exitGlowGo.transform.position = new Vector3(5f, 32f - pal.PortalBackOut.bounds.min.y * exitGlowScale, 0f);
-            exitGlowGo.transform.localScale = new Vector3(exitGlowScale, exitGlowScale, 1f);
-            var exitGlowSr = exitGlowGo.AddComponent<SpriteRenderer>();
-            exitGlowSr.sprite = pal.PortalBackOut;
-            exitGlowSr.sharedMaterial = pal.MatEmissiveExit;
-            exitGlowSr.sortingLayerID = SortingLayerSetup.GetSortingLayerId("Background");
-            exitGlowSr.sortingOrder = -6;
-            exitGlowSr.color = new Color(1f, 0.92f, 0.65f, 0.45f);
+            exitGlowGo.transform.position = new Vector3(5f, 33.6f, 0f);
             var exitGlowLight = exitGlowGo.AddComponent<Light2D>();
             exitGlowLight.lightType = Light2D.LightType.Point;
             exitGlowLight.color = new Color(1f, 0.92f, 0.65f, 1f);
-            exitGlowLight.intensity = 1.40f;
+            exitGlowLight.intensity = 1.30f;
             exitGlowLight.pointLightOuterRadius = 7.2f;
             exitGlowLight.pointLightInnerRadius = 1.4f;
-            ConfigureGameplayPointLight(exitGlowLight, enableVolumetric: true, volumeIntensity: 0.09f, addFlicker: true, phaseSeed: 5f);
+            ConfigureGameplayPointLight(exitGlowLight, enableVolumetric: true, volumeIntensity: 0.08f, addFlicker: true, phaseSeed: 5f);
 
             AddVerticalRoomBanner(artRoot, "Art_F_Banner", pal, mat, 12.5f, 37.2f, -12);
             AddShelfWithFioles(artRoot, "Art_F_Shelf", pal, mat, 18.2f, 34.6f, -11);
@@ -988,12 +985,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             PaintPrisonCeiling(solidTm, rimTm, pal, 76f, 164f, 22.5f, 23f);
 
-            // Outer east bedrock (seals Wall_MN_East [164..164.5] and outer east margin [164..168] seamlessly)
+            // Outer east bedrock (seals Wall_MN_East [164..164.5], outer east margin [164..168], and overhang east of Room T [144..168, 23..39])
             PaintVisualDirtSkirt(solidTm, pal, 164, 168, -1, 23);
+            PaintVisualDirtSkirt(solidTm, pal, 144, 168, 23, 39);
 
-            // Wall_N_WestUpper_76 [76, 76.5]x[15, 22.5]: cy=22 belongs to Ceiling_N (76, 22), so tile cy=15..22 + seamless beam
+            // Wall_N_WestUpper_76 [76, 76.5]x[15, 22.5]: cy=22 belongs to Ceiling_N (76, 22), so tile cy=15..22 + carved wall
             PaintPrisonOuterWall(solidTm, pal, 76f, 76.5f, 15f, 22f);
-            AddSolidBeamSprite(artRoot, "Beam_N_WestUpper_76", pal.DirtSprite, mat, 76.25f, 15f, 22.5f);
+            AddCarvedDividerWall(artRoot, "Beam_N_WestUpper_76", pal, mat, 76.25f, 15f, 22.5f);
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_M_VaultHeader_150", 150f, 4f, 7f);
             AddInterTierSlabStrata(artRoot, pal, mat, "W1_MtoN_West", 76f, 101f, 7.45f);
             AddInterTierSlabStrata(artRoot, pal, mat, "W1_MtoN_East", 107f, 164f, 7.45f);
@@ -1183,27 +1181,19 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddGroundedPrisonSprite(artRoot, "Art_O_CellDoor1", pal.SmallDoor, mat, 90.0f, -16f, 1.0f, -13, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_O_CellDoor2", pal.BigDoor0, mat, 154.0f, -16f, 0.90f, -14, Color.white);
 
-            // Room P Hero Landmarks + Grounded PortalBackOut_0_00 Emissive HDR Glow + Warm Beacon Light2D
+            // Room P Hero Landmarks + Warm Beacon Light2D (closed sewer gate — zero glowing fake-room square box over door)
             AddGroundedPrisonSprite(artRoot, "Art_P_CorruptedDoor", pal.HingeCorruptedDoor, mat, 174f, -16f, 0.85f, -13, Color.white);
             AddGroundedPrisonSprite(artRoot, "Art_P_SewerExitDoor", pal.ExitDoorSewerShort, mat, 224f, -16f, 0.85f, -5, Color.white);
 
             var exitGlowGo = CreateChild(artRoot, "Art_P_ExitGlow");
-            const float exitGlowScale = 0.55f;
-            exitGlowGo.transform.position = new Vector3(224f, -16f - pal.PortalBackOut.bounds.min.y * exitGlowScale, 0f);
-            exitGlowGo.transform.localScale = new Vector3(exitGlowScale, exitGlowScale, 1f);
-            var exitGlowSr = exitGlowGo.AddComponent<SpriteRenderer>();
-            exitGlowSr.sprite = pal.PortalBackOut;
-            exitGlowSr.sharedMaterial = pal.MatEmissiveExit;
-            exitGlowSr.sortingLayerID = SortingLayerSetup.GetSortingLayerId("Ground");
-            exitGlowSr.sortingOrder = -4;
-            exitGlowSr.color = new Color(1f, 0.92f, 0.65f, 0.45f);
+            exitGlowGo.transform.position = new Vector3(224f, -14.2f, 0f);
             var exitGlowLight = exitGlowGo.AddComponent<Light2D>();
             exitGlowLight.lightType = Light2D.LightType.Point;
-            exitGlowLight.color = new Color(1f, 0.92f, 0.65f, 1f);
-            exitGlowLight.intensity = 1.40f;
+            exitGlowLight.color = new Color(0.85f, 0.96f, 0.68f, 1f);
+            exitGlowLight.intensity = 1.25f;
             exitGlowLight.pointLightOuterRadius = 7.2f;
             exitGlowLight.pointLightInnerRadius = 1.4f;
-            ConfigureGameplayPointLight(exitGlowLight, enableVolumetric: true, volumeIntensity: 0.09f, addFlicker: true, phaseSeed: 224f);
+            ConfigureGameplayPointLight(exitGlowLight, enableVolumetric: true, volumeIntensity: 0.08f, addFlicker: true, phaseSeed: 224f);
 
             // Lighting: Room O (5 floor + 4 ceiling @ r=10.0f) & Room P (4 floor + 3 ceiling @ r=10.0f + Art_P_ExitGlow)
             // Phase 2 (P1-02 & P1-03): Room O & P Windows with GodRays, Piers, Arches, Cages & Storytelling Clusters
@@ -1319,12 +1309,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonCeilingRimOnly(rimTm, pal, -63f, -30f, 23f);
 
             PaintPrisonCeiling(solidTm, rimTm, pal, -102f, -30f, 38.5f, 39f);
-            // Outer west bedrock (seals Wall_QR_West [-102.5..-102] and outer west margin [-106..-102] flush with bottom skirt)
-            PaintVisualDirtSkirt(solidTm, pal, -106, -102, 15, 39);
+            // Outer west bedrock + top ceiling bedrock (seals camera top above Ceiling_R so zero parallax peeks over ceiling)
+            PaintVisualDirtSkirt(solidTm, pal, -106, -102, 15, 45);
+            PaintVisualDirtSkirt(solidTm, pal, -102, -30, 39, 45);
 
-            // Wall_R_EastUpper_Neg30 [-30.5, -30]x[31, 38.5]: cy=38 belongs to Ceiling_R (-31, 38), so tile cy=31..38 + seamless beam
+            // Wall_R_EastUpper_Neg30 [-30.5, -30]x[31, 38.5]: cy=38 belongs to Ceiling_R (-31, 38), so tile cy=31..38 + carved wall
             PaintPrisonOuterWall(solidTm, pal, -30.5f, -30f, 31f, 38f);
-            AddSolidBeamSprite(artRoot, "Beam_R_EastUpper_Neg30", pal.DirtSprite, mat, -30.25f, 31f, 38.5f);
+            AddCarvedDividerWall(artRoot, "Beam_R_EastUpper_Neg30", pal, mat, -30.25f, 31f, 38.5f);
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_R_ArmoryHeader_Neg88", -88f, 28f, 38.5f);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "W3_Sub", -106, -30, 7, 15);
             AddInterTierSlabStrata(artRoot, pal, mat, "W3_QtoR_West", -102f, -69f, 23.45f);
@@ -1468,15 +1459,18 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonSolidFloor(solidTm, rimTm, pal, 83f, 140f, 39f, 40f);
             PaintPrisonCeilingRimOnly(rimTm, pal, 83f, 92f, 39f);
 
-            // Wall_S_East lower portion [23..31] + seamless overhang bedrock [92..144, 31..39] below Floor_T_East
+            // Wall_S_East + complete bedrock fill [92..144, 23..39] BEFORE half-cell outer wall so cx=92 has zero 0.5u parallax slit
+            PaintVisualDirtSkirt(solidTm, pal, 92, 144, 23, 39);
             PaintPrisonOuterWall(solidTm, pal, 92f, 92.5f, 23f, 31f);
-            PaintVisualDirtSkirt(solidTm, pal, 92, 144, 31, 39);
 
             PaintPrisonCeiling(solidTm, rimTm, pal, 38f, 140f, 62.5f, 63f);
+            PaintVisualDirtSkirt(solidTm, pal, 34, 144, 63, 68);
+            PaintVisualDirtSkirt(solidTm, pal, 34, 38, 39, 63);
+            PaintVisualDirtSkirt(solidTm, pal, 140, 144, 39, 63);
             PaintPrisonOuterWall(solidTm, pal, 37.5f, 38f, 39f, 63f);
             PaintPrisonOuterWall(solidTm, pal, 140f, 140.5f, 39f, 63f);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "U1_SubE", 56, 76, 15, 23);
-            AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "U1_Overhang", 92, 144, 31, 39);
+            AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "U1_Overhang", 92, 144, 23, 39);
             AddInterTierSlabStrata(artRoot, pal, mat, "U1_StoT_West", 38f, 77f, 39.45f);
             AddInterTierSlabStrata(artRoot, pal, mat, "U1_StoT_East", 83f, 140f, 39.45f);
 
@@ -1515,31 +1509,23 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             AddFullHeightStonePilaster(artRoot, "Art_T_Pillar2", pal, mat, 109.75f, 40f, 62.5f);
             AddGroundedPrisonSprite(artRoot, "Art_T_CourtyardArch", pal.ExitDoorPrisonCourtyard, mat, 126.0f, 40f, 0.80f, -13, Color.white);
 
-            // P0-04 Part B: the courtyard arch is now a live Promenade biome exit — warm golden emissive glow + beacon in front of it
+            // Promenade biome exit warm beacon Light2D (closed courtyard gate — zero glowing fake-room square box over arch)
             var promenadeGlowGo = CreateChild(artRoot, "Art_T_ExitGlow");
-            const float promenadeGlowScale = 0.55f;
-            promenadeGlowGo.transform.position = new Vector3(126f, 40f - pal.PortalBackOut.bounds.min.y * promenadeGlowScale, 0f);
-            promenadeGlowGo.transform.localScale = new Vector3(promenadeGlowScale, promenadeGlowScale, 1f);
-            var promenadeGlowSr = promenadeGlowGo.AddComponent<SpriteRenderer>();
-            promenadeGlowSr.sprite = pal.PortalBackOut;
-            promenadeGlowSr.sharedMaterial = pal.MatEmissiveExit;
-            promenadeGlowSr.sortingLayerID = SortingLayerSetup.GetSortingLayerId("Ground");
-            promenadeGlowSr.sortingOrder = -4;
-            promenadeGlowSr.color = new Color(1f, 0.92f, 0.65f, 0.45f);
+            promenadeGlowGo.transform.position = new Vector3(126f, 41.8f, 0f);
             var promenadeGlowLight = promenadeGlowGo.AddComponent<Light2D>();
             promenadeGlowLight.lightType = Light2D.LightType.Point;
             promenadeGlowLight.color = new Color(1f, 0.92f, 0.65f, 1f);
-            promenadeGlowLight.intensity = 1.40f;
+            promenadeGlowLight.intensity = 1.30f;
             promenadeGlowLight.pointLightOuterRadius = 7.2f;
             promenadeGlowLight.pointLightInnerRadius = 1.4f;
-            ConfigureGameplayPointLight(promenadeGlowLight, enableVolumetric: true, volumeIntensity: 0.09f, addFlicker: true, phaseSeed: 126f);
+            ConfigureGameplayPointLight(promenadeGlowLight, enableVolumetric: true, volumeIntensity: 0.08f, addFlicker: true, phaseSeed: 126f);
 
             // Phase 2 (P1-02 & P1-03): Room S & T Windows with GodRays, Banners, Arches, Cages, Shelves & Storytelling Clusters
             AddWindowWithGodray(artRoot, "Art_S_Window1", mat, unlitMat, pal, new Vector2(60.0f, 35.2f));
             AddWindowWithGodray(artRoot, "Art_S_Window2", mat, unlitMat, pal, new Vector2(89.5f, 34.0f));
             AddPrisonSpriteProp(artRoot, "Art_S_BannerBig1", pal.BannerBig, pal.MatBannerSway, new Vector2(84.8f, 34.0f), 0.82f, -12, Color.white);
-            AddShelfWithFioles(artRoot, "Art_S_Shelf1", pal, mat, 86.5f, 26.2f, -11);
-            AddShelfWithFioles(artRoot, "Art_S_Shelf2", pal, mat, 89.5f, 26.2f, -11);
+            AddShelfWithFioles(artRoot, "Art_S_Shelf1", pal, mat, 86.2f, 26.2f, -11, variant: 0);
+            AddShelfWithFioles(artRoot, "Art_S_Shelf2", pal, mat, 89.8f, 25.75f, -11, variant: 1);
             AddScaledCeilingProp(artRoot, "Art_S_Cage1", pal.SuspendedCage, mat, 58.5f, 39f, 1.0f, -7, Color.white);
             AddFloorJunkCluster(artRoot, "Art_S_Junk1", pal, mat, 53.4f, 24f, 3);
             AddFloorJunkCluster(artRoot, "Art_S_JunkMid1", pal, mat, 78.0f, 24f, 1);
@@ -1767,8 +1753,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             rect.anchorMin = new Vector2(1f, 0f);
             rect.anchorMax = new Vector2(1f, 0f);
             rect.pivot = new Vector2(1f, 0f);
-            rect.anchoredPosition = new Vector2(-20f, 18f);
-            rect.sizeDelta = new Vector2(610f, 34f);
+            // Offset clear to the left of the bottom-right Run stats strip ([Brutality][Tactics][Survival]) so zero HUD overlap occurs
+            rect.anchoredPosition = new Vector2(-280f, 18f);
+            rect.sizeDelta = new Vector2(590f, 34f);
 
             var bg = badgeGo.AddComponent<UnityEngine.UI.Image>();
             bg.color = new Color(0.05f, 0.06f, 0.10f, 0.72f);
@@ -2322,13 +2309,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             soGate.FindProperty("_gateBarrierRoot").objectReferenceValue = gateBarrier;
             soGate.ApplyModifiedPropertiesWithoutUndo();
 
-            // I5: Exit Trigger at F center (5, 33), size (2, 2)
+            // I5: Exit Trigger at F center (5, 33), size (2, 2) — requires standing in front & pressing [E]
             var exitGo = CreateChild(interactionsRoot, "I5_ExitTrigger");
             exitGo.transform.position = new Vector3(5f, 33f, 0f);
             var exitCol = exitGo.AddComponent<BoxCollider2D>();
             exitCol.isTrigger = true;
             exitCol.offset = Vector2.zero;
             exitCol.size = new Vector2(2f, 2f);
+            var exitPromptGo = CreateChild(exitGo, "PromptIndicator");
+            BuildWorldPromptBadge(exitPromptGo, "[E] Rời khỏi Ngục Giếng Chuông", new Color(1f, 0.90f, 0.50f, 1f), 360f);
+            exitPromptGo.transform.localPosition = new Vector3(0f, 1.45f, 0f);
+            exitPromptGo.SetActive(false);
             var exitTrigger = exitGo.AddComponent<ExitTrigger>();
             var soExit = new SerializedObject(exitTrigger);
             soExit.FindProperty("_run").objectReferenceValue = runController;
@@ -2336,6 +2327,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             soExit.FindProperty("_player").objectReferenceValue = playerCtrl;
             soExit.FindProperty("_playerHealth").objectReferenceValue = playerHealth;
             soExit.FindProperty("_playerCollider").objectReferenceValue = playerCol;
+            soExit.FindProperty("_inputActions").objectReferenceValue = inputActions;
+            soExit.FindProperty("_promptIndicator").objectReferenceValue = exitPromptGo;
             soExit.ApplyModifiedPropertiesWithoutUndo();
 
             // 3 Copper Switch Doors (SD_1_EastVault, SD_2_SewerExit, SD_3_WestArmory)
@@ -2364,8 +2357,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 "Kẻ vượt Ngục Giếng Chuông chọn một trong hai lối thoát:\nHành Lang Tử Tù phía trên hoặc Cống Ngầm Độc Dược phía dưới.",
                 "[E] Đọc biên niên sử Ngục Tối");
 
-            // I15: Secondary Biome Exit Trigger ("Toxic Sewers") at (224, -15) in Room P
-            CreateSecondaryBiomeExitTrigger(interactionsRoot, "I15_SewerExitTrigger", "Toxic Sewers", new Vector2(224f, -15f), runController, sd2SewerExit, shieldP1, archerP1, playerCtrl, playerHealth, playerCol);
+            // I15: Secondary Biome Exit Trigger ("Toxic Sewers") at (224, -15) in Room P — requires [E] press when unlocked
+            CreateSecondaryBiomeExitTrigger(interactionsRoot, "I15_SewerExitTrigger", "Toxic Sewers", new Vector2(224f, -15f), runController, sd2SewerExit, shieldP1, archerP1, playerCtrl, playerHealth, playerCol, inputActions);
 
             // P0-04 Part B (Room N): 2nd lore tablet explains the Bell-Well uprising and points at the Promenade exit above Room S/T
             CreateLoreTablet(interactionsRoot, "I19_LoreTablet_NorthGallery", new Vector2(152.5f, 8f), runController, playerCtrl, playerHealth, playerCol, inputActions,
@@ -2373,8 +2366,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 "Đêm Giếng Chuông, tù nhân đập vỡ chuông để báo hiệu khởi nghĩa;\nnhững kẻ sống sót trèo lên Thượng Thành — lối ra Promenade nằm ngay trên Hành Lang Tử Tù.",
                 "[E] Đọc nhật ký Cai Ngục");
 
-            // P0-04 Part B (Room T): the courtyard arch becomes a live, door-less secondary biome exit guarded by Zone T1
-            CreateSecondaryBiomeExitTrigger(interactionsRoot, "I18_PromenadeExitTrigger", "Promenade of the Condemned", new Vector2(126f, 41.2f), runController, null, shieldT1, grenadierT1, playerCtrl, playerHealth, playerCol, new Vector2(2.2f, 2.4f));
+            // P0-04 Part B (Room T): the courtyard arch becomes a live, door-less secondary biome exit guarded by Zone T1 — requires [E] press when unlocked
+            CreateSecondaryBiomeExitTrigger(interactionsRoot, "I18_PromenadeExitTrigger", "Promenade of the Condemned", new Vector2(126f, 41.2f), runController, null, shieldT1, grenadierT1, playerCtrl, playerHealth, playerCol, inputActions, new Vector2(2.2f, 2.4f));
 
             // 9. UI: PlayerHUD.prefab + ResultPanel.prefab + EventSystem (UI action map)
             var playerHudPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerHudPrefabPath);
@@ -2701,6 +2694,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PlayerController player,
             Health playerHealth,
             BoxCollider2D playerCol,
+            InputActionAsset inputActions,
             Vector2 triggerSize = default)
         {
             var root = CreateChild(parent, name);
@@ -2720,6 +2714,11 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             lockedGo.transform.localPosition = new Vector3(0f, 1.45f, 0f);
             lockedGo.SetActive(false);
 
+            var promptGo = CreateChild(root, "PromptIndicator");
+            BuildWorldPromptBadge(promptGo, $"[E] Vào {biomeName}", new Color(1f, 0.90f, 0.50f, 1f), 340f);
+            promptGo.transform.localPosition = new Vector3(0f, 1.45f, 0f);
+            promptGo.SetActive(false);
+
             var exit = root.AddComponent<SecondaryBiomeExitTrigger>();
             var so = new SerializedObject(exit);
             so.FindProperty("_exitId").stringValue = name;
@@ -2731,7 +2730,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             so.FindProperty("_player").objectReferenceValue = player;
             so.FindProperty("_playerHealth").objectReferenceValue = playerHealth;
             so.FindProperty("_playerCollider").objectReferenceValue = playerCol;
+            so.FindProperty("_inputActions").objectReferenceValue = inputActions;
             so.FindProperty("_lockedPromptIndicator").objectReferenceValue = lockedGo;
+            so.FindProperty("_promptIndicator").objectReferenceValue = promptGo;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -2792,8 +2793,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 var scrollEast = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I11_Scroll_EastCourtyard", new Vector3(156.5f, 0f, 0f), 0, pal);
                 var scrollWest = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I12_Scroll_WestArmory", new Vector3(-95f, 24f, 0f), 1, pal);
                 var scrollHighBastion = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I17_Scroll_HighBastion", new Vector3(114f, 40f, 0f), 2, pal);
-                var scrollVaultA1 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I20_Scroll_VaultA1", new Vector3(198.5f, 29f, 0f), 3, pal);
-                var scrollVaultA2 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I21_Scroll_VaultA2", new Vector3(201.2f, 29f, 0f), 4, pal);
+                var scrollVaultA1 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I20_Scroll_VaultA1", new Vector3(199.6f, 29f, 0f), 3, pal);
+                var scrollVaultA2 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I21_Scroll_VaultA2", new Vector3(202.3f, 29f, 0f), 4, pal);
 
                 var soInteraction = new SerializedObject(scrollInteraction);
                 var scrollsProp = soInteraction.FindProperty("_scrolls");
@@ -4152,12 +4153,83 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 if (h <= 0.001f)
                     continue;
                 float offsetY = (rowMin + rowMax) * 0.5f - (cy + 0.5f);
-                var matrix = Matrix4x4.TRS(new Vector3(offsetX, offsetY, 0f), Quaternion.identity, new Vector3(0.5f, h, 1f));
+                // Keep inner core narrow (0.36u) so notched carved stone masonry defines the visible edges
+                var matrix = Matrix4x4.TRS(new Vector3(offsetX, offsetY, 0f), Quaternion.identity, new Vector3(0.36f, h, 1f));
                 SetTileWithMatrix(solidTm, cell, pal.Dirt, matrix);
             }
 
-            // 2. Seamless exact [centerX - 0.25, centerX + 0.25] x [yMin, yMax] dirt_00.png beam so zero 0.5u notches appear at junctions
-            AddSolidBeamSprite(artRoot, beamName, pal.DirtSprite, mat, centerX, yMin, yMax);
+            // 2. Dress the room-divider wall as true carved Dead Cells stone masonry (notched stone silhouette + normal-mapped cut-stone faces + lintel cap)
+            AddCarvedDividerWall(artRoot, beamName, pal, mat, centerX, yMin, yMax);
+        }
+
+        private static void AddCarvedDividerWall(GameObject parent, string name, PrisonPalette pal, Material mat, float centerX, float yMin, float yMax)
+        {
+            float height = yMax - yMin;
+            if (height <= 0.05f)
+                return;
+
+            int groundLayerId = SortingLayerSetup.GetSortingLayerId("Ground");
+            var container = CreateChild(parent, name);
+            container.transform.position = new Vector3(centerX, (yMin + yMax) * 0.5f, 0f);
+
+            int seed = Mathf.Abs(Mathf.RoundToInt(centerX * 13f + yMin * 7f));
+            var masonryTint = new Color(0.76f, 0.84f, 0.78f, 0.96f);
+            var capTint = new Color(0.80f, 0.86f, 0.80f, 1f);
+
+            // A. Notched stone-block core silhouette (stoneWall_0..3) stacked along full height
+            int blockCount = Mathf.Max(1, Mathf.CeilToInt(height));
+            float stepH = height / blockCount;
+            for (int i = 0; i < blockCount; i++)
+            {
+                float wy = yMin + (i + 0.5f) * stepH;
+                var coreGo = CreateChild(container, $"{name}_StoneCore_{i}");
+                coreGo.transform.position = new Vector3(centerX, wy, 0f);
+                var sw = pal.StoneWalls[(seed + i) % pal.StoneWalls.Length];
+                float sy = stepH / Mathf.Max(0.25f, sw.bounds.size.y);
+                coreGo.transform.localScale = new Vector3(0.88f, sy * 1.04f, 1f);
+                var sr = coreGo.AddComponent<SpriteRenderer>();
+                sr.sprite = sw;
+                sr.sharedMaterial = mat;
+                sr.sortingLayerID = groundLayerId;
+                sr.sortingOrder = -5;
+                sr.flipX = ((seed + i) & 1) == 0;
+                sr.color = Color.white;
+            }
+
+            // B. Normal-mapped cut-stone vertical masonry faces (ArchJambs) on both left & right sides so torches highlight stone courses
+            int jambRows = Mathf.Max(1, Mathf.CeilToInt(height / 1.45f));
+            float jambStep = height / jambRows;
+            for (int i = 0; i < jambRows; i++)
+            {
+                float wy = yMin + (i + 0.5f) * jambStep;
+                var jambSp = pal.ArchJambs[(seed + i) % pal.ArchJambs.Length];
+                float sy = jambStep / Mathf.Max(0.25f, jambSp.bounds.size.y);
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var faceGo = CreateChild(container, $"{name}_Face{(side < 0 ? "L" : "R")}_{i}");
+                    faceGo.transform.position = new Vector3(centerX + side * 0.13f, wy, 0f);
+                    faceGo.transform.localScale = new Vector3(0.58f, sy * 1.02f, 1f);
+                    var sr = faceGo.AddComponent<SpriteRenderer>();
+                    sr.sprite = jambSp;
+                    sr.sharedMaterial = mat;
+                    sr.sortingLayerID = groundLayerId;
+                    sr.sortingOrder = -4;
+                    sr.flipX = side > 0;
+                    sr.color = masonryTint;
+                }
+            }
+
+            // C. Carved stone lintel soffit cap at bottom end (yMin) so hanging dividers terminate with masonry weight
+            var sillSp = pal.ArchSills[seed % pal.ArchSills.Length];
+            var capGo = CreateChild(container, $"{name}_Cap");
+            capGo.transform.position = new Vector3(centerX, yMin + 0.14f, 0f);
+            capGo.transform.localScale = new Vector3(0.68f, 0.72f, 1f);
+            var capSr = capGo.AddComponent<SpriteRenderer>();
+            capSr.sprite = sillSp;
+            capSr.sharedMaterial = mat;
+            capSr.sortingLayerID = groundLayerId;
+            capSr.sortingOrder = -3;
+            capSr.color = capTint;
         }
 
         private static void AddSolidBeamSprite(GameObject parent, string name, Sprite dirtSprite, Material mat, float centerX, float yMin, float yMax)
@@ -4863,14 +4935,17 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             pin.Configure(topY, spanHeight, true);
         }
 
-        private static void AddShelfWithFioles(GameObject parent, string name, PrisonPalette pal, Material mat, float x, float y, int sortingOrder)
+        private static void AddShelfWithFioles(GameObject parent, string name, PrisonPalette pal, Material mat, float x, float y, int sortingOrder, int variant = 0)
         {
             var container = CreateChild(parent, name);
             AddPrisonSpriteProp(container, "Shelf", pal.Shelf, mat, new Vector2(x, y), 0.85f, sortingOrder, Color.white);
             float shelfTopY = y + pal.Shelf.bounds.max.y * 0.85f - 0.14f;
-            for (int i = 0; i < pal.ShelfVials.Length; i++)
+            int count = pal.ShelfVials.Length;
+            for (int i = 0; i < count; i++)
             {
-                var vial = pal.ShelfVials[i];
+                if (variant == 1 && i == 1)
+                    continue; // Leave natural gap on second shelf so adjacent shelves never read as identical copies
+                var vial = pal.ShelfVials[(i + variant) % count];
                 const float vScale = 1.00f;
                 float vx = x + (i - 1) * 0.58f;
                 AddPrisonSpriteProp(container, $"Fiole_{i}", vial, mat, new Vector2(vx, shelfTopY - vial.bounds.min.y * vScale), vScale, sortingOrder + 1, Color.white);
@@ -5012,22 +5087,32 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
         private static void AddInterTierSlabStrata(GameObject parent, PrisonPalette pal, Material mat, string tag, float xMin, float xMax, float centerY)
         {
-            const float scale = 0.95f;
-            var tint = new Color(0.88f, 0.94f, 0.94f, 0.92f);
+            // Subtle, organic low-contrast stone strata blended inside dark slabs (no bright repeating sticker patches)
             int groundLayerId = SortingLayerSetup.GetSortingLayerId("Ground");
             int idx = 0;
-            for (float x = xMin + 1.5f; x <= xMax - 1.5f; x += 5.5f)
+            float x = xMin + 1.4f;
+            while (x <= xMax - 1.4f)
             {
+                int h = CellHash(Mathf.RoundToInt(x * 3f), Mathf.RoundToInt(centerY * 5f) + idx * 17);
+                float jitterX = ((h % 7) - 3) * 0.16f;
+                float jitterY = (((h / 7) % 5) - 2) * 0.055f;
+                float scaleX = 0.82f + ((h / 35) % 5) * 0.10f;
+                float scaleY = 0.80f + ((h / 175) % 4) * 0.08f;
+                float alpha = 0.24f + ((h / 700) % 4) * 0.045f;
+
                 var go = CreateChild(parent, $"Art_{tag}_SlabStrata_{idx++}");
-                go.transform.position = new Vector3(x, centerY, 0f);
-                go.transform.localScale = new Vector3(scale, scale, 1f);
+                go.transform.position = new Vector3(Mathf.Clamp(x + jitterX, xMin + 0.9f, xMax - 0.9f), centerY + jitterY, 0f);
+                go.transform.localScale = new Vector3(scaleX, scaleY, 1f);
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = pal.SlabStrata;
                 sr.sharedMaterial = mat;
                 sr.sortingLayerID = groundLayerId;
                 sr.sortingOrder = -4;
-                sr.color = tint;
-                sr.flipX = (idx & 1) == 0;
+                sr.color = new Color(0.46f, 0.54f, 0.50f, alpha);
+                sr.flipX = (h & 1) == 0;
+                sr.flipY = (h & 2) == 0;
+
+                x += 4.3f + ((h / 13) % 4) * 0.65f;
             }
         }
 
@@ -5311,19 +5396,19 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 ConfigureGameplayPointLight(mLight, enableVolumetric: false, volumeIntensity: 0f, addFlicker: false, phaseSeed: 0f);
             }
 
-            // 3. 9 GroundMist_R5 strips (2.8u height) across dungeon lower wells, tiers & sewers (Spec §5.5 #4 + Round 9 Task 3.2b)
+            // 3. 9 GroundMist_R5 strips (2.8u height) on VFX/-1 (draping in front of player legs) with exact 4u interior crossfades and zero outer-bedrock overhang
             var mistRoot = new GameObject("GroundMist_R5");
             (string name, Vector3 pos, Vector3 scale)[] mistSpecs =
             {
-                ("Mist_RoomAB", new Vector3(21f, 1.4f, 0f), new Vector3(38f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomC", new Vector3(49f, 1.4f, 0f), new Vector3(14f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomG", new Vector3(66f, 1.4f, 0f), new Vector3(20f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomK", new Vector3(-23f, 17.4f, 0f), new Vector3(14f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomE", new Vector3(3f, 25.4f, 0f), new Vector3(36f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomO", new Vector3(120f, -14.6f, 0f), new Vector3(88f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomP", new Vector3(198f, -14.6f, 0f), new Vector3(70f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomQ", new Vector3(-66f, 17.4f, 0f), new Vector3(72f * 24f, 2.8f * 24f, 1f)),
-                ("Mist_RoomT", new Vector3(89f, 41.4f, 0f), new Vector3(96f * 24f, 2.8f * 24f, 1f)),
+                ("Mist_RoomAB", new Vector3(22f, 1.4f, 0f), new Vector3(44f * 24f, 2.8f * 24f, 1f)),   // [0..44]   overlaps C on [40..44]
+                ("Mist_RoomC", new Vector3(50f, 1.4f, 0f), new Vector3(20f * 24f, 2.8f * 24f, 1f)),    // [40..60]  overlaps AB [40..44] & G [56..60]
+                ("Mist_RoomG", new Vector3(110f, 1.4f, 0f), new Vector3(108f * 24f, 2.8f * 24f, 1f)),  // [56..164] continuous through G + M to east wall
+                ("Mist_RoomK", new Vector3(-13f, 17.4f, 0f), new Vector3(38f * 24f, 2.8f * 24f, 1f)),  // [-32..6]  overlaps Q [-32..-28] & covers K + J
+                ("Mist_RoomE", new Vector3(11f, 25.4f, 0f), new Vector3(54f * 24f, 2.8f * 24f, 1f)),   // [-16..38] continuous through E + L to east wall
+                ("Mist_RoomO", new Vector3(121f, -14.6f, 0f), new Vector3(90f * 24f, 2.8f * 24f, 1f)), // [76..166] overlaps P on [162..166]
+                ("Mist_RoomP", new Vector3(198f, -14.6f, 0f), new Vector3(72f * 24f, 2.8f * 24f, 1f)), // [162..234] flush at east wall
+                ("Mist_RoomQ", new Vector3(-65f, 17.4f, 0f), new Vector3(74f * 24f, 2.8f * 24f, 1f)),  // [-102..-28] overlaps K on [-32..-28]
+                ("Mist_RoomT", new Vector3(89f, 41.4f, 0f), new Vector3(102f * 24f, 2.8f * 24f, 1f)),  // [38..140] flush wall-to-wall across T
             };
             var mistTint = new Color(0.84f, 0.90f, 0.92f, 0.86f);
             foreach (var spec in mistSpecs)
