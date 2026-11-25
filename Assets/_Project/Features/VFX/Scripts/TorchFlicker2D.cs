@@ -16,6 +16,8 @@ namespace DeadCells.VFX
         [SerializeField] private float _speed = 3.2f;
         [SerializeField] private float _phaseOffset;
 
+        private Camera _mainCam;
+
         private void Awake()
         {
             if (_targetLight == null)
@@ -34,6 +36,24 @@ namespace DeadCells.VFX
 
         private void Update()
         {
+            if (_mainCam == null)
+                _mainCam = Camera.main;
+
+            if (_mainCam != null)
+            {
+                float halfH = (_mainCam.orthographic && _mainCam.orthographicSize > 0.01f)
+                    ? _mainCam.orthographicSize
+                    : 6.75f;
+                float aspect = _mainCam.aspect > 0.01f ? _mainCam.aspect : (16f / 9f);
+                float halfW = halfH * aspect;
+                float pad = Mathf.Max(0f, _baseOuterRadius) + 4f;
+                Vector3 camPos = _mainCam.transform.position;
+                Vector3 pos = transform.position;
+                if (Mathf.Abs(pos.x - camPos.x) > halfW + pad ||
+                    Mathf.Abs(pos.y - camPos.y) > halfH + pad)
+                    return;
+            }
+
             ApplyAtTime(Time.time);
         }
 

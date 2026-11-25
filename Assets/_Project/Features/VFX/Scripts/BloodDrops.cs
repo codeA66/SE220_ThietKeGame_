@@ -133,6 +133,8 @@ namespace DeadCells.VFX
             gameObject.AddComponent<MeshFilter>().sharedMesh = _mesh;
             // The default sprite material, so the drops are lit like every other sprite effect.
             RuntimeSprites.Prepare(gameObject.AddComponent<MeshRenderer>(), 0, SortingOrder);
+            if (_active.Count == 0)
+                enabled = false;
         }
 
         private void OnDestroy()
@@ -159,6 +161,9 @@ namespace DeadCells.VFX
                 drop.Blue = blue;
                 _active.Add(drop);
             }
+
+            if (_active.Count > 0)
+                enabled = true;
         }
 
         private void Update()
@@ -196,6 +201,8 @@ namespace DeadCells.VFX
                 return;
             _meshDirty = false;
             BuildMesh();
+            if (_active.Count == 0)
+                enabled = false;
         }
 
         private void Fly(Drop drop, float dt)
