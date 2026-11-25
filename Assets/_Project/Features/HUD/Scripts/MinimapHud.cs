@@ -337,6 +337,8 @@ namespace DeadCells.HUD
                 return true;
             if (_player.Health != null && !_player.Health.IsAlive)
                 return true;
+            if (_player.IsInScriptedSequence)
+                return true;
             if (_player.RunStats != null && _player.RunStats.IsChoosing)
                 return true;
             if (_gameplayHudCanvas != null && !_gameplayHudCanvas.enabled)
