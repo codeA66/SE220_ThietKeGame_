@@ -192,6 +192,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
         [MenuItem("Tools/DeadCells/Scenes/Build Nha Giam Gieng Chuong (v8)")]
         public static void BuildAll()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
             EnsureFolder(RoomsFolder);
             EnsureFolder(UiFolder);
 

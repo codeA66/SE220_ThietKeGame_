@@ -237,6 +237,9 @@ namespace DeadCells.Tools.Editor
         [MenuItem("Tools/DeadCells/Scenes/Remediate Main_Level")]
         public static void RemediateMainLevel()
         {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+
             EnsurePlayerHudTrailFill();
             SortingLayerSetup.EnsureDeadCellsSortingLayers();
             PrisonPropSpriteGenerator.EnsureAll();
