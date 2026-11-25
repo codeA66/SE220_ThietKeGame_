@@ -1882,6 +1882,212 @@ namespace DeadCells.Core.Tests
             }
         }
 
+        [Test]
+        public void EnemyShield_PlayerBehindWithinBackstepTrigger_RespectsTurnDelayWithoutInstantSnapTurn()
+        {
+            var root = new GameObject("__Round9ShieldTurnDelayTest");
+            GameObject shieldGo = null;
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+
+                var playerGo = new GameObject("Player");
+                playerGo.transform.SetParent(root.transform);
+                playerGo.layer = PlayerLayer;
+                playerGo.transform.position = new Vector3(-0.8f, 0f, 0f);
+
+                var shieldPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPaths[2]);
+                Assert.IsNotNull(shieldPrefab, $"Missing {EnemyPrefabPaths[2]}");
+                shieldGo = Object.Instantiate(shieldPrefab, Vector3.zero, Quaternion.identity);
+
+                var shieldAnim = shieldGo.GetComponent<EnemyAnimator>();
+                var shieldController = shieldGo.GetComponent<EnemyController>();
+                InvokePrivateMethod(shieldAnim, "Awake");
+                InvokePrivateMethod(shieldController, "Awake");
+                InvokePrivateMethod(shieldController, "Start");
+
+                var ctx = GetPrivateField<EnemyContext>(shieldController, "_context");
+                var machine = GetPrivateField<EnemyStateMachine>(shieldController, "_machine");
+                ctx.Player = playerGo.transform;
+                ctx.Face(1);
+
+                Physics2D.SyncTransforms();
+                ctx.RefreshFrame();
+
+                Assert.IsTrue(ctx.IsGrounded, "Precondition: Enemy_Shield must be grounded.");
+                Assert.AreEqual(0.6f, ctx.Data.TurnDelay, 0.001f, "Precondition: Enemy_Shield TurnDelay must be 0.6s.");
+                Assert.Less(ctx.DistanceToPlayer, ctx.Data.BackstepTrigger,
+                    "Precondition: player at 0.8u must be inside BackstepTrigger.");
+                Assert.IsTrue(ctx.CanSeePlayer(ctx.Data.LoseRange), "Precondition: Enemy_Shield must see player.");
+                Assert.IsTrue(ctx.CanWalk(-ctx.DirectionToPlayer), "Precondition: room behind must allow Backstep.");
+
+                machine.ForceChangeState(machine.Chase);
+                SetPrivateField(machine, "_lastTransitionFrame", -1);
+
+                var chase = (EnemyChaseState)machine.Chase;
+                for (int i = 0; i < 3; i++)
+                    chase.Tick(0.05f);
+
+                Assert.AreSame(machine.Chase, machine.Current,
+                    "Within TurnDelay (0.15s < 0.6s), Enemy_Shield must stay in Chase instead of snapping into Backstep.");
+                Assert.AreEqual(1, ctx.Facing,
+                    "Within TurnDelay (0.15s < 0.6s), Enemy_Shield must keep facing +1 (right) instead of snap-turning.");
+
+                // Once TurnDelay completes, Enemy_Shield turns toward player and enters Backstep normally.
+                SetPrivateField(machine, "_lastTransitionFrame", -1);
+                chase.Tick(0.50f);
+                Assert.AreEqual(-1, ctx.Facing, "After TurnDelay elapses, Enemy_Shield must turn toward player (-1).");
+                Assert.AreSame(machine.Backstep, machine.Current,
+                    "After TurnDelay completes while player is inside BackstepTrigger, Enemy_Shield must transition to Backstep.");
+            }
+            finally
+            {
+                if (shieldGo != null)
+                    Object.DestroyImmediate(shieldGo);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void EnemyContext_RefreshFrame_DetectsGroundAtOuterFivePercentLedgeEdge()
+        {
+            var root = new GameObject("__Round9EnemyLedgeEdgeGroundTest");
+            EnemyData data = null;
+            try
+            {
+                LayerMask groundMask = (1 << GroundLayer) | (1 << OneWayLayer);
+
+                var ledgeGo = new GameObject("LedgePlatform");
+                ledgeGo.transform.SetParent(root.transform);
+                ledgeGo.layer = GroundLayer;
+                ledgeGo.transform.position = new Vector3(-5f, -0.5f, 0f);
+                ledgeGo.AddComponent<BoxCollider2D>().size = new Vector2(10f, 1f);
+
+                var harness = CreateEnemyHarness(root.transform, Vector2.zero, groundMask, out data);
+                float width = harness.Collider.size.x; // 0.8u
+                float fourPercentOverlap = width * 0.04f;
+                float edgeX = width * 0.5f - fourPercentOverlap; // b.min.x = -0.032f over platform ending at x = 0
+
+                harness.Go.transform.position = new Vector3(edgeX, 0f, 0f);
+                harness.Body.position = new Vector2(edgeX, 0f);
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                Assert.IsTrue(harness.Context.IsGrounded,
+                    "Enemy resting on outer 4% corner of a platform edge must still be detected as grounded.");
+
+                // Negative control: clearly past the ledge edge is airborne.
+                float offLedgeX = width * 0.5f + 0.05f;
+                harness.Go.transform.position = new Vector3(offLedgeX, 0f, 0f);
+                harness.Body.position = new Vector2(offLedgeX, 0f);
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                Assert.IsFalse(harness.Context.IsGrounded,
+                    "Enemy positioned completely past the ledge edge must report airborne.");
+
+                // Rising through a OneWayPlatform must not report IsGrounded == true on frame 1.
+                ledgeGo.SetActive(false);
+                var oneWayGo = new GameObject("OneWayPlatform");
+                oneWayGo.transform.SetParent(root.transform);
+                oneWayGo.layer = OneWayLayer;
+                oneWayGo.transform.position = new Vector3(0f, -0.125f, 0f);
+                oneWayGo.AddComponent<BoxCollider2D>().size = new Vector2(6f, 0.25f);
+
+                harness.Go.transform.position = Vector3.zero;
+                harness.Body.position = Vector2.zero;
+                harness.Body.linearVelocity = new Vector2(0f, 3f);
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                Assert.IsFalse(harness.Context.IsGrounded,
+                    "Rising (vy > 0.05) through a OneWayPlatform must not falsely report IsGrounded == true.");
+
+                harness.Body.linearVelocity = Vector2.zero;
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                Assert.IsTrue(harness.Context.IsGrounded,
+                    "Resting on a OneWayPlatform (vy <= 0.05) must report IsGrounded == true.");
+            }
+            finally
+            {
+                if (data != null)
+                    Object.DestroyImmediate(data);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void EnemyBackstepAndLunge_ExceedingMaxGroundedWait_ExitSafelyWithoutDeadlock()
+        {
+            var root = new GameObject("__Round9EnemyMaxGroundedWaitTest");
+            EnemyData data = null;
+            try
+            {
+                LayerMask groundMask = (1 << GroundLayer) | (1 << OneWayLayer);
+                var skills = new[]
+                {
+                    new EnemyData.Skill
+                    {
+                        Kind = EnemyAttackKind.Lunge,
+                        ChargeAnim = "AtkLoad",
+                        ExecuteAnim = "Atk",
+                        Charge = 0f,
+                        TravelCells = 4f,
+                        TravelDuration = 0.4f,
+                        LungeUpSpeed = 5f,
+                        Recover = 0.2f
+                    }
+                };
+                var harness = CreateEnemyHarness(root.transform, new Vector2(0f, 5f), groundMask, out data, skills);
+                SetPrivateField(data, "_backstepDuration", 0.25f);
+
+                var machine = new EnemyStateMachine(harness.Context);
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsFalse(harness.Context.IsGrounded, "Precondition: enemy in mid-air must start ungrounded.");
+
+                // 1. Backstep exits cleanly once BackstepDuration + MaxGroundedWait (1.0s) is exceeded.
+                machine.ForceChangeState(machine.Backstep);
+                SetPrivateField(machine, "_lastTransitionFrame", -1);
+                var backstep = (EnemyBackstepState)machine.Backstep;
+
+                backstep.Tick(0.25f);
+                Assert.AreSame(machine.Backstep, machine.Current,
+                    "Airborne Backstep should wait for ground right after BackstepDuration.");
+
+                backstep.Tick(0.90f);
+                Assert.AreSame(machine.Backstep, machine.Current,
+                    "Airborne Backstep must still be waiting before BackstepDuration + 1.0s.");
+
+                backstep.Tick(0.15f);
+                Assert.AreSame(machine.Chase, machine.Current,
+                    "Airborne Backstep exceeding MaxGroundedWait (1.0s) must exit to Chase without deadlock.");
+
+                // 2. Lunge exits cleanly through Recover -> Chase once TravelDuration + MaxGroundedWait (1.0s) is exceeded.
+                var lunge = (EnemyLungeAttackState)machine.Skills[0];
+                machine.ForceChangeState(lunge);
+                SetPrivateField(machine, "_lastTransitionFrame", -1);
+
+                lunge.Tick(0.01f); // Charge (0f) -> Execute
+                lunge.Tick(0.40f); // TravelDuration elapsed, still airborne
+                Assert.AreSame(lunge, machine.Current,
+                    "Airborne Lunge should wait for ground right after TravelDuration.");
+
+                lunge.Tick(1.05f); // Exceeds TravelDuration + MaxGroundedWait (1.0s) -> enters Recover
+                lunge.Tick(0.25f); // Exceeds Recover (0.2f) -> exits to Chase
+                Assert.AreSame(machine.Chase, machine.Current,
+                    "Airborne Lunge exceeding MaxGroundedWait (1.0s) must exit Recover -> Chase without deadlock.");
+            }
+            finally
+            {
+                if (data != null)
+                    Object.DestroyImmediate(data);
+                Object.DestroyImmediate(root);
+            }
+        }
+
         // ==================== Fixtures & helpers ====================
 
         /// <summary>A hittable dummy on the Enemy layer with a live Health (0s invulnerability).</summary>
@@ -2017,7 +2223,32 @@ namespace DeadCells.Core.Tests
         private static EnemyStunHarness CreateEnemyStunHarness(Transform parent, Vector2 position,
             float gravityScale = 0f)
         {
-            var go = new GameObject("EnemyStunHarness");
+            var harness = CreateEnemyHarness(parent, position, (LayerMask)(1 << GroundLayer), out var data,
+                gravityScale: gravityScale);
+            var stun = (EnemyStunState)new EnemyStateMachine(harness.Context).Stun;
+            return new EnemyStunHarness(harness.Go, harness.Body, harness.Context, stun, data);
+        }
+
+        private readonly struct EnemyHarness
+        {
+            public readonly GameObject Go;
+            public readonly Rigidbody2D Body;
+            public readonly BoxCollider2D Collider;
+            public readonly EnemyContext Context;
+
+            public EnemyHarness(GameObject go, Rigidbody2D body, BoxCollider2D collider, EnemyContext context)
+            {
+                Go = go;
+                Body = body;
+                Collider = collider;
+                Context = context;
+            }
+        }
+
+        private static EnemyHarness CreateEnemyHarness(Transform parent, Vector2 position, LayerMask groundMask,
+            out EnemyData data, EnemyData.Skill[] skills = null, float gravityScale = 0f)
+        {
+            var go = new GameObject("EnemyHarness");
             go.transform.SetParent(parent);
             go.layer = EnemyLayer;
             go.transform.position = position;
@@ -2048,11 +2279,12 @@ namespace DeadCells.Core.Tests
             var health = go.AddComponent<Health>();
             health.RestoreFull();
 
-            var data = ScriptableObject.CreateInstance<EnemyData>();
-            var context = new EnemyContext(body, col, enemyAnimator, health, data,
-                (LayerMask)(1 << GroundLayer), (LayerMask)(1 << PlayerLayer));
-            var stun = (EnemyStunState)new EnemyStateMachine(context).Stun;
-            return new EnemyStunHarness(go, body, context, stun, data);
+            data = ScriptableObject.CreateInstance<EnemyData>();
+            if (skills != null)
+                SetPrivateField(data, "_skills", skills);
+
+            var context = new EnemyContext(body, col, enemyAnimator, health, data, groundMask, (LayerMask)(1 << PlayerLayer));
+            return new EnemyHarness(go, body, col, context);
         }
 
         private static PlayerHarness CreatePlayerHarness(Transform parent, Vector2 feetPosition)
