@@ -64,8 +64,10 @@ namespace DeadCells.Enemies
         public void RefreshFrame()
         {
             var b = _collider.bounds;
-            IsGrounded = Physics2D.BoxCast(new Vector2(b.center.x, b.min.y + 0.02f), new Vector2(b.size.x * 0.9f, 0.04f),
-                0f, Vector2.down, GroundProbe, _groundMask);
+            LayerMask mask = _body.linearVelocity.y > 0.05f ? _solidWallMask : _groundMask;
+            float width = Mathf.Max(0.05f, b.size.x - 0.02f);
+            IsGrounded = Physics2D.BoxCast(new Vector2(b.center.x, b.min.y + 0.02f), new Vector2(width, 0.04f),
+                0f, Vector2.down, GroundProbe, mask);
         }
 
         // ---------- Skills ----------
