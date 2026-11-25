@@ -67,6 +67,23 @@ namespace DeadCells.Enemies
             Take().Play(LootKind.Gem, style.Value, style, position, velocity, player, groundMask);
         }
 
+        /// <summary>Destroys every pooled pickup and clears the pool for test teardown isolation.</summary>
+        public static void ClearPoolForTests()
+        {
+            while (s_pool.Count > 0)
+            {
+                LootPickup pickup = s_pool.Pop();
+                if (pickup == null)
+                    continue;
+
+                if (Application.isPlaying)
+                    Destroy(pickup.gameObject);
+                else
+                    DestroyImmediate(pickup.gameObject);
+            }
+            s_pool.Clear();
+        }
+
         private static LootPickup Take()
         {
             EnsureSprites();

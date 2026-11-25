@@ -63,6 +63,23 @@ namespace DeadCells.Enemies
             }
         }
 
+        /// <summary>Destroys every pooled damage popup and clears the pool for test teardown isolation.</summary>
+        public static void ClearPoolForTests()
+        {
+            while (s_pool.Count > 0)
+            {
+                DamagePopup popup = s_pool.Pop();
+                if (popup == null)
+                    continue;
+
+                if (Application.isPlaying)
+                    Destroy(popup.gameObject);
+                else
+                    DestroyImmediate(popup.gameObject);
+            }
+            s_pool.Clear();
+        }
+
         private static DamagePopup Create()
         {
             var go = new GameObject("DamagePopup");
