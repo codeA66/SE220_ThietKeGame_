@@ -2412,7 +2412,7 @@ GameObject:
   - component: {fileID: 3625282525215014192}
   m_Layer: 7
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5199,7 +5199,7 @@ MonoBehaviour:
   _mergeShakeAmplitude: 0.15
   _mergeShakeDuration: 0.2
   _neckOffset: {x: 0.24, y: 0.1}
-  _crawlDistance: -5
+  _crawlDistance: 5
   _dropHeight: 5
   _restHeight: 0.19
   _gravity: 40

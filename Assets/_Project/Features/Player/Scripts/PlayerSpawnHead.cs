@@ -112,10 +112,11 @@ namespace DeadCells.Player
         private void Begin()
         {
             // The head hops along the body's floor; it drops on the side whose column is clear down to it.
+            float crawl = Mathf.Abs(_crawlDistance);
             _groundY = _context.Position.y + _restHeight;
             _targetX = _context.Position.x + _neckOffset.x * _context.FacingDirection;
             _direction = IsColumnClear(-_context.FacingDirection) ? _context.FacingDirection : -_context.FacingDirection;
-            _position = new Vector2(_targetX - _direction * _crawlDistance, _groundY + _dropHeight);
+            _position = new Vector2(_targetX - _direction * crawl, _groundY + _dropHeight);
 
             _velocityY = 0f;
             _angle = 0f;
@@ -130,7 +131,8 @@ namespace DeadCells.Player
 
         private bool IsColumnClear(int side)
         {
-            var top = new Vector2(_targetX + side * _crawlDistance, _groundY + _dropHeight);
+            float crawl = Mathf.Abs(_crawlDistance);
+            var top = new Vector2(_targetX + side * crawl, _groundY + _dropHeight);
             return Physics2D.Raycast(top, Vector2.down, _dropHeight - _restHeight, _groundMask).collider == null;
         }
 
