@@ -8,6 +8,7 @@ using DeadCells.Player;
 using DeadCells.Player.StateMachine;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -17,6 +18,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
     {
         private const string PlayerPrefabPath = "Assets/_Project/Features/Player/Prefabs/Player.prefab";
         private readonly List<GameObject> _created = new();
+        private string _previousScene;
 
         private sealed class DummyPlayState : IPlayerState
         {
@@ -46,6 +48,13 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             public void FixedTick() { }
         }
 
+        [SetUp]
+        public void SetUp()
+        {
+            _previousScene = Assets.GeometryAuditHelper.CaptureCurrentScenePath();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -62,6 +71,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
                     Object.DestroyImmediate(popup.gameObject);
             }
             Time.timeScale = 1f;
+            Assets.GeometryAuditHelper.RestoreScene(_previousScene);
         }
 
         [Test]
@@ -389,13 +399,11 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             body.bodyType = RigidbodyType2D.Kinematic;
             var col = projGo.AddComponent<BoxCollider2D>();
             col.isTrigger = true;
-            var sr = projGo.AddComponent<SpriteRenderer>();
             var proj = projGo.AddComponent<Projectile>();
 
+            // Leave _renderer null so Setup does not spawn an unparented TrailRibbon view in EditMode.
             typeof(Projectile).GetField("_mode", BindingFlags.Instance | BindingFlags.NonPublic)
                 .SetValue(proj, Projectile.Mode.Straight);
-            typeof(Projectile).GetField("_renderer", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(proj, sr);
 
             int releasedCount = 0;
             proj.Setup(_ => releasedCount++, null, 0, 0);
@@ -404,13 +412,20 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.IsTrue(proj.gameObject.activeSelf);
 
             proj.gameObject.SetActive(false);
+            // EditMode SetActive(false) does not trigger OnDisable on non-[ExecuteAlways] components.
+            InvokeNonPublic(proj, "OnDisable");
             Assert.IsFalse(proj.IsLive, "Disabling a live Projectile via SetActive(false) must mark it non-live.");
             Assert.AreEqual(1, releasedCount, "Disabling a live Projectile via SetActive(false) must release it back to the pool once.");
+
+            // Repeated OnDisable must be idempotent (no double-release).
+            InvokeNonPublic(proj, "OnDisable");
+            Assert.AreEqual(1, releasedCount, "Repeated OnDisable must not double-release a non-live Projectile.");
 
             // Pooled reuse still works cleanly without re-entry issues.
             proj.LaunchStraight(Vector2.one, new Vector2(-6f, 0f), 10, 1f, null);
             Assert.IsTrue(proj.IsLive);
             proj.gameObject.SetActive(false);
+            InvokeNonPublic(proj, "OnDisable");
             Assert.IsFalse(proj.IsLive);
             Assert.AreEqual(2, releasedCount);
         }
