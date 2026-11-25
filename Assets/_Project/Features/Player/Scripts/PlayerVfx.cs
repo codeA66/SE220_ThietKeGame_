@@ -77,6 +77,8 @@ namespace DeadCells.Player
         private const float TearMaxShift = 0.14f;
         private readonly System.Collections.Generic.Dictionary<(Sprite, int), Sprite> _tearSprites =
             new System.Collections.Generic.Dictionary<(Sprite, int), Sprite>();
+        private SpriteRenderer _tearBody;
+        private SpriteRenderer[] _activeTearStrips;
 
         // The landing cloud is played at the feet, nudged down this many units (3 px) so it sits on the floor.
         private const float LandDownOffset = 3f / 32f;
@@ -163,8 +165,15 @@ namespace DeadCells.Player
             }
         }
 
+        private void OnDisable() => RestoreTearBody();
+
         private void OnDestroy()
         {
+            RestoreTearBody();
+            foreach (Sprite piece in _tearSprites.Values)
+                DestroyRuntimeObject(piece);
+            _tearSprites.Clear();
+
             if (_context == null)
                 return;
             _context.RollStarted -= OnRollStarted;
@@ -325,12 +334,18 @@ namespace DeadCells.Player
         }
 
         // Release flash at the bow; the combo finisher gets the bigger gold one.
-        private void OnBowFired(Vector2 muzzle, int facing, bool heavy) =>
-            _spawner.Play(heavy ? GeneratedVfx.MuzzleFlashHeavy : GeneratedVfx.MuzzleFlash, muzzle, facing < 0);
+        private void OnBowFired(Vector2 muzzle, int facing, bool heavy)
+        {
+            if (_spawner != null)
+                _spawner.Play(heavy ? GeneratedVfx.MuzzleFlashHeavy : GeneratedVfx.MuzzleFlash, muzzle, facing < 0);
+        }
 
         // Debris bursts back off the surface, against the arrow's flight.
-        private void OnArrowWorldHit(Vector2 point, int direction, bool heavy) =>
-            _spawner.Play(heavy ? GeneratedVfx.ArrowImpactHeavy : GeneratedVfx.ArrowImpact, point, direction > 0);
+        private void OnArrowWorldHit(Vector2 point, int direction, bool heavy)
+        {
+            if (_spawner != null)
+                _spawner.Play(heavy ? GeneratedVfx.ArrowImpactHeavy : GeneratedVfx.ArrowImpact, point, direction > 0);
+        }
 
         // The player has just stood up: a solid white beam drops from the sky onto them. While it lasts the body is
         // a black silhouette torn into vertical strips that slide up and down, and white motes float up off it.
@@ -338,7 +353,8 @@ namespace DeadCells.Player
         {
             Vector2 feet = _context.Position;
             VfxDefinition beam = GeneratedVfx.AscendBeam;
-            _spawner.Play(beam, feet);
+            if (_spawner != null)
+                _spawner.Play(beam, feet);
 
             float duration = beam.Frames.Length / beam.Fps;
             if (_camera != null)
@@ -368,6 +384,10 @@ namespace DeadCells.Player
         private System.Collections.IEnumerator TearBody(float duration)
         {
             SpriteRenderer body = _context.Sprite;
+            if (body == null)
+                yield break;
+            RestoreTearBody();
+
             var strips = new SpriteRenderer[TearStrips];
             for (int i = 0; i < TearStrips; i++)
             {
@@ -380,6 +400,8 @@ namespace DeadCells.Player
                 strips[i].color = Color.black;
             }
 
+            _activeTearStrips = strips;
+            _tearBody = body;
             body.enabled = false;
             float nextShift = 0f;
             var shifts = new float[TearStrips];
@@ -396,9 +418,35 @@ namespace DeadCells.Player
                 yield return null;
             }
 
-            body.enabled = true;
-            foreach (SpriteRenderer strip in strips)
-                Destroy(strip.gameObject);
+            RestoreTearBody();
+        }
+
+        private void RestoreTearBody()
+        {
+            if (_tearBody != null)
+            {
+                _tearBody.enabled = true;
+                _tearBody = null;
+            }
+
+            if (_activeTearStrips == null)
+                return;
+            foreach (SpriteRenderer strip in _activeTearStrips)
+            {
+                if (strip != null)
+                    DestroyRuntimeObject(strip.gameObject);
+            }
+            _activeTearStrips = null;
+        }
+
+        private static void DestroyRuntimeObject(Object obj)
+        {
+            if (obj == null)
+                return;
+            if (Application.isPlaying)
+                Destroy(obj);
+            else
+                DestroyImmediate(obj);
         }
 
         private void SliceInto(SpriteRenderer[] strips, SpriteRenderer body, float[] shifts, float fade)
@@ -431,7 +479,8 @@ namespace DeadCells.Player
         {
             Vector3 chest = ChestPoint();
             int push = info.Direction == 0 ? -_context.FacingDirection : info.Direction;
-            _spawner.Play(GeneratedVfx.PlayerHitSpark, chest + new Vector3(-push * 0.25f, 0f, 0f), push < 0, Random.Range(-25f, 25f));
+            if (_spawner != null)
+                _spawner.Play(GeneratedVfx.PlayerHitSpark, chest + new Vector3(-push * 0.25f, 0f, 0f), push < 0, Random.Range(-25f, 25f));
             BloodDrops.Emit(chest, push, BloodBurst.Light, _context.GroundMask);
             StartCoroutine(FlashBody(0.12f));
         }
@@ -443,7 +492,8 @@ namespace DeadCells.Player
             int push = info.Direction == 0 ? -_context.FacingDirection : info.Direction;
             BloodDrops.Emit(chest, push, BloodBurst.Gore, _context.GroundMask, Random.Range(-10f, 10f));
             BloodDrops.Emit(chest, push, BloodBurst.Heavy, _context.GroundMask, Random.Range(-25f, 25f));
-            _spawner.Play(GeneratedVfx.PlayerBloodMist, chest, push < 0, Random.Range(-10f, 10f));
+            if (_spawner != null)
+                _spawner.Play(GeneratedVfx.PlayerBloodMist, chest, push < 0, Random.Range(-10f, 10f));
             StartCoroutine(FlashBody(0.2f));
             StartCoroutine(ScarfLeaves());
         }
@@ -497,9 +547,11 @@ namespace DeadCells.Player
             Vector2 held = go.transform.position;
             // The strike: a white-hot flash on the scarf and a hit spark at the point of impact, then it goes black.
             scarf.color = Color.white;
-            _spawner.Play(GeneratedVfx.PlayerHitSpark, held, false, Random.Range(-20f, 20f), 1.6f);
+            if (_spawner != null)
+                _spawner.Play(GeneratedVfx.PlayerHitSpark, held, false, Random.Range(-20f, 20f), 1.6f);
             VfxDefinition beam = GeneratedVfx.AscendBeam;
-            _spawner.Play(beam, new Vector2(held.x, feet.y));
+            if (_spawner != null)
+                _spawner.Play(beam, new Vector2(held.x, feet.y));
             if (_camera != null)
                 _camera.Shake(AwakenShakeAmplitude * 1.6f, beam.Frames.Length / beam.Fps);
             yield return new WaitForSeconds(0.04f);
@@ -607,7 +659,8 @@ namespace DeadCells.Player
         // lands. The stars orbit in an ellipse, pass in front of the head and behind it, spin, and shrink away at the end.
         private void OnStunned(float duration)
         {
-            _spawner.Play(GeneratedVfx.PlayerHitSpark, (Vector3)_context.Position + Vector3.up * StunHeadHeight, false, Random.Range(-20f, 20f), 0.8f);
+            if (_spawner != null)
+                _spawner.Play(GeneratedVfx.PlayerHitSpark, (Vector3)_context.Position + Vector3.up * StunHeadHeight, false, Random.Range(-20f, 20f), 0.8f);
             StartCoroutine(StunStars(duration));
         }
 
@@ -646,7 +699,10 @@ namespace DeadCells.Player
         }
 
         // One small puff at the feet as the player gets up onto the ledge, trailing behind.
-        private void OnLedgeClimbFinished(Vector2 feet) =>
-            _spawner.Play(GeneratedVfx.LedgeDust, feet, _context.FacingDirection < 0, 0f, Random.Range(0.8f, 1.2f));
+        private void OnLedgeClimbFinished(Vector2 feet)
+        {
+            if (_spawner != null)
+                _spawner.Play(GeneratedVfx.LedgeDust, feet, _context.FacingDirection < 0, 0f, Random.Range(0.8f, 1.2f));
+        }
     }
 }
