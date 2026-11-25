@@ -76,12 +76,77 @@ namespace DeadCells.Enemies
                 if (pickup == null)
                     continue;
 
-                if (Application.isPlaying)
-                    Destroy(pickup.gameObject);
-                else
-                    DestroyImmediate(pickup.gameObject);
+                DestroyAsset(pickup.gameObject);
             }
             s_pool.Clear();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void ResetStaticsForPlayMode()
+        {
+            ReleaseSprites();
+            ClearPoolForTests();
+        }
+
+        private static void ReleaseSprites()
+        {
+            DestroySpriteAndTexture(s_coinSmall);
+            DestroySpriteAndTexture(s_coinLarge);
+            DestroySpriteAndTexture(s_halo);
+            DestroySpriteAndTexture(s_sparkle);
+            if (s_gems != null)
+            {
+                for (int i = 0; i < s_gems.Length; i++)
+                {
+                    if (s_gems[i] != null)
+                        DestroySpriteAndTexture(s_gems[i].Sprite);
+                }
+            }
+
+            s_coinSmall = null;
+            s_coinLarge = null;
+            s_halo = null;
+            s_sparkle = null;
+            s_gems = null;
+        }
+
+        private static bool HasValidSprites()
+        {
+            if (s_gems == null || s_coinSmall == null || s_coinSmall.texture == null ||
+                s_coinLarge == null || s_coinLarge.texture == null ||
+                s_halo == null || s_halo.texture == null ||
+                s_sparkle == null || s_sparkle.texture == null)
+                return false;
+
+            for (int i = 0; i < s_gems.Length; i++)
+            {
+                if (s_gems[i] == null || s_gems[i].Sprite == null || s_gems[i].Sprite.texture == null)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static void DestroySpriteAndTexture(Sprite sprite)
+        {
+            if (sprite == null)
+                return;
+
+            Texture2D tex = sprite.texture;
+            DestroyAsset(sprite);
+            if (tex != null)
+                DestroyAsset(tex);
+        }
+
+        private static void DestroyAsset(Object asset)
+        {
+            if (asset == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(asset);
+            else
+                DestroyImmediate(asset);
         }
 
         private static LootPickup Take()
@@ -138,7 +203,9 @@ namespace DeadCells.Enemies
 
             bool isGem = kind == LootKind.Gem;
             _renderer.sprite = isGem ? gem.Sprite : value >= 3 ? s_coinLarge : s_coinSmall;
+            _halo.sprite = s_halo;
             _halo.enabled = isGem;
+            _sparkle.sprite = s_sparkle;
             _sparkle.enabled = false;
             if (isGem)
                 _sparkle.color = Color.Lerp(Color.white, gem.Glow, 0.25f);
@@ -283,8 +350,10 @@ namespace DeadCells.Enemies
 
         private static void EnsureSprites()
         {
-            if (s_gems != null)
+            if (HasValidSprites())
                 return;
+
+            ReleaseSprites();
 
             var gold = Palette(new Color(0.30f, 0.17f, 0.04f), new Color(0.75f, 0.48f, 0.08f),
                 new Color(0.96f, 0.74f, 0.16f), new Color(1f, 0.95f, 0.62f));
