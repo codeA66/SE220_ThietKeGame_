@@ -46,9 +46,21 @@ namespace DeadCells.Player
             _crouch = map.FindAction("Crouch", throwIfNotFound: false);
         }
 
-        private void OnEnable() => _actions.FindActionMap("Player").Enable();
+        private void OnEnable()
+        {
+            if (_actions != null)
+                _actions.FindActionMap("Player")?.Enable();
+        }
 
-        private void OnDisable() => _actions.FindActionMap("Player").Disable();
+        private void OnDisable()
+        {
+            if (_actions != null)
+                _actions.FindActionMap("Player")?.Disable();
+            MoveX = 0f;
+            MoveY = 0f;
+            JumpPressed = JumpHeld = AttackPressed = AttackHeld = AttackReleased =
+                RollPressed = InteractPressed = EquipSwordPressed = EquipBowPressed = CrouchHeld = false;
+        }
 
         public void Poll()
         {

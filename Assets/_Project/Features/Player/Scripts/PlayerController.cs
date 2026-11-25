@@ -149,6 +149,9 @@ namespace DeadCells.Player
             if (_respawnAt >= 0f && Time.time >= _respawnAt)
                 Respawn();
 
+            if (_input == null || !_input.isActiveAndEnabled)
+                return;
+
             _input.Poll();
             if (RunStats.BlocksGameplayInput)
                 return;
