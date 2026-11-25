@@ -202,12 +202,25 @@ suites = {
     "Unit.EncounterGateTests": "U08 U09 U10",
     "Unit.LevelRunTests": "U11 U12 U13 U14 U15",
     "Unit.ExitTriggerTests": "U16",
-    "Assets.CDGeometryTests": "A01", "Assets.ABGeometryTests": "A02",
-    "Assets.GGeometryTests": "A03", "Assets.HJKGeometryTests": "A04",
-    "Assets.ELFGeometryTests": "A05", "Assets.MapGeometryTests": "A06",
-    "Assets.MapWiringTests": "A07", "Play.PilotPlayTests": "P01",
-    "Play.EncounterPlayTests": "P02 P04", "Play.ChestPlayTests": "P03",
+    "Unit.SwitchDoorTests": "U17",
+    "Unit.TeleportGateTests": "U18",
+    "Unit.LoreTabletTests": "U19",
+    "Unit.SecondaryBiomeExitTests": "U20",
+    "Assets.CDGeometryTests": "A01",
+    "Assets.ABGeometryTests": "A02",
+    "Assets.GGeometryTests": "A03",
+    "Assets.HJKGeometryTests": "A04",
+    "Assets.ELFGeometryTests": "A05",
+    "Assets.WingGeometryTests": "A05b A05c A05d A05e",
+    "Assets.MapGeometryTests": "A06",
+    "Assets.MapWiringTests": "A07 A08 A09 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19 A20 A21 A22 A23",
+    "Play.PilotPlayTests": "P01",
+    "Play.EncounterPlayTests": "P02 P04",
+    "Play.ChestPlayTests": "P03",
     "Play.RunPlayTests": "P05 P06 P07",
+    "Play.ExpansionPlayTests": "P08",
+    "Play.Round9PlayTests": "P09 P10",
+    "Play.VaultAPlayTests": "P11",
 }
 expected = {code: ns + fixture for fixture, codes in suites.items()
             if ns + fixture == scope or (ns + fixture).startswith(scope + ".")
@@ -238,14 +251,16 @@ for node in root.iter():
     elif result != "Passed":
         incomplete.append(name + " " + result)
     if node.tag == "test-case":
-        match = re.fullmatch(r"(.+)\.([UAP]\d{2})_\w+", name)
+        match = re.fullmatch(r"(.+)\.([UAP]\d{2}[a-z]?)_\w+", name)
         if match:
             fixture, code = match.groups()
             all_ids[code] += 1
             if expected.get(code) == fixture:
                 found[code] += 1
-                continue
-        extra.append(name)
+            else:
+                extra.append(name)
+        elif re.match(r"[UAP]\d{2}[a-z]?_", name.rsplit(".", 1)[-1]):
+            extra.append(name)
 missing = sorted(set(expected) - set(found))
 duplicates = sorted(code for code, count in all_ids.items() if count > 1)
 print("missing:", missing, "extra/wrong fixture:", extra, "duplicate IDs:", duplicates)
