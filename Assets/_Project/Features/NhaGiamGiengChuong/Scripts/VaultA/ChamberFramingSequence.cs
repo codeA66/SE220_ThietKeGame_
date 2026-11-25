@@ -42,7 +42,9 @@ namespace DeadCells.NhaGiamGiengChuong
         private bool _isPlaying;
         private bool _hudWasVisible;
         private bool _stripWasVisible;
+        private bool _runSubscribed;
         private Coroutine _activeCoroutine;
+        private Coroutine _audioFadeCoroutine;
 
         public bool HasPlayed => _hasPlayed;
         public bool IsPlaying => _isPlaying;
@@ -94,7 +96,13 @@ namespace DeadCells.NhaGiamGiengChuong
             _returnSmoothTime = returnSmoothTime;
             _hasPlayed = false;
             _isPlaying = false;
+            UnsubscribeRun();
+            SubscribeRun();
         }
+
+        private void Awake() => SubscribeRun();
+
+        private void OnEnable() => SubscribeRun();
 
         private void Update()
         {
@@ -107,13 +115,70 @@ namespace DeadCells.NhaGiamGiengChuong
 
         private void OnDisable()
         {
+            UnsubscribeRun();
+            StopAudioFade();
             if (_activeCoroutine != null)
             {
                 StopCoroutine(_activeCoroutine);
                 _activeCoroutine = null;
             }
             if (_isPlaying)
-                RestoreStateAfterInterrupt();
+                RestoreStateAfterInterrupt(restoreHud: _run == null || _run.IsPlaying);
+        }
+
+        private void OnDestroy() => UnsubscribeRun();
+
+        public void FadeChamberAudio(float targetVolume, float duration, bool stopAtZero)
+        {
+            if (_chamberAudio == null)
+                return;
+            StopAudioFade();
+            float clamped = Mathf.Clamp01(targetVolume);
+            if (clamped > 0.001f && _chamberAudio.clip != null && !_chamberAudio.isPlaying)
+            {
+                _chamberAudio.loop = true;
+                _chamberAudio.volume = 0f;
+                _chamberAudio.Play();
+            }
+
+            if (duration <= 0f || !isActiveAndEnabled || !Application.isPlaying)
+            {
+                _chamberAudio.volume = clamped;
+                if (stopAtZero && clamped <= 0.001f)
+                    _chamberAudio.Stop();
+                return;
+            }
+            _audioFadeCoroutine = StartCoroutine(FadeAudioRoutine(clamped, duration, stopAtZero));
+        }
+
+        private void SubscribeRun()
+        {
+            if (_runSubscribed || _run == null)
+                return;
+            _run.Finished += OnRunFinished;
+            _runSubscribed = true;
+        }
+
+        private void UnsubscribeRun()
+        {
+            if (!_runSubscribed || _run == null)
+                return;
+            _run.Finished -= OnRunFinished;
+            _runSubscribed = false;
+        }
+
+        private void OnRunFinished(LevelOutcome _)
+        {
+            StopAudioFade();
+            if (_chamberAudio != null && _chamberAudio.isPlaying)
+                _chamberAudio.Stop();
+            if (_activeCoroutine != null)
+            {
+                StopCoroutine(_activeCoroutine);
+                _activeCoroutine = null;
+            }
+            if (_isPlaying)
+                RestoreStateAfterInterrupt(restoreHud: false);
         }
 
         public bool TryTrigger()
@@ -134,6 +199,8 @@ namespace DeadCells.NhaGiamGiengChuong
             if (_player != null)
                 _player.EnterTransitionLock();
 
+            StartChamberAudioFadeIn();
+
             // Wait for feet to touch solid floor if player entered mid-jump/roll
             float groundWait = 0f;
             while (_player != null && _player.Context != null && !_player.Context.IsGrounded && groundWait < 2.0f)
@@ -147,8 +214,6 @@ namespace DeadCells.NhaGiamGiengChuong
 
             if (_cameraFollow != null)
                 _cameraFollow.BeginFocusOverride(_cameraFocusPoint, _focusSmoothTime, _focusOrthoSize, bypassBounds: false);
-
-            StartChamberAudioFadeIn();
 
             if (_fader != null)
             {
@@ -247,10 +312,11 @@ namespace DeadCells.NhaGiamGiengChuong
                 _statsStrip.SetActive(_stripWasVisible);
         }
 
-        private void RestoreStateAfterInterrupt()
+        private void RestoreStateAfterInterrupt(bool restoreHud)
         {
             _isPlaying = false;
-            RestoreHud();
+            if (restoreHud)
+                RestoreHud();
             if (_fader != null)
                 _fader.SetLetterbox(0f);
             if (_cameraFollow != null && _cameraFollow.IsFocusOverrideActive)
@@ -259,37 +325,35 @@ namespace DeadCells.NhaGiamGiengChuong
                 _player.EndScriptedSequence();
         }
 
-        private void StartChamberAudioFadeIn()
+        private void StartChamberAudioFadeIn() =>
+            FadeChamberAudio(_targetAudioVolume, _audioFadeInDuration, stopAtZero: false);
+
+        private void StopAudioFade()
         {
-            if (_chamberAudio == null || _chamberAudio.clip == null)
-                return;
-            _chamberAudio.loop = true;
-            _chamberAudio.volume = 0f;
-            if (!_chamberAudio.isPlaying)
-                _chamberAudio.Play();
-            if (isActiveAndEnabled && Application.isPlaying)
-                StartCoroutine(FadeAudioIn());
-            else
-                _chamberAudio.volume = _targetAudioVolume;
+            if (_audioFadeCoroutine != null)
+            {
+                StopCoroutine(_audioFadeCoroutine);
+                _audioFadeCoroutine = null;
+            }
         }
 
-        private IEnumerator FadeAudioIn()
+        private IEnumerator FadeAudioRoutine(float targetVolume, float duration, bool stopAtZero)
         {
-            if (_audioFadeInDuration <= 0f)
-            {
-                _chamberAudio.volume = _targetAudioVolume;
-                yield break;
-            }
-
+            float start = _chamberAudio.volume;
             float elapsed = 0f;
-            while (elapsed < _audioFadeInDuration && _chamberAudio != null)
+            while (elapsed < duration && _chamberAudio != null)
             {
                 elapsed += Time.unscaledDeltaTime;
-                _chamberAudio.volume = Mathf.Lerp(0f, _targetAudioVolume, Mathf.Clamp01(elapsed / _audioFadeInDuration));
+                _chamberAudio.volume = Mathf.Lerp(start, targetVolume, Mathf.Clamp01(elapsed / duration));
                 yield return null;
             }
             if (_chamberAudio != null)
-                _chamberAudio.volume = _targetAudioVolume;
+            {
+                _chamberAudio.volume = targetVolume;
+                if (stopAtZero && targetVolume <= 0.001f)
+                    _chamberAudio.Stop();
+            }
+            _audioFadeCoroutine = null;
         }
     }
 }
