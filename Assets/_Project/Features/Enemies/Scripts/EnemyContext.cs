@@ -119,14 +119,17 @@ namespace DeadCells.Enemies
         /// Turns toward a direction after Data.TurnDelay seconds of wanting to (instant when 0).
         /// Returns true once facing that way.
         /// </summary>
-        public bool TurnToward(int direction)
+        public bool TurnToward(int direction) => TurnToward(direction, Time.deltaTime);
+
+        /// <summary>Deterministic overload for EditMode tests driving TurnDelay with explicit deltaTime.</summary>
+        public bool TurnToward(int direction, float deltaTime)
         {
             if (direction == 0 || direction == Facing)
             {
                 _turnTimer = 0f;
                 return true;
             }
-            _turnTimer += Time.deltaTime;
+            _turnTimer += deltaTime;
             if (_turnTimer < Data.TurnDelay)
                 return false;
             Face(direction);

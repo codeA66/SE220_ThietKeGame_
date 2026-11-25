@@ -22,10 +22,13 @@ namespace DeadCells.Enemies.States
             _moveDir = 0f;
         }
 
-        public override void Tick()
+        public override void Tick() => Tick(Time.deltaTime);
+
+        /// <summary>Deterministic overload for EditMode tests driving TurnDelay with explicit deltaTime.</summary>
+        public void Tick(float deltaTime)
         {
             bool visible = Ctx.CanSeePlayer(Ctx.Data.LoseRange);
-            _lostTimer = visible ? 0f : _lostTimer + Time.deltaTime;
+            _lostTimer = visible ? 0f : _lostTimer + deltaTime;
             if (_lostTimer >= LoseSightGrace)
             {
                 Machine.ChangeState(Machine.Idle);
@@ -33,10 +36,10 @@ namespace DeadCells.Enemies.States
             }
 
             int toPlayer = Ctx.DirectionToPlayer;
-            bool facingPlayer = Ctx.TurnToward(toPlayer);
+            bool facingPlayer = Ctx.TurnToward(toPlayer, deltaTime);
             float dist = Ctx.DistanceToPlayer;
 
-            if (visible && Ctx.IsGrounded && TryKeepDistance(dist, toPlayer))
+            if (visible && Ctx.IsGrounded && facingPlayer && TryKeepDistance(dist, toPlayer))
                 return;
 
             if (visible && Ctx.IsGrounded && facingPlayer)
