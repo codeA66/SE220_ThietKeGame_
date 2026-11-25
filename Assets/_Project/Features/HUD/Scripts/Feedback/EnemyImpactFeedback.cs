@@ -15,16 +15,26 @@ namespace DeadCells.HUD
         [SerializeField] private AudioSource _audio;
         [SerializeField] private AudioClip _hitSound;
         [SerializeField] private AudioClip _fatalSound;
+        // Kept serialized for existing scene wiring (MapWiringTests.A17); owned by EnemyController.
+#pragma warning disable CS0169
         [SerializeField] private FloatingDamageNumber _numberPrefab;
-        [SerializeField] private GameObject _bar;
         [SerializeField] private Transform _fill;
+#pragma warning restore CS0169
+        [SerializeField] private GameObject _bar;
 
-        private float _hideBarAt;
+        private void Awake()
+        {
+            if (_bar != null)
+                _bar.SetActive(false);
+        }
 
         private void OnEnable()
         {
-            _target.Damaged += OnHit;
-            _target.Died += OnDefeated;
+            if (_target != null)
+            {
+                _target.Damaged += OnHit;
+                _target.Died += OnDefeated;
+            }
         }
 
         private void OnDisable()
@@ -36,43 +46,30 @@ namespace DeadCells.HUD
             }
         }
 
-        private void LateUpdate()
-        {
-            if (!_bar.activeSelf)
-                return;
-
-            if (_target == null || !_target.IsAlive || Time.time >= _hideBarAt)
-                _bar.SetActive(false);
-            else
-                _bar.transform.position = BarPosition();
-        }
-
         private void OnHit(DamageInfo damage)
         {
             PlayContact(damage, _impactBlood, _hitSound);
-            _fill.localScale = new Vector3(0.65f * _target.Current / _target.Max, 0.065f, 1f);
-            _hideBarAt = Time.time + 1.1f;
-            _bar.transform.position = BarPosition();
-            _bar.SetActive(true);
         }
 
         private void OnDefeated(DamageInfo damage)
         {
             PlayContact(damage, _defeatBlood, _fatalSound);
-            _bar.SetActive(false);
+            if (_bar != null)
+                _bar.SetActive(false);
         }
-
-        private Vector3 BarPosition() => _target.transform.position + Vector3.up * (_body.offset.y + _body.size.y / 2f + 0.19f);
 
         private void PlayContact(DamageInfo damage, VfxDefinition blood, AudioClip sound)
         {
-            Vector3 position = _target.transform.position + Vector3.up * _body.offset.y;
-            // The baked blood sprites are drawn red; enemy blood is blue, so play a recoloured copy.
-            _vfx.Play(VfxRecolor.Blue(blood), position, damage.Direction < 0);
-            _vfx.Play(_impactFlash, position);
-            _audio.PlayOneShot(sound, 0.75f);
-            var number = Instantiate(_numberPrefab, transform);
-            number.Show(BarPosition() + new Vector3(0.45f, -0.20f), damage.Amount, damage.IsCritical);
+            if (_vfx != null && _target != null && _body != null)
+            {
+                Vector3 position = _target.transform.position + Vector3.up * _body.offset.y;
+                // The baked blood sprites are drawn red; enemy blood is blue, so play a recoloured copy.
+                _vfx.Play(VfxRecolor.Blue(blood), position, damage.Direction < 0);
+                _vfx.Play(_impactFlash, position);
+            }
+
+            if (_audio != null && sound != null)
+                _audio.PlayOneShot(sound, 0.75f);
         }
     }
 }
