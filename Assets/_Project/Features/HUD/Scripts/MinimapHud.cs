@@ -207,7 +207,9 @@ namespace DeadCells.HUD
         private void HandleMapInput()
         {
             Keyboard kb = Keyboard.current;
-            if (kb != null && (kb.tabKey.wasPressedThisFrame || kb.mKey.wasPressedThisFrame))
+            Gamepad gp = Gamepad.current;
+            if ((kb != null && (kb.tabKey.wasPressedThisFrame || kb.mKey.wasPressedThisFrame)) ||
+                (gp != null && gp.selectButton.wasPressedThisFrame))
             {
                 SetFullMapOpen(!_view.IsFullMapOpen);
                 return;
@@ -219,6 +221,12 @@ namespace DeadCells.HUD
             if (kb != null && kb.escapeKey.wasPressedThisFrame)
             {
                 LastEscapeCloseFrame = Time.frameCount;
+                SetFullMapOpen(false);
+                return;
+            }
+
+            if (gp != null && gp.buttonEast.wasPressedThisFrame)
+            {
                 SetFullMapOpen(false);
                 return;
             }
