@@ -172,21 +172,21 @@ namespace DeadCells.NhaGiamGiengChuong
 
         private void SubscribeInput()
         {
-            if (_inputActions == null)
+            if (_interactAction != null || _inputActions == null)
                 return;
             var map = _inputActions.FindActionMap(_actionMapName, throwIfNotFound: false);
             _interactAction = map?.FindAction(_interactActionName, throwIfNotFound: false);
             if (_interactAction != null)
-                _interactAction.performed += OnInteractPerformed;
+                _interactAction.started += OnInteractStarted;
         }
 
         private void UnsubscribeInput()
         {
             if (_interactAction != null)
-                _interactAction.performed -= OnInteractPerformed;
+                _interactAction.started -= OnInteractStarted;
             _interactAction = null;
         }
 
-        private void OnInteractPerformed(InputAction.CallbackContext ctx) => TryToggleReading();
+        private void OnInteractStarted(InputAction.CallbackContext ctx) => TryToggleReading();
     }
 }
