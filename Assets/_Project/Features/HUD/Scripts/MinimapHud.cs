@@ -82,14 +82,14 @@ namespace DeadCells.HUD
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureInActiveScene()
         {
-            if (FindFirstObjectByType<MinimapHud>() != null || FindFirstObjectByType<PlayerController>() == null)
+            if (FindAnyObjectByType<MinimapHud>() != null || FindAnyObjectByType<PlayerController>() == null)
                 return;
             new GameObject("MinimapHud").AddComponent<MinimapHud>();
         }
 
         private void Start()
         {
-            _player = FindFirstObjectByType<PlayerController>();
+            _player = FindAnyObjectByType<PlayerController>();
             if (_player == null)
             {
                 GameDebug.LogWarning("No player in the scene, so the minimap has nothing to follow.", LogTopic.UI);
@@ -98,9 +98,9 @@ namespace DeadCells.HUD
             }
 
             _target = _player.transform;
-            _hitStop = FindFirstObjectByType<HitStop>();
+            _hitStop = FindAnyObjectByType<HitStop>();
 
-            var healthHud = FindFirstObjectByType<PlayerHealthHud>();
+            var healthHud = FindAnyObjectByType<PlayerHealthHud>();
             if (healthHud != null)
                 _gameplayHudCanvas = healthHud.GetComponentInParent<Canvas>();
 
