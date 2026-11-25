@@ -4,7 +4,9 @@ using DeadCells.Combat;
 using DeadCells.Player.StateMachine;
 using DeadCells.Player.StateMachine.States;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
 {
@@ -242,6 +244,46 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             typeof(LevelRunController).GetMethod("OnDestroy", BindingFlags.Instance | BindingFlags.NonPublic)?.Invoke(cleanupRun, null);
             Assert.AreEqual(1f, Time.timeScale, 0.0001f, "[U15/OnDestroy] Time.timeScale must be restored to 1.");
             Object.DestroyImmediate(cleanupRun.gameObject);
+        }
+
+        [Test]
+        public void U16_InputActions_GamepadRollAndCrouchBindings_DoNotCollide()
+        {
+            const string inputActionsPath = "Assets/_Project/Settings/Input/InputSystem_Actions.inputactions";
+            var actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(inputActionsPath);
+            Assert.IsNotNull(actions, $"[U16/Asset] Missing InputActionAsset at '{inputActionsPath}'.");
+
+            var playerMap = actions.FindActionMap("Player", throwIfNotFound: true);
+            var rollAction = playerMap.FindAction("Roll", throwIfNotFound: true);
+            var crouchAction = playerMap.FindAction("Crouch", throwIfNotFound: true);
+
+            var rollGamepadPaths = CollectGamepadBindingPaths(rollAction);
+            var crouchGamepadPaths = CollectGamepadBindingPaths(crouchAction);
+
+            CollectionAssert.Contains(rollGamepadPaths, "<Gamepad>/buttonEast",
+                "[U16/RollGamepad] Roll must keep <Gamepad>/buttonEast.");
+            CollectionAssert.Contains(crouchGamepadPaths, "<Gamepad>/rightStickPress",
+                "[U16/CrouchGamepad] Crouch must use <Gamepad>/rightStickPress.");
+
+            foreach (string path in rollGamepadPaths)
+            {
+                Assert.IsFalse(crouchGamepadPaths.Contains(path),
+                    $"[U16/Collision] Gamepad Roll and Crouch must not share binding '{path}'.");
+            }
+        }
+
+        private static HashSet<string> CollectGamepadBindingPaths(InputAction action)
+        {
+            var paths = new HashSet<string>();
+            foreach (var binding in action.bindings)
+            {
+                if (!binding.isComposite && !binding.isPartOfComposite &&
+                    !string.IsNullOrEmpty(binding.path) && binding.path.StartsWith("<Gamepad>/"))
+                {
+                    paths.Add(binding.path);
+                }
+            }
+            return paths;
         }
 
         private LevelRunController CreateRun(out Health health)

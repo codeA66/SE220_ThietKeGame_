@@ -1,6 +1,7 @@
 using System.Reflection;
 using DeadCells.Combat;
 using DeadCells.HUD;
+using DeadCells.Player;
 using DeadCells.RunFlow;
 using NUnit.Framework;
 using UnityEngine;
@@ -201,6 +202,44 @@ namespace DeadCells.Core.Tests
             Assert.IsTrue(health.IsAlive);
 
             InvokePrivateMethod(screen, "OnDisable");
+            InvokePrivateMethod(run, "OnDisable");
+        }
+
+        [Test]
+        public void RunSession_CompleteRun_BlocksDamageAndLocksPlayerControlAndBodyPhysics()
+        {
+            var playerGo = new GameObject("Player");
+            playerGo.transform.SetParent(_root.transform);
+            var rb = playerGo.AddComponent<Rigidbody2D>();
+            rb.simulated = true;
+            rb.linearVelocity = new Vector2(6f, -3f);
+            rb.angularVelocity = 12f;
+
+            var health = playerGo.AddComponent<Health>();
+            health.RestoreFull(); // Awake() does not run in EditMode; initialize Current = Max (100)
+
+            var inputReader = playerGo.AddComponent<PlayerInputReader>();
+            var controller = playerGo.AddComponent<PlayerController>();
+            Assert.IsTrue(inputReader.enabled);
+            Assert.IsTrue(controller.enabled);
+
+            var runGo = new GameObject("RunSession");
+            runGo.transform.SetParent(_root.transform);
+            var run = runGo.AddComponent<RunSession>();
+            SetPrivateField(run, "_playerHealth", health);
+            InvokePrivateMethod(run, "OnEnable");
+
+            Assert.IsTrue(run.CompleteRun(), "CompleteRun() must succeed on a live session.");
+            Assert.IsTrue(run.IsCompleted);
+            Assert.IsFalse(health.TakeDamage(new DamageInfo(999, 1, 0f, 0f, false, _root)),
+                "Player must be damage-immune once RunSession completes.");
+            Assert.IsTrue(health.IsAlive);
+            Assert.IsFalse(inputReader.enabled, "PlayerInputReader must be disabled once RunSession completes.");
+            Assert.IsFalse(controller.enabled, "PlayerController must be disabled once RunSession completes.");
+            Assert.IsFalse(rb.simulated, "Player Rigidbody2D simulation must be disabled once RunSession completes.");
+            Assert.AreEqual(Vector2.zero, rb.linearVelocity, "Player linearVelocity must be zeroed once RunSession completes.");
+            Assert.AreEqual(0f, rb.angularVelocity, 0.0001f, "Player angularVelocity must be zeroed once RunSession completes.");
+
             InvokePrivateMethod(run, "OnDisable");
         }
 
