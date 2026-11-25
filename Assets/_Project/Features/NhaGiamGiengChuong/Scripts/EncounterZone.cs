@@ -122,7 +122,7 @@ namespace DeadCells.NhaGiamGiengChuong
         public static Vector2 GetColliderFeet(BoxCollider2D collider)
         {
             float scaleSignY = collider.transform.lossyScale.y < 0f ? -1f : 1f;
-            float localHalfHeight = collider.size.y * 0.5f * scaleSignY;
+            float localHalfHeight = (collider.size.y * 0.5f + collider.edgeRadius) * scaleSignY;
             Vector3 localFeet = new Vector3(collider.offset.x, collider.offset.y - localHalfHeight, 0f);
             return collider.transform.TransformPoint(localFeet);
         }
