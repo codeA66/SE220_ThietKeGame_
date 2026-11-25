@@ -16,12 +16,12 @@ namespace DeadCells.Player
         private readonly Action<IDamageable, DamageInfo> _onTargetHit;
         private bool _anyFatalInStrike;
 
-        public PlayerCombat(Transform owner, BoxCollider2D collider, WeaponData weapon, LayerMask targets, PlayerRunStats stats)
+        public PlayerCombat(Transform owner, BoxCollider2D collider, WeaponData weapon, LayerMask targets, PlayerRunStats stats, LayerMask solidObstructionMask = default)
         {
             _owner = owner;
             _collider = collider;
             MeleeWeapon = weapon;
-            _query = new HitQuery(targets);
+            _query = new HitQuery(targets, solidObstructionMask);
             _stats = stats;
             _onTargetHit = (target, hitInfo) =>
             {
@@ -68,7 +68,7 @@ namespace DeadCells.Player
             int damage = _stats.ScaleDamage(strike.Damage, MeleeWeapon.ScalingStat);
             var info = new DamageInfo(damage, facing, strike.Knockback, strike.CanCrit ? 0.35f : 0f, strike.CanCrit, _owner.gameObject);
             _anyFatalInStrike = false;
-            int hits = _query.Strike(center, size, info, _onTargetHit);
+            int hits = _query.Strike(center, size, info, _onTargetHit, lineOfSightOrigin: (Vector2)bounds.center);
             if (hits > 0)
             {
                 StrikeHit?.Invoke(hits, info.IsCritical);
@@ -90,7 +90,7 @@ namespace DeadCells.Player
                 : damage;
             var info = new DamageInfo(scaledDamage, 0, 0f, stun, false, _owner.gameObject, isStomp: true);
             _anyFatalInStrike = false;
-            int hits = _query.Strike(center, area, info, _onTargetHit);
+            int hits = _query.Strike(center, area, info, _onTargetHit, lineOfSightOrigin: new Vector2(bounds.center.x, bounds.min.y + 0.15f));
             if (hits > 0)
             {
                 StrikeHit?.Invoke(hits, false);

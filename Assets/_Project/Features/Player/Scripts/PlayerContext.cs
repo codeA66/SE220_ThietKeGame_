@@ -120,6 +120,7 @@ namespace DeadCells.Player
 
         public SpriteRenderer Sprite => _sprite;
         public LayerMask GroundMask => _groundMask;
+        public LayerMask SolidWallMask => _solidWallMask;
 
         public void NotifyAwakened() => Awakened?.Invoke();
 

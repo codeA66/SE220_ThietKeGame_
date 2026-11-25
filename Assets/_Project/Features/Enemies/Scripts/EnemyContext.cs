@@ -35,7 +35,7 @@ namespace DeadCells.Enemies
             int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
             int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
             _solidWallMask = groundMask.value & ~oneWayBit;
-            _hits = new HitQuery(attackTargets);
+            _hits = new HitQuery(attackTargets, _solidWallMask);
             _skillReadyTime = new float[data.Skills.Length];
         }
 
@@ -196,7 +196,7 @@ namespace DeadCells.Enemies
             var b = _collider.bounds;
             var center = new Vector2(b.center.x + Facing * skill.HitReach * 0.5f, b.min.y + skill.HitHeight * 0.5f);
             var info = new DamageInfo(skill.Damage, Facing, skill.Knockback, skill.StunDealt, false, Owner);
-            return _hits.Strike(center, new Vector2(skill.HitReach, skill.HitHeight), info);
+            return _hits.Strike(center, new Vector2(skill.HitReach, skill.HitHeight), info, lineOfSightOrigin: (Vector2)b.center);
         }
     }
 }

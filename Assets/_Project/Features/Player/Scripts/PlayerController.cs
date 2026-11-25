@@ -58,7 +58,7 @@ namespace DeadCells.Player
             var collider = GetComponent<BoxCollider2D>();
             _context = new PlayerContext(_body, collider, _sprite, _groundMask, _rollPassThroughMask, _climbableMask, _config, _input, _animator);
             RunStats = new PlayerRunStats(_health);
-            _context.Combat = new PlayerCombat(transform, collider, _weapon, _attackTargets, RunStats);
+            _context.Combat = new PlayerCombat(transform, collider, _weapon, _attackTargets, RunStats, _context.SolidWallMask);
             if (_bow == null)
                 throw new System.InvalidOperationException("PlayerController requires its PlayerBow reference.");
             _bow.Initialize(_attackTargets, _groundMask, RunStats);
