@@ -11,6 +11,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
@@ -317,6 +318,64 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             var hudGo = Track(new GameObject("GameplayHUD"));
             var hudCanvas = hudGo.AddComponent<Canvas>();
             hudCanvas.enabled = true;
+
+            // Verify WallInscription opens immediately on Interact.started without waiting for Hold completion.
+            var actionsClone = Object.Instantiate(actions);
+            var interactAction = actionsClone.FindActionMap("Player", throwIfNotFound: true)
+                .FindAction("Interact", throwIfNotFound: true);
+            StringAssert.Contains("Hold", interactAction.interactions,
+                "Player/Interact must retain Hold interaction so started-vs-performed is exercised.");
+
+            int performedCount = 0;
+            void OnPerformed(InputAction.CallbackContext _) => performedCount++;
+            interactAction.performed += OnPerformed;
+
+            player.TeleportTo(new Vector2(191.5f, 29f), 1);
+            var insGo = Track(new GameObject("I24_VaultA_Inscription"));
+            insGo.transform.position = new Vector3(191.5f, 29f, 0f);
+            var insTrig = insGo.AddComponent<BoxCollider2D>();
+            insTrig.isTrigger = true;
+            insTrig.offset = new Vector2(0f, 1f);
+            insTrig.size = new Vector2(3.5f, 2.5f);
+            Physics2D.SyncTransforms();
+
+            var prompt = Track(new GameObject("Prompt"));
+            var banner = Track(new GameObject("Banner"));
+            var bannerText = banner.AddComponent<Text>();
+            var inscription = insGo.AddComponent<WallInscription>();
+            inscription.Configure("Bức Họa Không Đề Tên", "Test Quote", run, player, pHealth, pCol, insTrig, actionsClone, prompt, banner, bannerText, startsUnlocked: true);
+
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            try
+            {
+                interactAction.Enable();
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.E));
+                InputSystem.Update();
+
+                Assert.AreEqual(InputActionPhase.Started, interactAction.phase,
+                    "Pressing E once on Hold Interact must enter Started without waiting for hold completion.");
+                Assert.AreEqual(0, performedCount,
+                    "Hold Interact must not have completed performed phase on initial press.");
+                Assert.IsTrue(inscription.IsReading,
+                    "WallInscription must open quote immediately via Interact.started.");
+                Assert.IsTrue(banner.activeSelf);
+
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                InputSystem.Update();
+                Assert.IsTrue(inscription.IsReading,
+                    "Releasing E before hold completion must leave quote open.");
+                Assert.AreEqual(0, performedCount);
+            }
+            finally
+            {
+                interactAction.performed -= OnPerformed;
+                interactAction.Disable();
+                if (insGo != null)
+                    insGo.SetActive(false);
+                if (keyboard != null && keyboard.added)
+                    InputSystem.RemoveDevice(keyboard);
+                Object.DestroyImmediate(actionsClone);
+            }
 
             var seqGo = Track(new GameObject("Seq_RunEnd"));
             var seqTrig = seqGo.AddComponent<BoxCollider2D>();

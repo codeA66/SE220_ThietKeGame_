@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using DeadCells.CameraSystem;
@@ -39,29 +40,49 @@ namespace DeadCells.Core.Tests
             _spawned.Clear();
         }
 
+        private const string TagManagerPath = "ProjectSettings/TagManager.asset";
+
         [Test]
         public void SortingLayerSetup_RegistersAllDeadCellsLayersInOrderIdempotently()
         {
-            SortingLayerSetup.EnsureDeadCellsSortingLayers();
-            SortingLayerSetup.EnsureDeadCellsSortingLayers();
-
-            string[] layerNames = SortingLayer.layers.Select(l => l.name).ToArray();
-            Assert.IsNotEmpty(layerNames);
-            Assert.AreEqual("Default", layerNames[0], "Default sorting layer must remain at index 0.");
-            Assert.AreEqual(layerNames.Distinct().Count(), layerNames.Length, "Sorting layers must not contain duplicates.");
-
-            int previousIndex = -1;
-            foreach (string expected in ExpectedOrder)
+            byte[] beforeBytes = File.ReadAllBytes(TagManagerPath);
+            try
             {
-                int index = System.Array.IndexOf(layerNames, expected);
-                Assert.GreaterOrEqual(index, 0, $"Missing expected sorting layer '{expected}'.");
-                Assert.Greater(index, previousIndex, $"Sorting layer '{expected}' is out of strict relative order.");
-                previousIndex = index;
+                SortingLayerSetup.EnsureDeadCellsSortingLayers();
+                var firstPass = SortingLayer.layers.Select(l => (l.name, l.id)).ToArray();
 
-                int id = SortingLayerSetup.GetSortingLayerId(expected);
-                Assert.AreEqual(SortingLayer.NameToID(expected), id);
-                if (expected != "Default")
-                    Assert.AreNotEqual(0, id, $"Sorting layer '{expected}' must have a non-zero unique ID.");
+                SortingLayerSetup.EnsureDeadCellsSortingLayers();
+                var secondPass = SortingLayer.layers.Select(l => (l.name, l.id)).ToArray();
+                byte[] afterBytes = File.ReadAllBytes(TagManagerPath);
+
+                CollectionAssert.AreEqual(firstPass, secondPass, "EnsureDeadCellsSortingLayers must be idempotent.");
+                Assert.IsTrue(beforeBytes.SequenceEqual(afterBytes),
+                    "EnsureDeadCellsSortingLayers must not rewrite ProjectSettings/TagManager.asset when layers are already registered.");
+
+                string[] layerNames = SortingLayer.layers.Select(l => l.name).ToArray();
+                Assert.IsNotEmpty(layerNames);
+                Assert.AreEqual("Default", layerNames[0], "Default sorting layer must remain at index 0.");
+                Assert.AreEqual(layerNames.Distinct().Count(), layerNames.Length, "Sorting layers must not contain duplicates.");
+
+                int previousIndex = -1;
+                foreach (string expected in ExpectedOrder)
+                {
+                    int index = System.Array.IndexOf(layerNames, expected);
+                    Assert.GreaterOrEqual(index, 0, $"Missing expected sorting layer '{expected}'.");
+                    Assert.Greater(index, previousIndex, $"Sorting layer '{expected}' is out of strict relative order.");
+                    previousIndex = index;
+
+                    int id = SortingLayerSetup.GetSortingLayerId(expected);
+                    Assert.AreEqual(SortingLayer.NameToID(expected), id);
+                    if (expected != "Default")
+                        Assert.AreNotEqual(0, id, $"Sorting layer '{expected}' must have a non-zero unique ID.");
+                }
+            }
+            finally
+            {
+                byte[] currentBytes = File.ReadAllBytes(TagManagerPath);
+                if (!currentBytes.SequenceEqual(beforeBytes))
+                    File.WriteAllBytes(TagManagerPath, beforeBytes);
             }
         }
 

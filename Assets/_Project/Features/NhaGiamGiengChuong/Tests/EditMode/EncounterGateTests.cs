@@ -138,24 +138,62 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
         {
             // Run 1: Retreat after 1/2, return and kill 2/2 -> opens and stays open across floor revisit.
             {
-                var run = CreatePlayingRun();
+                var playerGo = Track(new GameObject("Player_U10"));
+                playerGo.transform.position = new Vector3(-13.5f, 24f, 0f);
+                var playerCol = playerGo.AddComponent<BoxCollider2D>();
+                playerCol.size = new Vector2(0.8f, 1.6f);
+                playerCol.offset = new Vector2(0f, 0.8f);
+                var playerHealth = playerGo.AddComponent<Health>();
+                playerHealth.Initialize(100, 0f);
+
+                var run = Track(new GameObject("Run_U10")).AddComponent<LevelRunController>();
+                run.Configure(null, playerHealth);
+                run.TickIntro(new DummyPlayState(), 0f);
+
                 var zombieE = SpawnEnemy(ZombiePrefabPath, new Vector2(-9f, 24f));
                 var archerE = SpawnEnemy(ArcherPrefabPath, new Vector2(10f, 24f));
-                var (gate, barrier) = CreateGate(run, zombieE, archerE);
+                var zoneGo = Track(new GameObject("Zone_E1"));
+                var zone = zoneGo.AddComponent<EncounterZone>();
+                zone.Configure("E1", new Vector2(-15f, 24f), new Vector2(-12f, 31f), run, null, playerCol,
+                    new[] { zombieE, archerE }, playerHealth);
+                zone.PutEnemiesToSleep();
 
+                var (gate, barrier) = CreateGate(run, zombieE, archerE);
+                int openCount = 0;
+                gate.Opened += () => openCount++;
+
+                Assert.IsTrue(zone.Evaluate(), "[U10/EnterE1] expected E1 zone to wake enemies.");
                 KillEnemy(zombieE);
                 Assert.AreEqual(1, gate.DefeatedCount, "[U10/Retreat] progress=1/2");
                 Assert.IsFalse(gate.IsOpen);
-
-                // Player retreats to K and returns: gate retains 1/2.
-                Assert.AreEqual(1, gate.DefeatedCount);
                 Assert.IsTrue(barrier.activeSelf);
 
-                // Kill second enemy -> gate opens and stays open.
+                // Player retreats to K and re-enters E1: gate re-subscribes and retains 1/2.
+                playerGo.transform.position = new Vector3(-20f, 24f, 0f);
+                Assert.IsFalse(zone.Evaluate(), "[U10/RetreatOutside] zone must not re-activate.");
+                gate.enabled = false;
+                gate.enabled = true;
+
+                playerGo.transform.position = new Vector3(-13.5f, 24f, 0f);
+                Assert.IsFalse(zone.Evaluate(), "[U10/ReEnterE1] zone remains activated.");
+                Assert.AreEqual(1, gate.DefeatedCount);
+                Assert.IsFalse(gate.IsOpen);
+                Assert.IsTrue(barrier.activeSelf);
+                Assert.AreEqual(0, openCount);
+
+                // Kill second enemy after re-enable -> gate opens once and stays open across floor revisit.
                 KillEnemy(archerE);
                 Assert.IsTrue(gate.IsOpen);
                 Assert.IsFalse(barrier.activeSelf);
                 Assert.AreEqual(2, gate.DefeatedCount);
+                Assert.AreEqual(1, openCount);
+
+                gate.enabled = false;
+                gate.enabled = true;
+                Assert.IsTrue(gate.IsOpen, "[U10/Revisit] opened gate remains open after re-enable.");
+                Assert.IsFalse(barrier.activeSelf);
+                Assert.AreEqual(2, gate.DefeatedCount);
+                Assert.AreEqual(1, openCount);
             }
 
             // Run 2: Lock while closed (1/2) -> further deaths after Ended do NOT open the gate.
