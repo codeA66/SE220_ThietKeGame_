@@ -40,6 +40,12 @@ namespace DeadCells.NhaGiamGiengChuong
         private bool _isOpen;
         private bool _promptVisible;
         private Coroutine _openAnimCoroutine;
+        private bool _hasCapturedBaseVisuals;
+        private Vector3 _switchBaseScale = Vector3.one;
+        private Color _switchBaseColor = Color.white;
+        private Vector3 _doorBasePos;
+        private SpriteRenderer[] _doorRenderers = Array.Empty<SpriteRenderer>();
+        private Color[] _doorBaseColors = Array.Empty<Color>();
 
         public string DoorId => _doorId;
         public bool IsOpen => _isOpen;
@@ -67,6 +73,8 @@ namespace DeadCells.NhaGiamGiengChuong
             BoxCollider2D playerCollider = null)
         {
             UnsubscribeInput();
+            StopOpenAnimationAndResetVisuals();
+            _hasCapturedBaseVisuals = false;
             _doorId = doorId;
             _run = run;
             _player = player;
@@ -82,7 +90,14 @@ namespace DeadCells.NhaGiamGiengChuong
             _isOpen = false;
 
             if (_doorBarrierRoot != null)
+            {
+                foreach (var barrierCol in _doorBarrierRoot.GetComponentsInChildren<Collider2D>(true))
+                {
+                    if (barrierCol != null)
+                        barrierCol.enabled = true;
+                }
                 _doorBarrierRoot.SetActive(true);
+            }
             if (_switchRenderer != null && _switchOffSprite != null)
                 _switchRenderer.sprite = _switchOffSprite;
 
@@ -112,13 +127,9 @@ namespace DeadCells.NhaGiamGiengChuong
         private void OnDisable()
         {
             UnsubscribeInput();
-            if (_openAnimCoroutine != null)
-            {
-                StopCoroutine(_openAnimCoroutine);
-                _openAnimCoroutine = null;
-                if (_isOpen && _doorBarrierRoot != null)
-                    _doorBarrierRoot.SetActive(false);
-            }
+            StopOpenAnimationAndResetVisuals();
+            if (_isOpen && _doorBarrierRoot != null)
+                _doorBarrierRoot.SetActive(false);
         }
 
         private void OnDestroy()
@@ -189,8 +200,9 @@ namespace DeadCells.NhaGiamGiengChuong
 
             if (Application.isPlaying && isActiveAndEnabled && _doorBarrierRoot != null && _doorBarrierRoot.activeInHierarchy)
             {
-                Opened?.Invoke(this);
+                CaptureBaseVisualState();
                 _openAnimCoroutine = StartCoroutine(AnimateSwitchAndDoorOpenRoutine());
+                Opened?.Invoke(this);
             }
             else
             {
@@ -201,6 +213,55 @@ namespace DeadCells.NhaGiamGiengChuong
             return true;
         }
 
+        private void CaptureBaseVisualState()
+        {
+            if (_hasCapturedBaseVisuals)
+                return;
+            _hasCapturedBaseVisuals = true;
+            if (_switchRenderer != null)
+            {
+                _switchBaseScale = _switchRenderer.transform.localScale;
+                _switchBaseColor = _switchRenderer.color;
+            }
+            if (_doorBarrierRoot != null)
+            {
+                _doorBasePos = _doorBarrierRoot.transform.position;
+                _doorRenderers = _doorBarrierRoot.GetComponentsInChildren<SpriteRenderer>(true);
+                _doorBaseColors = new Color[_doorRenderers.Length];
+                for (int i = 0; i < _doorRenderers.Length; i++)
+                    _doorBaseColors[i] = _doorRenderers[i] != null ? _doorRenderers[i].color : Color.white;
+            }
+            else
+            {
+                _doorRenderers = Array.Empty<SpriteRenderer>();
+                _doorBaseColors = Array.Empty<Color>();
+            }
+        }
+
+        private void StopOpenAnimationAndResetVisuals()
+        {
+            if (_openAnimCoroutine != null)
+            {
+                StopCoroutine(_openAnimCoroutine);
+                _openAnimCoroutine = null;
+            }
+            if (!_hasCapturedBaseVisuals)
+                return;
+
+            if (_switchRenderer != null)
+            {
+                _switchRenderer.transform.localScale = _switchBaseScale;
+                _switchRenderer.color = _switchBaseColor;
+            }
+            if (_doorBarrierRoot != null)
+                _doorBarrierRoot.transform.position = _doorBasePos;
+            for (int i = 0; i < _doorRenderers.Length; i++)
+            {
+                if (_doorRenderers[i] != null && i < _doorBaseColors.Length)
+                    _doorRenderers[i].color = _doorBaseColors[i];
+            }
+        }
+
         private IEnumerator AnimateSwitchAndDoorOpenRoutine()
         {
             SpawnActivationBurst(transform.position + Vector3.up * 0.95f, new Color(0.45f, 0.95f, 1.0f, 1f), 14, 2.8f, 0.4f);
@@ -208,18 +269,8 @@ namespace DeadCells.NhaGiamGiengChuong
                 SpawnActivationBurst(_doorBarrierRoot.transform.position + Vector3.down * 1.3f, new Color(0.74f, 0.70f, 0.58f, 1f), 18, 3.6f, 1.3f);
 
             Transform swTr = _switchRenderer != null ? _switchRenderer.transform : null;
-            Vector3 swBaseScale = swTr != null ? swTr.localScale : Vector3.one;
-            Color swBaseColor = _switchRenderer != null ? _switchRenderer.color : Color.white;
             var flashColor = new Color(0.75f, 1.0f, 1.0f, 1f);
-
             Transform doorTr = _doorBarrierRoot != null ? _doorBarrierRoot.transform : null;
-            Vector3 doorStartPos = doorTr != null ? doorTr.position : Vector3.zero;
-            var doorRenderers = _doorBarrierRoot != null
-                ? _doorBarrierRoot.GetComponentsInChildren<SpriteRenderer>(true)
-                : Array.Empty<SpriteRenderer>();
-            var doorBaseColors = new Color[doorRenderers.Length];
-            for (int i = 0; i < doorRenderers.Length; i++)
-                doorBaseColors[i] = doorRenderers[i] != null ? doorRenderers[i].color : Color.white;
 
             const float switchPressDuration = 0.22f;
             const float rumbleDuration = 0.11f;
@@ -238,17 +289,17 @@ namespace DeadCells.NhaGiamGiengChuong
                     float st = Mathf.Clamp01(elapsed / switchPressDuration);
                     float dip = Mathf.Sin(st * Mathf.PI);
                     swTr.localScale = new Vector3(
-                        swBaseScale.x * (1f + 0.14f * dip),
-                        swBaseScale.y * (1f - 0.22f * dip),
-                        swBaseScale.z);
+                        _switchBaseScale.x * (1f + 0.14f * dip),
+                        _switchBaseScale.y * (1f - 0.22f * dip),
+                        _switchBaseScale.z);
                     if (_switchRenderer != null)
-                        _switchRenderer.color = Color.Lerp(swBaseColor, flashColor, dip);
+                        _switchRenderer.color = Color.Lerp(_switchBaseColor, flashColor, dip);
                 }
                 else if (swTr != null)
                 {
-                    swTr.localScale = swBaseScale;
+                    swTr.localScale = _switchBaseScale;
                     if (_switchRenderer != null)
-                        _switchRenderer.color = swBaseColor;
+                        _switchRenderer.color = _switchBaseColor;
                 }
 
                 // 2. Door barrier rumble followed by smooth vertical retraction into ceiling header
@@ -257,23 +308,23 @@ namespace DeadCells.NhaGiamGiengChuong
                     if (elapsed < rumbleDuration)
                     {
                         float jitter = Mathf.Sin(elapsed * 95f) * 0.065f;
-                        doorTr.position = doorStartPos + new Vector3(jitter, 0f, 0f);
+                        doorTr.position = _doorBasePos + new Vector3(jitter, 0f, 0f);
                     }
                     else
                     {
                         float dt = Mathf.Clamp01((elapsed - rumbleDuration) / slideDuration);
                         float ease = dt * dt * (3f - 2f * dt);
                         float microShake = (1f - dt) * Mathf.Sin(elapsed * 70f) * 0.025f;
-                        doorTr.position = doorStartPos + new Vector3(microShake, ease * slideHeight, 0f);
+                        doorTr.position = _doorBasePos + new Vector3(microShake, ease * slideHeight, 0f);
                         if (dt > 0.65f)
                         {
                             float fade = 1f - Mathf.Clamp01((dt - 0.65f) / 0.35f);
-                            for (int i = 0; i < doorRenderers.Length; i++)
+                            for (int i = 0; i < _doorRenderers.Length; i++)
                             {
-                                if (doorRenderers[i] == null)
+                                if (_doorRenderers[i] == null || i >= _doorBaseColors.Length)
                                     continue;
-                                Color bc = doorBaseColors[i];
-                                doorRenderers[i].color = new Color(bc.r, bc.g, bc.b, bc.a * fade);
+                                Color bc = _doorBaseColors[i];
+                                _doorRenderers[i].color = new Color(bc.r, bc.g, bc.b, bc.a * fade);
                             }
                         }
                     }
@@ -282,19 +333,10 @@ namespace DeadCells.NhaGiamGiengChuong
                 yield return null;
             }
 
-            if (swTr != null)
-                swTr.localScale = swBaseScale;
-            if (_switchRenderer != null)
-                _switchRenderer.color = swBaseColor;
-            for (int i = 0; i < doorRenderers.Length; i++)
-            {
-                if (doorRenderers[i] != null)
-                    doorRenderers[i].color = doorBaseColors[i];
-            }
+            _openAnimCoroutine = null;
+            StopOpenAnimationAndResetVisuals();
             if (_doorBarrierRoot != null)
                 _doorBarrierRoot.SetActive(false);
-
-            _openAnimCoroutine = null;
         }
 
         private static void SpawnActivationBurst(Vector3 pos, Color color, int count, float speed, float gravity)
@@ -416,7 +458,7 @@ namespace DeadCells.NhaGiamGiengChuong
         private bool IsInputBlocked()
         {
             var p = ResolvePlayer();
-            return p != null && p.RunStats != null && p.RunStats.BlocksGameplayInput;
+            return p != null && ((p.RunStats != null && p.RunStats.BlocksGameplayInput) || p.IsInScriptedSequence);
         }
 
         private BoxCollider2D ResolvePlayerCollider()
