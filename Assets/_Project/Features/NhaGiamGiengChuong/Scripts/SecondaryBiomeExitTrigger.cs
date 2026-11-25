@@ -4,13 +4,14 @@ using DeadCells.Combat;
 using DeadCells.Enemies;
 using DeadCells.Player;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace DeadCells.NhaGiamGiengChuong
 {
     /// <summary>
-    /// Secondary biome exit trigger (e.g. Toxic Sewers I15). Unlocks only when the linked SwitchDoor
-    /// is open (if assigned) and both assigned guardians are defeated, then submits a win candidate
-    /// for the assigned living Player's main collider during Playing.
+    /// Secondary biome exit trigger (e.g. Toxic Sewers I15, Promenade I18). Unlocks only when the linked SwitchDoor
+    /// is open (if assigned) and both assigned guardians are defeated, displays an [E] prompt, and submits a win
+    /// candidate only when the living Player presses Interact inside the trigger during Playing.
     /// </summary>
     [RequireComponent(typeof(BoxCollider2D))]
     public sealed class SecondaryBiomeExitTrigger : MonoBehaviour
@@ -24,12 +25,18 @@ namespace DeadCells.NhaGiamGiengChuong
         [SerializeField] private PlayerController _player;
         [SerializeField] private Health _playerHealth;
         [SerializeField] private BoxCollider2D _playerCollider;
+        [SerializeField] private InputActionAsset _inputActions;
+        [SerializeField] private string _actionMapName = "Player";
+        [SerializeField] private string _interactActionName = "Interact";
         [SerializeField] private GameObject _lockedPromptIndicator;
+        [SerializeField] private GameObject _promptIndicator;
 
         private readonly HashSet<EnemyController> _defeatedGuardians = new HashSet<EnemyController>();
         private BoxCollider2D _triggerZone;
+        private InputAction _interactAction;
         private bool _subscribed;
         private bool _lockedPromptVisible;
+        private bool _promptVisible;
 
         public string ExitId => _exitId;
         public string BiomeName => _biomeName;
@@ -42,7 +49,9 @@ namespace DeadCells.NhaGiamGiengChuong
         public bool IsUnlocked =>
             (_switchDoor == null || _switchDoor.IsOpen) && AreGuardiansDefeated;
         public bool LockedPromptVisible => _lockedPromptVisible;
+        public bool PromptVisible => _promptVisible;
         public GameObject LockedPromptIndicator => _lockedPromptIndicator;
+        public GameObject PromptIndicator => _promptIndicator;
 
         public event Action<int> WinCandidateSubmitted;
 
@@ -55,9 +64,12 @@ namespace DeadCells.NhaGiamGiengChuong
             EnemyController secondGuardian,
             PlayerController player,
             Health playerHealth = null,
-            BoxCollider2D playerCollider = null)
+            BoxCollider2D playerCollider = null,
+            InputActionAsset inputActions = null,
+            GameObject promptIndicator = null)
         {
             UnsubscribeGuardians();
+            UnsubscribeInput();
             _exitId = exitId;
             _biomeName = biomeName;
             _run = run;
@@ -67,10 +79,15 @@ namespace DeadCells.NhaGiamGiengChuong
             _player = player;
             _playerHealth = playerHealth;
             _playerCollider = playerCollider;
+            _inputActions = inputActions;
+            _promptIndicator = promptIndicator;
             _defeatedGuardians.Clear();
 
             if (isActiveAndEnabled)
+            {
                 SubscribeGuardians();
+                SubscribeInput();
+            }
             RefreshVisualState();
         }
 
@@ -83,17 +100,20 @@ namespace DeadCells.NhaGiamGiengChuong
         private void OnEnable()
         {
             SubscribeGuardians();
+            SubscribeInput();
             RefreshVisualState();
         }
 
         private void OnDisable()
         {
             UnsubscribeGuardians();
+            UnsubscribeInput();
         }
 
         private void OnDestroy()
         {
             UnsubscribeGuardians();
+            UnsubscribeInput();
         }
 
         private void Update()
@@ -105,10 +125,17 @@ namespace DeadCells.NhaGiamGiengChuong
         {
             bool inTrigger = IsPlayerInTrigger();
             var health = ResolvePlayerHealth();
-            bool alive = health == null || health.IsAlive;
-            _lockedPromptVisible = _run != null && _run.IsPlaying && alive && !IsUnlocked && inTrigger;
+            bool alive = health != null && health.IsAlive;
+            bool playing = _run != null && _run.IsPlaying;
+            bool unlocked = IsUnlocked;
+
+            _lockedPromptVisible = playing && alive && !unlocked && inTrigger;
+            _promptVisible = playing && alive && unlocked && !IsInputBlocked() && inTrigger;
+
             if (_lockedPromptIndicator != null)
                 _lockedPromptIndicator.SetActive(_lockedPromptVisible);
+            if (_promptIndicator != null)
+                _promptIndicator.SetActive(_promptVisible);
         }
 
         public bool NotifyGuardianDied(EnemyController enemy)
@@ -128,14 +155,11 @@ namespace DeadCells.NhaGiamGiengChuong
             return added;
         }
 
-        private void OnTriggerEnter2D(Collider2D other)
+        public bool TryInteract()
         {
-            TrySubmitForCollider(other, Time.frameCount);
-        }
-
-        private void OnTriggerStay2D(Collider2D other)
-        {
-            TrySubmitForCollider(other, Time.frameCount);
+            if (IsInputBlocked() || !IsPlayerInTrigger())
+                return false;
+            return TrySubmitForCollider(ResolvePlayerCollider(), Time.frameCount);
         }
 
         public bool TrySubmitForCollider(Collider2D candidateCollider, int frame)
@@ -162,6 +186,34 @@ namespace DeadCells.NhaGiamGiengChuong
 
             WinCandidateSubmitted?.Invoke(frame);
             return true;
+        }
+
+        private void OnInteractStarted(InputAction.CallbackContext _) => TryInteract();
+
+        private void SubscribeInput()
+        {
+            if (_inputActions == null || _interactAction != null)
+                return;
+            var map = _inputActions.FindActionMap(_actionMapName, throwIfNotFound: false);
+            if (map == null)
+                return;
+            _interactAction = map.FindAction(_interactActionName, throwIfNotFound: false);
+            if (_interactAction != null)
+                _interactAction.started += OnInteractStarted;
+        }
+
+        private void UnsubscribeInput()
+        {
+            if (_interactAction == null)
+                return;
+            _interactAction.started -= OnInteractStarted;
+            _interactAction = null;
+        }
+
+        private bool IsInputBlocked()
+        {
+            var p = ResolvePlayer();
+            return p != null && ((p.RunStats != null && p.RunStats.BlocksGameplayInput) || p.IsInScriptedSequence);
         }
 
         private bool IsGuardianDefeated(EnemyController enemy)

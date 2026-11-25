@@ -27,26 +27,38 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
         private static void ConfigureVaultASpriteImporters()
         {
-            ConfigureSingleSpriteImporter($"{VaultASpriteFolder}/WallTapestry_04.png", 48f);
+            // Monumental full-res lossless centerpiece tapestry (1082x1454 @ 135 PPU = 8.01u x 10.77u)
+            ConfigureSingleSpriteImporter($"{VaultASpriteFolder}/WallTapestry_04.png", 135f, FilterMode.Bilinear, 2048);
+
+            // High-craft generated Gothic sanctuary sprites (crisp Bilinear at native resolution)
+            (string fileName, float ppu, int maxSize)[] highCraftProps =
+            {
+                ("VaultA_CathedralBackdrop.png", 48f, 2048),
+                ("VaultA_SunArchWindow.png", 110f, 1024),
+                ("VaultA_SunbeamShaft.png", 48f, 1024),
+                ("VaultA_SandstoneColumn.png", 50f, 1024),
+                ("VaultA_RoyalBanner.png", 100f, 1024),
+                ("VaultA_Candelabra.png", 110f, 1024),
+                ("VaultA_AltarDais.png", 70f, 1024),
+                ("VaultA_HangingIvy.png", 100f, 1024),
+                ("VaultA_StonePlinth.png", 220f, 512),
+            };
+            foreach (var item in highCraftProps)
+                ConfigureSingleSpriteImporter($"{VaultASpriteFolder}/{item.fileName}", item.ppu, FilterMode.Bilinear, item.maxSize);
+
+            // Native 24-PPU pixel-art masonry & floor sprites
             string[] props24 =
             {
-                "VaultA_SunArchWindow.png",
-                "VaultA_SunbeamShaft.png",
-                "VaultA_SandstoneColumn.png",
-                "VaultA_RoyalBanner.png",
-                "VaultA_Candelabra.png",
-                "VaultA_HangingIvy.png",
                 "VaultA_RoyalCarpet.png",
                 "VaultA_MossFlowers.png",
-                "VaultA_StonePlinth.png",
                 "VaultA_CrackedWallPatch.png",
                 "VaultA_DarkFissure.png",
             };
             foreach (string fileName in props24)
-                ConfigureSingleSpriteImporter($"{VaultASpriteFolder}/{fileName}", 24f);
+                ConfigureSingleSpriteImporter($"{VaultASpriteFolder}/{fileName}", 24f, FilterMode.Point, 512);
         }
 
-        private static void ConfigureSingleSpriteImporter(string assetPath, float ppu)
+        private static void ConfigureSingleSpriteImporter(string assetPath, float ppu, FilterMode filterMode = FilterMode.Point, int maxTextureSize = 2048)
         {
             var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
             if (importer == null)
@@ -68,9 +80,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 importer.spritePixelsPerUnit = ppu;
                 dirty = true;
             }
-            if (importer.filterMode != FilterMode.Point)
+            if (importer.filterMode != filterMode)
             {
-                importer.filterMode = FilterMode.Point;
+                importer.filterMode = filterMode;
+                dirty = true;
+            }
+            if (importer.maxTextureSize != maxTextureSize)
+            {
+                importer.maxTextureSize = maxTextureSize;
                 dirty = true;
             }
             if (importer.textureCompression != TextureImporterCompression.Uncompressed)
@@ -133,65 +150,78 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintVisualDirtSkirt(solidTm, pal, 172, 176, 28, 50);
             PaintVisualDirtSkirt(solidTm, pal, 204, 208, 28, 50);
 
-            // 1. High Gothic Sunlit Arched Skylight & Diagonal Golden Godrays
-            PlaceVaultASprite(artRoot, "VaultA_Skylight", LoadVaultASprite("VaultA_SunArchWindow.png"), unlitMat, bgLayerId, -16, new Vector3(188.8f, 44.6f, 0f), Color.white);
-            PlaceVaultASprite(artRoot, "VaultA_GodrayMain", LoadVaultASprite("VaultA_SunbeamShaft.png"), unlitMat, vfxLayerId, 2, new Vector3(190.4f, 39.2f, 0f), new Color(1f, 0.94f, 0.78f, 0.78f), new Vector3(1.45f, 1.35f, 1f));
-            PlaceVaultASprite(artRoot, "VaultA_GodrayAccent", LoadVaultASprite("VaultA_SunbeamShaft.png"), unlitMat, vfxLayerId, 2, new Vector3(192.6f, 37.8f, 0f), new Color(1f, 0.92f, 0.74f, 0.50f), new Vector3(1.10f, 1.25f, 1f));
+            // 1. Full Monumental Sunlit Gothic Cathedral Backdrop covering X=[176..204], Y=[29..49] centered at 190.0
+            PlaceVaultASprite(artRoot, "VaultA_CathedralBackdrop", LoadVaultASprite("VaultA_CathedralBackdrop.png"), mat, bgLayerId, -19, new Vector3(190.0f, 39.0f, 0f), new Color(1.00f, 0.98f, 0.94f, 1f), new Vector3(1.02f, 1.30f, 1f));
 
-            // 2. Flanking Weathered Sandstone Columns (10u tall, bottom at floor y=29 -> center y=34)
+            // 2. High Gothic Stained-Glass Rose Skylight crowning the centerpiece arch (unlit luminous daylight)
+            PlaceVaultASprite(artRoot, "VaultA_Skylight", LoadVaultASprite("VaultA_SunArchWindow.png"), unlitMat, bgLayerId, -16, new Vector3(190.0f, 45.8f, 0f), new Color(1.00f, 0.97f, 0.90f, 1f));
+
+            // 3. Four Towering Corinthian Sandstone Cathedral Columns with creeping ivy (grounded flush at y=29 -> center y=37.6)
             var colSprite = LoadVaultASprite("VaultA_SandstoneColumn.png");
-            PlaceVaultASprite(artRoot, "VaultA_Column_West", colSprite, mat, bgLayerId, -14, new Vector3(185.4f, 34.0f, 0f), Color.white);
-            PlaceVaultASprite(artRoot, "VaultA_Column_East", colSprite, mat, bgLayerId, -14, new Vector3(197.6f, 34.0f, 0f), Color.white);
-            PlaceVaultASprite(artRoot, "VaultA_Column_Entry", colSprite, mat, bgLayerId, -14, new Vector3(177.2f, 34.0f, 0f), new Color(0.92f, 0.88f, 0.80f, 1f));
+            var colScale = new Vector3(0.88f, 1.12f, 1f);
+            PlaceVaultASprite(artRoot, "VaultA_Column_FarWest", colSprite, mat, bgLayerId, -14, new Vector3(176.8f, 37.6f, 0f), new Color(0.92f, 0.89f, 0.84f, 1f), colScale);
+            PlaceVaultASprite(artRoot, "VaultA_Column_West", colSprite, mat, bgLayerId, -14, new Vector3(182.2f, 37.6f, 0f), Color.white, colScale);
+            PlaceVaultASprite(artRoot, "VaultA_Column_East", colSprite, mat, bgLayerId, -14, new Vector3(197.8f, 37.6f, 0f), Color.white, colScale);
+            PlaceVaultASprite(artRoot, "VaultA_Column_FarEast", colSprite, mat, bgLayerId, -14, new Vector3(203.2f, 37.6f, 0f), new Color(0.92f, 0.89f, 0.84f, 1f), colScale);
 
-            // 3. Flanking Tattered Crimson-and-Gold Royal Banners echoing the tapestry
+            // 4. Flanking Royal Crimson & Gold Heraldic Banners (chains anchored cleanly under upper rose garlands)
             var bannerSprite = LoadVaultASprite("VaultA_RoyalBanner.png");
-            PlaceVaultASprite(artRoot, "VaultA_Banner_West", bannerSprite, mat, bgLayerId, -13, new Vector3(185.8f, 38.2f, 0f), Color.white);
-            PlaceVaultASprite(artRoot, "VaultA_Banner_East", bannerSprite, mat, bgLayerId, -13, new Vector3(197.2f, 38.2f, 0f), Color.white);
+            PlaceVaultASprite(artRoot, "VaultA_Banner_West", bannerSprite, mat, bgLayerId, -13, new Vector3(184.4f, 41.2f, 0f), Color.white);
+            PlaceVaultASprite(artRoot, "VaultA_Banner_East", bannerSprite, mat, bgLayerId, -13, new Vector3(195.6f, 41.2f, 0f), Color.white);
 
-            // 4. Centerpiece Royal Tapestry (238x320 @ 48 PPU = 4.96u x 6.67u, centered at (191.5, 37.2))
-            PlaceVaultASprite(artRoot, "WallTapestry_04", LoadVaultASprite("WallTapestry_04.png"), mat, bgLayerId, -12, new Vector3(191.5f, 37.2f, 0f), Color.white);
+            // 5. Stepped Sandstone & Crimson-Velvet Royal Sanctuary Dais centered beneath tapestry (grounded y=29 -> cy=30.53)
+            PlaceVaultASprite(artRoot, "VaultA_AltarDais", LoadVaultASprite("VaultA_AltarDais.png"), mat, bgLayerId, -13, new Vector3(190.0f, 30.53f, 0f), Color.white);
 
-            // 5. Draped Sunlit Ivy Vines connecting upper stonework into tapestry moss border
+            // 6. HERO FULL-RES LOSSLESS ROYAL TAPESTRY (1082x1454 @ 135 PPU = 8.01u x 10.77u, centered at (190.0, 37.6))
+            PlaceVaultASprite(artRoot, "WallTapestry_04", LoadVaultASprite("WallTapestry_04.png"), mat, bgLayerId, -12, new Vector3(190.0f, 37.6f, 0f), Color.white);
+
+            // 7. Lush Sunlit Ivy & Blooming Ivory/Crimson Rose Garlands draping the arches and upper corners
             var ivySprite = LoadVaultASprite("VaultA_HangingIvy.png");
-            PlaceVaultASprite(artRoot, "VaultA_Ivy_TopL", ivySprite, mat, bgLayerId, -11, new Vector3(188.6f, 41.2f, 0f), Color.white);
-            PlaceVaultASprite(artRoot, "VaultA_Ivy_TopR", ivySprite, mat, bgLayerId, -11, new Vector3(194.4f, 41.6f, 0f), Color.white, new Vector3(-1f, 1f, 1f));
-            PlaceVaultASprite(artRoot, "VaultA_Ivy_CeilW", ivySprite, mat, bgLayerId, -11, new Vector3(181.5f, 47.0f, 0f), Color.white);
-            PlaceVaultASprite(artRoot, "VaultA_Ivy_CeilE", ivySprite, mat, bgLayerId, -11, new Vector3(200.5f, 47.0f, 0f), Color.white, new Vector3(-1f, 1f, 1f));
+            PlaceVaultASprite(artRoot, "VaultA_Ivy_TopL", ivySprite, mat, bgLayerId, -11, new Vector3(185.0f, 44.8f, 0f), Color.white);
+            PlaceVaultASprite(artRoot, "VaultA_Ivy_TopR", ivySprite, mat, bgLayerId, -11, new Vector3(195.0f, 44.8f, 0f), Color.white, new Vector3(-1f, 1f, 1f));
+            PlaceVaultASprite(artRoot, "VaultA_Ivy_CeilW", ivySprite, mat, bgLayerId, -11, new Vector3(179.2f, 47.6f, 0f), Color.white, new Vector3(0.96f, 0.96f, 1f));
+            PlaceVaultASprite(artRoot, "VaultA_Ivy_CeilE", ivySprite, mat, bgLayerId, -11, new Vector3(200.8f, 47.6f, 0f), Color.white, new Vector3(-0.96f, 0.96f, 1f));
 
-            // 6. Twin Antique Brass Candelabras (4u tall, grounded y=29 -> center y=31)
+            // 8. Twin Antique 5-Branch Gilded-Brass Candelabras flanking the royal dais (grounded y=29 -> cy=31.32)
             var candSprite = LoadVaultASprite("VaultA_Candelabra.png");
-            PlaceVaultASprite(artRoot, "VaultA_Candelabra_W", candSprite, mat, bgLayerId, -10, new Vector3(187.8f, 31.0f, 0f), Color.white);
-            PlaceVaultASprite(artRoot, "VaultA_Candelabra_E", candSprite, mat, bgLayerId, -10, new Vector3(195.2f, 31.0f, 0f), Color.white);
+            PlaceVaultASprite(artRoot, "VaultA_Candelabra_W", candSprite, mat, bgLayerId, -10, new Vector3(184.6f, 31.32f, 0f), Color.white);
+            PlaceVaultASprite(artRoot, "VaultA_Candelabra_E", candSprite, mat, bgLayerId, -10, new Vector3(195.4f, 31.32f, 0f), Color.white);
 
-            // 7. Frayed Crimson Velvet Carpet along floor (0.67u tall, resting on floor y=29)
+            // 9. Frayed Crimson Velvet Runner extending from west entrance to dais
             var carpetSprite = LoadVaultASprite("VaultA_RoyalCarpet.png");
-            for (float cx = 182.0f; cx <= 198.0f; cx += 4.0f)
+            for (float cx = 180.0f; cx <= 184.0f; cx += 4.0f)
                 PlaceVaultASprite(artRoot, $"VaultA_Carpet_{cx:F0}", carpetSprite, mat, groundLayerId, -2, new Vector3(cx, 29.15f, 0f), Color.white);
 
-            // 8. Sunlit Moss & Wildflower Clusters along cracked floor
+            // 10. Sunlit Moss & Wildflower Clusters along cracked nave floor
             var mossSprite = LoadVaultASprite("VaultA_MossFlowers.png");
-            foreach (float mx in new[] { 181.2f, 184.5f, 189.2f, 193.8f, 196.4f, 202.8f })
+            foreach (float mx in new[] { 179.6f, 183.4f, 196.6f, 200.9f })
                 PlaceVaultASprite(artRoot, $"VaultA_Flora_{mx:F1}", mossSprite, mat, groundLayerId, -1, new Vector3(mx, 29.38f, 0f), Color.white);
 
-            // 9. Mossy Sandstone Plinths beneath the 2 bonus scrolls (grounded at y=29)
+            // 11. Carved Gothic Sandstone Relic Plinths beneath the 2 bonus scrolls (x=199.6 & 202.3, grounded at y=29)
             var plinthSprite = LoadVaultASprite("VaultA_StonePlinth.png");
-            PlaceVaultASprite(artRoot, "VaultA_Plinth_1", plinthSprite, mat, bgLayerId, -9, new Vector3(198.5f, 29.55f, 0f), Color.white, new Vector3(0.85f, 0.70f, 1f));
-            PlaceVaultASprite(artRoot, "VaultA_Plinth_2", plinthSprite, mat, bgLayerId, -9, new Vector3(201.2f, 29.55f, 0f), Color.white, new Vector3(0.85f, 0.70f, 1f));
+            PlaceVaultASprite(artRoot, "VaultA_Plinth_1", plinthSprite, mat, bgLayerId, -9, new Vector3(199.6f, 29.87f, 0f), Color.white);
+            PlaceVaultASprite(artRoot, "VaultA_Plinth_2", plinthSprite, mat, bgLayerId, -9, new Vector3(202.3f, 29.87f, 0f), Color.white);
 
-            // 10. Return Fissure Visual inside VaultA west wall (x=178.5, grounded y=29 -> center y=30.33)
-            PlaceVaultASprite(artRoot, "VaultA_ReturnFissure", LoadVaultASprite("VaultA_DarkFissure.png"), mat, bgLayerId, -9, new Vector3(178.5f, 30.33f, 0f), Color.white);
+            // 12. Return Fissure Visual inside VaultA west wall (x=178.2, grounded y=29 -> center y=30.33)
+            PlaceVaultASprite(artRoot, "VaultA_ReturnFissure", LoadVaultASprite("VaultA_DarkFissure.png"), mat, bgLayerId, -9, new Vector3(178.2f, 30.33f, 0f), Color.white);
 
-            // 11. Warm Sunlit Sanctuary Lighting (isolated inside Room_VaultA; does not touch Global Light 2D)
-            AddVaultAPointLight(artRoot, "VaultA_SunFill_Center", new Vector3(191.5f, 38.5f, 0f), new Color(1.00f, 0.93f, 0.78f, 1f), 1.35f, 4.5f, 18.0f, 0.45f, flicker: false, seed: 0f);
-            AddVaultAPointLight(artRoot, "VaultA_SunFill_West", new Vector3(181.5f, 34.5f, 0f), new Color(1.00f, 0.92f, 0.76f, 1f), 0.95f, 2.5f, 13.0f, 0.50f, flicker: false, seed: 0f);
-            AddVaultAPointLight(artRoot, "VaultA_SunFill_East", new Vector3(199.8f, 33.5f, 0f), new Color(1.00f, 0.91f, 0.74f, 1f), 0.95f, 2.5f, 12.0f, 0.50f, flicker: false, seed: 0f);
-            AddVaultAPointLight(artRoot, "VaultA_CandleLight_W", new Vector3(187.8f, 33.0f, 0f), new Color(1.00f, 0.80f, 0.44f, 1f), 1.10f, 0.8f, 6.5f, 0.62f, flicker: true, seed: 1.7f);
-            AddVaultAPointLight(artRoot, "VaultA_CandleLight_E", new Vector3(195.2f, 33.0f, 0f), new Color(1.00f, 0.80f, 0.44f, 1f), 1.10f, 0.8f, 6.5f, 0.62f, flicker: true, seed: 4.3f);
+            // 13. Silky Golden Volumetric Sunbeam Shafts (gentle opacity so tapestry details stay 100% crisp & vivid)
+            PlaceVaultASprite(artRoot, "VaultA_GodrayMain", LoadVaultASprite("VaultA_SunbeamShaft.png"), unlitMat, vfxLayerId, 2, new Vector3(188.6f, 39.5f, 0f), new Color(1f, 0.94f, 0.78f, 0.28f), new Vector3(1.00f, 1.55f, 1f));
+            PlaceVaultASprite(artRoot, "VaultA_GodrayAccent", LoadVaultASprite("VaultA_SunbeamShaft.png"), unlitMat, vfxLayerId, 2, new Vector3(191.8f, 39.5f, 0f), new Color(1f, 0.92f, 0.74f, 0.22f), new Vector3(0.92f, 1.45f, 1f));
 
-            // 12. Drifting Golden Sunbeam Dust Motes & Falling Petals
-            CreateVaultAAmbientParticles(artRoot, "VaultA_SunMotes", particlesUnlit, vfxLayerId, new Vector3(191.5f, 38.5f, 0f), new Vector3(18f, 12f, 0.1f), new Color(1f, 0.93f, 0.70f, 0.55f), 0.09f, 12f);
-            CreateVaultAAmbientParticles(artRoot, "VaultA_Petals", particlesUnlit, vfxLayerId, new Vector3(191.0f, 44.5f, 0f), new Vector3(14f, 3f, 0.1f), new Color(0.94f, 0.68f, 0.68f, 0.65f), 0.13f, 4.5f);
+            // 14. Rich Warm Sunlit Cathedral Lighting (isolated inside Room_VaultA; never touches Global Light 2D)
+            AddVaultAPointLight(artRoot, "VaultA_SunFill_Center", new Vector3(190.0f, 40.5f, 0f), new Color(1.00f, 0.94f, 0.80f, 1f), 1.38f, 5.5f, 19.5f, 0.42f, flicker: false, seed: 0f);
+            AddVaultAPointLight(artRoot, "VaultA_TapestryHalo", new Vector3(190.0f, 37.6f, 0f), new Color(1.00f, 0.96f, 0.88f, 1f), 0.75f, 4.2f, 9.5f, 0.48f, flicker: false, seed: 0f);
+            AddVaultAPointLight(artRoot, "VaultA_SunFill_West", new Vector3(180.2f, 35.0f, 0f), new Color(1.00f, 0.91f, 0.74f, 1f), 0.95f, 2.8f, 13.0f, 0.50f, flicker: false, seed: 0f);
+            AddVaultAPointLight(artRoot, "VaultA_SunFill_East", new Vector3(200.5f, 34.0f, 0f), new Color(1.00f, 0.91f, 0.74f, 1f), 0.98f, 2.8f, 13.0f, 0.50f, flicker: false, seed: 0f);
+            AddVaultAPointLight(artRoot, "VaultA_CandleLight_W", new Vector3(184.6f, 33.4f, 0f), new Color(1.00f, 0.78f, 0.40f, 1f), 1.15f, 0.9f, 6.8f, 0.60f, flicker: true, seed: 1.7f);
+            AddVaultAPointLight(artRoot, "VaultA_CandleLight_E", new Vector3(195.4f, 33.4f, 0f), new Color(1.00f, 0.78f, 0.40f, 1f), 1.15f, 0.9f, 6.8f, 0.60f, flicker: true, seed: 4.3f);
+
+            // 15. Atmospheric Golden Dust Motes, Drifting Rose Petals & Tiny Rising Candle Embers
+            CreateVaultAAmbientParticles(artRoot, "VaultA_SunMotes", particlesUnlit, vfxLayerId, new Vector3(190.0f, 39.0f, 0f), new Vector3(22f, 14f, 0.1f), new Color(1f, 0.94f, 0.72f, 0.58f), 0.085f, 16f);
+            CreateVaultAAmbientParticles(artRoot, "VaultA_Petals", particlesUnlit, vfxLayerId, new Vector3(190.0f, 45.2f, 0f), new Vector3(18f, 3.5f, 0.1f), new Color(0.92f, 0.52f, 0.56f, 0.72f), 0.13f, 6.0f);
+            CreateVaultAAmbientParticles(artRoot, "VaultA_CandleEmbers_W", particlesUnlit, vfxLayerId, new Vector3(184.6f, 33.6f, 0f), new Vector3(1.6f, 0.5f, 0.1f), new Color(1f, 0.84f, 0.42f, 0.78f), 0.06f, 5.5f, rising: true);
+            CreateVaultAAmbientParticles(artRoot, "VaultA_CandleEmbers_E", particlesUnlit, vfxLayerId, new Vector3(195.4f, 33.6f, 0f), new Vector3(1.6f, 0.5f, 0.1f), new Color(1f, 0.84f, 0.42f, 0.78f), 0.06f, 5.5f, rising: true);
         }
 
         private static void BuildVaultAInScene(
@@ -237,7 +267,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             // 4. I24_VaultA_Inscription (under tapestry center, unlocked only after framing sequence)
             var inscription = CreateVaultAInscription(interactionsRoot, runController, playerCtrl, playerHealth, playerCol, inputActions);
 
-            // 5. VaultA_FramingSequence (one-shot trigger at x=183.5 -> slow walk to 190.0 + camera pan/zoom to (191.5, 37.2))
+            // 5. VaultA_FramingSequence (one-shot trigger at x=183.5 -> slow walk to 188.8 + camera pan/zoom to (190.0, 37.6))
             var gameplayCanvas = playerHudGo.GetComponent<Canvas>() ?? playerHudGo.GetComponentInChildren<Canvas>(true);
             var scrollPres = UnityEngine.Object.FindAnyObjectByType<ScrollPickupPresentation>(FindObjectsInactive.Include);
             GameObject statsStrip = scrollPres != null
@@ -360,7 +390,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             InputActionAsset inputActions)
         {
             var root = CreateChild(parent, "I24_VaultA_Inscription");
-            root.transform.position = new Vector3(191.5f, 29f, 0f);
+            root.transform.position = new Vector3(190.0f, 29f, 0f);
 
             var trigger = root.AddComponent<BoxCollider2D>();
             trigger.isTrigger = true;
@@ -431,11 +461,11 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             so.FindProperty("_gameplayHud").objectReferenceValue = gameplayHud;
             so.FindProperty("_statsStrip").objectReferenceValue = statsStrip;
             so.FindProperty("_inscription").objectReferenceValue = inscription;
-            so.FindProperty("_walkTargetX").floatValue = 190.0f;
+            so.FindProperty("_walkTargetX").floatValue = 188.8f;
             so.FindProperty("_walkSpeedMultiplier").floatValue = 0.38f;
-            so.FindProperty("_cameraFocusPoint").vector2Value = new Vector2(191.5f, 37.2f);
+            so.FindProperty("_cameraFocusPoint").vector2Value = new Vector2(190.0f, 37.6f);
             so.FindProperty("_focusSmoothTime").floatValue = 1.5f;
-            so.FindProperty("_focusOrthoSize").floatValue = 5.2f;
+            so.FindProperty("_focusOrthoSize").floatValue = 6.6f;
             so.FindProperty("_holdDuration").floatValue = 3.2f;
             so.FindProperty("_returnSmoothTime").floatValue = 0.9f;
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -645,7 +675,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             Vector3 boxSize,
             Color color,
             float size,
-            float rate)
+            float rate,
+            bool rising = false)
         {
             var go = CreateChild(parent, name);
             go.transform.position = pos;
@@ -654,10 +685,10 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             main.loop = true;
             main.playOnAwake = true;
             main.prewarm = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(4.0f, 7.5f);
+            main.startLifetime = rising ? new ParticleSystem.MinMaxCurve(1.4f, 2.8f) : new ParticleSystem.MinMaxCurve(4.0f, 7.5f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.15f, 0.45f);
             main.startSize = new ParticleSystem.MinMaxCurve(size * 0.7f, size * 1.2f);
-            main.gravityModifier = 0.03f;
+            main.gravityModifier = rising ? -0.05f : 0.03f;
             main.startColor = color;
             var em = ps.emission;
             em.rateOverTime = rate;
@@ -667,7 +698,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var vel = ps.velocityOverLifetime;
             vel.enabled = true;
             vel.x = new ParticleSystem.MinMaxCurve(-0.18f, 0.25f);
-            vel.y = new ParticleSystem.MinMaxCurve(-0.35f, -0.08f);
+            vel.y = rising ? new ParticleSystem.MinMaxCurve(0.28f, 0.65f) : new ParticleSystem.MinMaxCurve(-0.35f, -0.08f);
             vel.z = new ParticleSystem.MinMaxCurve(0f, 0f);
             var rend = go.GetComponent<ParticleSystemRenderer>();
             rend.sharedMaterial = particlesUnlit;

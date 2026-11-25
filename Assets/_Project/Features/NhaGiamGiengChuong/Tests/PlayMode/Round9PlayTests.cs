@@ -376,13 +376,12 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Play
                 "[P10/KillGrenadierT1]");
             yield return null;
             Assert.IsTrue(promenadeExit.IsUnlocked, "[P10/PromenadeUnlocked] Must unlock after both guardians die.");
+            Assert.IsFalse(run.IsEnded, "[P10/PromenadeNoAutoWin] Standing at unlocked Promenade exit must wait for [E].");
+            Assert.IsTrue(promenadeExit.PromptVisible, "[P10/PromenadePromptVisible] Unlocked Promenade exit must show [E] prompt.");
 
-            if (!run.IsEnded)
-            {
-                Assert.IsTrue(
-                    promenadeExit.TrySubmitForCollider(player.GetComponent<BoxCollider2D>(), Time.frameCount),
-                    "[P10/PromenadeWinSubmit]");
-            }
+            Press(_keyboard.eKey);
+            yield return null;
+            Release(_keyboard.eKey);
 
             yield return PlayModeTestHelper.WaitUntil(() => run.IsEnded && panel.IsVisible, 2f, "[P10/PromenadeWinSettle]");
             Assert.AreEqual(LevelOutcome.Win, run.Outcome);
