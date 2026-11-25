@@ -98,11 +98,18 @@ namespace DeadCells.CameraSystem
 
         public void EndFocusOverride(float returnSmoothTime = -1f)
         {
+            if (_camera == null)
+                _camera = GetComponent<Camera>();
             _focusOverrideActive = false;
             _bypassBoundsDuringOverride = false;
             _targetOrthoSize = _defaultOrthoSize;
             _isReturningFromOverride = returnSmoothTime > 0f;
             _returnSmoothTime = returnSmoothTime > 0f ? returnSmoothTime : _smoothTime;
+            if (returnSmoothTime == 0f && _camera != null && _camera.orthographic && _defaultOrthoSize > 0f)
+            {
+                _camera.orthographicSize = _defaultOrthoSize;
+                _orthoVelocity = 0f;
+            }
             if (_target != null)
             {
                 _focus = (Vector2)_target.position + _offset;
