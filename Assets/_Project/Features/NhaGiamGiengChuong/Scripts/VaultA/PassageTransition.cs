@@ -42,6 +42,8 @@ namespace DeadCells.NhaGiamGiengChuong
         private InputAction _interactAction;
         private bool _isUnlocked;
         private bool _promptVisible;
+        private bool _isChamberActive;
+        private bool _runSubscribed;
         private Coroutine _activeCoroutine;
 
         public bool IsUnlocked => _isUnlocked;
@@ -93,6 +95,9 @@ namespace DeadCells.NhaGiamGiengChuong
             _framingSequence = framingSequence;
             _startsUnlocked = startsUnlocked;
             _isUnlocked = startsUnlocked;
+            _isChamberActive = false;
+            UnsubscribeRun();
+            SubscribeRun();
             if (isActiveAndEnabled)
                 SubscribeInput();
             RefreshPrompt();
@@ -101,34 +106,76 @@ namespace DeadCells.NhaGiamGiengChuong
         private void Awake()
         {
             _isUnlocked = _startsUnlocked;
+            SubscribeRun();
             if (_promptIndicator != null)
                 _promptIndicator.SetActive(false);
         }
 
         private void OnEnable()
         {
+            SubscribeRun();
             SubscribeInput();
             RefreshPrompt();
         }
 
         private void OnDisable()
         {
+            UnsubscribeRun();
             UnsubscribeInput();
+            CleanupIfActiveOrOccupied();
+            if (_promptIndicator != null)
+                _promptIndicator.SetActive(false);
+            _promptVisible = false;
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeRun();
+            UnsubscribeInput();
+            CleanupIfActiveOrOccupied();
+        }
+
+        private void SubscribeRun()
+        {
+            if (_runSubscribed || _run == null)
+                return;
+            _run.Finished += OnRunFinished;
+            _runSubscribed = true;
+        }
+
+        private void UnsubscribeRun()
+        {
+            if (!_runSubscribed || _run == null)
+                return;
+            _run.Finished -= OnRunFinished;
+            _runSubscribed = false;
+        }
+
+        private void OnRunFinished(LevelOutcome _) => CleanupIfActiveOrOccupied();
+
+        private void CleanupIfActiveOrOccupied()
+        {
+            bool wasTransitioning = _activeCoroutine != null;
             if (_activeCoroutine != null)
             {
                 StopCoroutine(_activeCoroutine);
                 _activeCoroutine = null;
-                if (_fader != null)
-                    _fader.ResetImmediate();
-                if (_player != null && _player.IsInScriptedSequence)
-                    _player.EndScriptedSequence();
-                if (_dungeonParallaxRoot != null && !_isEnteringChamber)
-                    _dungeonParallaxRoot.SetActive(true);
-                CombatAudioHub.SetAmbientMultiplier(1f);
             }
-            if (_promptIndicator != null)
-                _promptIndicator.SetActive(false);
-            _promptVisible = false;
+            if (!wasTransitioning && !_isChamberActive)
+                return;
+
+            _isChamberActive = false;
+            if (_fader != null)
+                _fader.ResetImmediate();
+            if (_cameraFollow != null && _cameraFollow.IsFocusOverrideActive)
+                _cameraFollow.EndFocusOverride(0f);
+            if (_player != null && _player.IsInScriptedSequence)
+                _player.EndScriptedSequence();
+            if (_dungeonParallaxRoot != null)
+                _dungeonParallaxRoot.SetActive(true);
+            if (_chamberAudio != null && _chamberAudio.isPlaying)
+                _chamberAudio.Stop();
+            CombatAudioHub.SetAmbientMultiplier(1f);
         }
 
         private void Update() => RefreshPrompt();
@@ -165,12 +212,16 @@ namespace DeadCells.NhaGiamGiengChuong
             }
             else if (_chamberAudio != null && _chamberAudio.isPlaying)
             {
-                yield return FadeAudio(_chamberAudio, 0f, _fadeDuration > 0f ? 0.5f : 0f, stopAtZero: true);
+                if (_framingSequence != null)
+                    _framingSequence.FadeChamberAudio(0f, _fadeDuration > 0f ? 0.5f : 0f, stopAtZero: true);
+                else
+                    yield return FadeAudio(_chamberAudio, 0f, _fadeDuration > 0f ? 0.5f : 0f, stopAtZero: true);
             }
 
             if (_fader != null)
                 yield return _fader.FadeTo(1f, _fadeDuration);
 
+            _isChamberActive = _isEnteringChamber;
             if (_chamberRoot != null)
                 _chamberRoot.SetActive(_isEnteringChamber);
             if (_dungeonParallaxRoot != null)
@@ -193,13 +244,7 @@ namespace DeadCells.NhaGiamGiengChuong
             }
             else if (_framingSequence != null && _framingSequence.HasPlayed && _chamberAudio != null && _chamberAudio.clip != null)
             {
-                if (!_chamberAudio.isPlaying)
-                {
-                    _chamberAudio.volume = 0f;
-                    _chamberAudio.loop = true;
-                    _chamberAudio.Play();
-                }
-                StartCoroutine(FadeAudio(_chamberAudio, _chamberAudioVolume, 0.6f, stopAtZero: false));
+                _framingSequence.FadeChamberAudio(_chamberAudioVolume, 0.6f, stopAtZero: false);
             }
 
             if (_fader != null)
@@ -225,7 +270,7 @@ namespace DeadCells.NhaGiamGiengChuong
 
         private bool CanInteractNow()
         {
-            if (!_isUnlocked || _run == null || !_run.IsPlaying)
+            if (!_isUnlocked || _activeCoroutine != null || _run == null || !_run.IsPlaying)
                 return false;
             if (_fader != null && _fader.IsTransitioning)
                 return false;
@@ -267,21 +312,21 @@ namespace DeadCells.NhaGiamGiengChuong
 
         private void SubscribeInput()
         {
-            if (_inputActions == null)
+            if (_interactAction != null || _inputActions == null)
                 return;
             var map = _inputActions.FindActionMap(_actionMapName, throwIfNotFound: false);
             _interactAction = map?.FindAction(_interactActionName, throwIfNotFound: false);
             if (_interactAction != null)
-                _interactAction.performed += OnInteractPerformed;
+                _interactAction.started += OnInteractStarted;
         }
 
         private void UnsubscribeInput()
         {
             if (_interactAction != null)
-                _interactAction.performed -= OnInteractPerformed;
+                _interactAction.started -= OnInteractStarted;
             _interactAction = null;
         }
 
-        private void OnInteractPerformed(InputAction.CallbackContext ctx) => TryBeginTransition();
+        private void OnInteractStarted(InputAction.CallbackContext ctx) => TryBeginTransition();
     }
 }
