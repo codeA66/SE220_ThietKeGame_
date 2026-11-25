@@ -23,6 +23,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
         private const string InputActionsPath = "Assets/_Project/Settings/Input/InputSystem_Actions.inputactions";
         private string _previousScene;
         private readonly List<GameObject> _created = new();
+        private readonly InputTestFixture _inputFixture = new();
+        private bool _inputFixtureActive;
 
         private sealed class DummyPlayState : IPlayerState
         {
@@ -37,6 +39,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
         {
             _previousScene = Assets.GeometryAuditHelper.CaptureCurrentScenePath();
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            _inputFixture.Setup();
+            _inputFixtureActive = true;
         }
 
         [TearDown]
@@ -54,6 +58,11 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             }
             _created.Clear();
             Time.timeScale = 1f;
+            if (_inputFixtureActive)
+            {
+                _inputFixture.TearDown();
+                _inputFixtureActive = false;
+            }
             Assets.GeometryAuditHelper.RestoreScene(_previousScene);
         }
 
