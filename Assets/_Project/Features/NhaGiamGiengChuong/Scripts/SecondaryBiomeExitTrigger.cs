@@ -80,8 +80,7 @@ namespace DeadCells.NhaGiamGiengChuong
             _playerHealth = playerHealth;
             _playerCollider = playerCollider;
             _inputActions = inputActions;
-            if (promptIndicator != null)
-                _promptIndicator = promptIndicator;
+            _promptIndicator = promptIndicator;
             _defeatedGuardians.Clear();
 
             if (isActiveAndEnabled)
@@ -126,7 +125,7 @@ namespace DeadCells.NhaGiamGiengChuong
         {
             bool inTrigger = IsPlayerInTrigger();
             var health = ResolvePlayerHealth();
-            bool alive = health == null || health.IsAlive;
+            bool alive = health != null && health.IsAlive;
             bool playing = _run != null && _run.IsPlaying;
             bool unlocked = IsUnlocked;
 
