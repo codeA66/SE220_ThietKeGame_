@@ -120,13 +120,14 @@ Shader "DeadCells/GroundMist2D"
                 // World-space constant-width edge feathering (works even when SpriteRenderers are dynamically batched)
                 float duv = max(abs(ddx(input.uv.x)), 1e-6);
                 float stripWidth = clamp(abs(ddx(input.worldXY.x)) / duv, 4.0, 200.0);
-                float edgeSpanW = 3.8 + (float)fbm * 0.6;
+                float edgeSpanW = 3.6 + (float)fbm * 0.4;
                 float distL = input.uv.x * stripWidth;
                 float distR = (1.0 - input.uv.x) * stripWidth;
                 half hLeft = (half)smoothstep(0.0, edgeSpanW, distL);
                 half hRight = (half)smoothstep(0.0, edgeSpanW, distR);
-                // Complementary pow(0.72) keeps alpha-over brightness flat across 4u interior strip overlaps
-                half hFade = pow(max(hLeft * hRight, 0.0001h), 0.72h);
+                // Complementary pow(0.72) keeps alpha-over brightness flat across 4u interior strip overlaps and hits exact 0 at edges
+                half hEdge = hLeft * hRight;
+                half hFade = hEdge > 0.0001h ? pow(hEdge, 0.72h) : 0.0h;
 
                 half4 col = _MistColor * input.color;
                 col.a = saturate(col.a * density * vFade * hFade * tex.a);
