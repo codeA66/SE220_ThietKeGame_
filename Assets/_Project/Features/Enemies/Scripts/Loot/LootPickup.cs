@@ -49,6 +49,7 @@ namespace DeadCells.Enemies
         private GemStyle _gem;
         private Transform _player;
         private LayerMask _groundMask;
+        private LayerMask _solidMask;
         private Vector2 _velocity;
         private float _age;
         private float _phase;
@@ -56,6 +57,10 @@ namespace DeadCells.Enemies
         private float _sparkleStartAge;
         private bool _isResting;
         private bool _isMagnetised;
+
+        public bool IsResting => _isResting;
+
+        public void StepSimulation(float dt) => Simulate(dt);
 
         public static void SpawnGold(int value, Vector3 position, Vector2 velocity, Transform player, LayerMask groundMask) =>
             Take().Play(LootKind.Gold, value, null, position, velocity, player, groundMask);
@@ -194,6 +199,9 @@ namespace DeadCells.Enemies
             _gem = gem;
             _player = player;
             _groundMask = groundMask;
+            int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
+            int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
+            _solidMask = groundMask.value & ~oneWayBit;
             _velocity = velocity;
             _age = 0f;
             _phase = Random.value * Mathf.PI * 2f;
@@ -291,18 +299,31 @@ namespace DeadCells.Enemies
             if (!Mathf.Approximately(_velocity.x, 0f))
             {
                 float stepX = _velocity.x * dt;
-                RaycastHit2D wall = Physics2D.Raycast(position, new Vector2(Mathf.Sign(stepX), 0f), Mathf.Abs(stepX) + Radius, _groundMask);
-                if (wall.collider != null)
+                RaycastHit2D wall = Physics2D.Raycast(position, new Vector2(Mathf.Sign(stepX), 0f), Mathf.Abs(stepX) + Radius, _solidMask);
+                if (wall.collider != null && wall.distance > 0.0001f)
                     _velocity.x = -_velocity.x * Bounce;
                 else
                     position.x += stepX;
             }
 
             float stepY = _velocity.y * dt;
-            if (stepY < 0f)
+            if (stepY > 0f)
+            {
+                RaycastHit2D ceiling = Physics2D.Raycast(position, Vector2.up, stepY + Radius, _solidMask);
+                if (ceiling.collider != null && ceiling.distance > 0.0001f)
+                {
+                    position.y = ceiling.point.y - Radius;
+                    _velocity.y = -Mathf.Abs(_velocity.y) * Bounce;
+                }
+                else
+                {
+                    position.y += stepY;
+                }
+            }
+            else if (stepY < 0f)
             {
                 RaycastHit2D ground = Physics2D.Raycast(position, Vector2.down, -stepY + Radius, _groundMask);
-                if (ground.collider != null)
+                if (ground.collider != null && ground.distance > 0.0001f)
                 {
                     position.y = ground.point.y + Radius;
                     _velocity.y = -_velocity.y * Bounce;
@@ -317,10 +338,6 @@ namespace DeadCells.Enemies
                 {
                     position.y += stepY;
                 }
-            }
-            else
-            {
-                position.y += stepY;
             }
 
             _cachedTransform.position = position;
