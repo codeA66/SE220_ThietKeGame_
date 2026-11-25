@@ -41,11 +41,26 @@ namespace DeadCells.CameraSystem
         private float _punchAmplitude;
         private float _punchDuration;
         private float _punchUntil = -1f;
+        private float _defaultOrthoSize;
+        private float _targetOrthoSize;
+        private float _orthoVelocity;
+        private bool _focusOverrideActive;
+        private Vector2 _focusOverrideTarget;
+        private float _overrideSmoothTime = 1.2f;
+        private bool _bypassBoundsDuringOverride;
+        private bool _isReturningFromOverride;
+        private float _returnSmoothTime = 0.6f;
+
+        public bool IsFocusOverrideActive => _focusOverrideActive;
+        public bool UseBounds => _useBounds;
+        public Rect CurrentBounds => _bounds;
 
         private void Awake()
         {
             _camera = GetComponent<Camera>();
             _basePosition = transform.position;
+            _defaultOrthoSize = _camera != null ? _camera.orthographicSize : 7f;
+            _targetOrthoSize = _defaultOrthoSize;
         }
 
         private void Start()
@@ -58,31 +73,110 @@ namespace DeadCells.CameraSystem
             _basePosition = transform.position;
         }
 
-        private void LateUpdate()
+        private void LateUpdate() => StepCamera(Time.deltaTime);
+
+        public void SetBounds(bool useBounds, Rect bounds)
         {
-            if (_target == null)
+            _useBounds = useBounds;
+            _bounds = bounds;
+        }
+
+        public void BeginFocusOverride(Vector2 worldTarget, float smoothTime, float? targetOrthoSize = null, bool bypassBounds = false)
+        {
+            if (_camera == null)
+                _camera = GetComponent<Camera>();
+            if (_defaultOrthoSize <= 0f && _camera != null)
+                _defaultOrthoSize = _camera.orthographicSize;
+
+            _focusOverrideActive = true;
+            _isReturningFromOverride = false;
+            _focusOverrideTarget = worldTarget;
+            _overrideSmoothTime = Mathf.Max(0.01f, smoothTime);
+            _targetOrthoSize = targetOrthoSize ?? _defaultOrthoSize;
+            _bypassBoundsDuringOverride = bypassBounds;
+        }
+
+        public void EndFocusOverride(float returnSmoothTime = -1f)
+        {
+            _focusOverrideActive = false;
+            _bypassBoundsDuringOverride = false;
+            _targetOrthoSize = _defaultOrthoSize;
+            _isReturningFromOverride = returnSmoothTime > 0f;
+            _returnSmoothTime = returnSmoothTime > 0f ? returnSmoothTime : _smoothTime;
+            if (_target != null)
+            {
+                _focus = (Vector2)_target.position + _offset;
+                _lastTargetPosition = _target.position;
+                _lookAheadCurrent = 0f;
+                _lookAheadVelocity = 0f;
+            }
+        }
+
+        public void StepCamera(float deltaTime)
+        {
+            if (_camera == null)
+                _camera = GetComponent<Camera>();
+            if (deltaTime <= 0f)
+                return;
+            if (!_focusOverrideActive && _target == null)
                 return;
 
-            Vector2 targetPos = (Vector2)_target.position + _offset;
+            float activeSmooth;
+            Vector3 desired;
+            if (_focusOverrideActive)
+            {
+                activeSmooth = _overrideSmoothTime;
+                DampOrthoSize(_targetOrthoSize, activeSmooth, deltaTime);
+                desired = new Vector3(_focusOverrideTarget.x, _focusOverrideTarget.y, transform.position.z);
+                if (_useBounds && !_bypassBoundsDuringOverride)
+                    desired = ClampToBounds(desired);
+            }
+            else
+            {
+                Vector2 targetPos = (Vector2)_target.position + _offset;
 
-            // Deadzone: move the focus point only by how far the target leaves the box.
-            Vector2 delta = targetPos - _focus;
-            if (Mathf.Abs(delta.x) > _deadzone.x)
-                _focus.x += delta.x - Mathf.Sign(delta.x) * _deadzone.x;
-            if (Mathf.Abs(delta.y) > _deadzone.y)
-                _focus.y += delta.y - Mathf.Sign(delta.y) * _deadzone.y;
+                // Deadzone: move the focus point only by how far the target leaves the box.
+                Vector2 delta = targetPos - _focus;
+                if (Mathf.Abs(delta.x) > _deadzone.x)
+                    _focus.x += delta.x - Mathf.Sign(delta.x) * _deadzone.x;
+                if (Mathf.Abs(delta.y) > _deadzone.y)
+                    _focus.y += delta.y - Mathf.Sign(delta.y) * _deadzone.y;
 
-            float speedX = (_target.position.x - _lastTargetPosition.x) / Mathf.Max(Time.deltaTime, 0.0001f);
-            _lastTargetPosition = _target.position;
-            float lookAheadGoal = Mathf.Abs(speedX) > _lookAheadSpeedThreshold ? Mathf.Sign(speedX) * _lookAhead : _lookAheadCurrent;
-            _lookAheadCurrent = Mathf.SmoothDamp(_lookAheadCurrent, lookAheadGoal, ref _lookAheadVelocity, _lookAheadSmoothTime);
+                float speedX = (_target.position.x - _lastTargetPosition.x) / Mathf.Max(deltaTime, 0.0001f);
+                _lastTargetPosition = _target.position;
+                float lookAheadGoal = Mathf.Abs(speedX) > _lookAheadSpeedThreshold ? Mathf.Sign(speedX) * _lookAhead : _lookAheadCurrent;
+                _lookAheadCurrent = Mathf.SmoothDamp(_lookAheadCurrent, lookAheadGoal, ref _lookAheadVelocity, _lookAheadSmoothTime, Mathf.Infinity, deltaTime);
 
-            var desired = new Vector3(_focus.x + _lookAheadCurrent, _focus.y, transform.position.z);
-            if (_useBounds)
-                desired = ClampToBounds(desired);
+                activeSmooth = _isReturningFromOverride ? _returnSmoothTime : _smoothTime;
+                DampOrthoSize(_defaultOrthoSize, activeSmooth, deltaTime);
 
-            _basePosition = Vector3.SmoothDamp(_basePosition, desired, ref _velocity, _smoothTime);
+                desired = new Vector3(_focus.x + _lookAheadCurrent, _focus.y, transform.position.z);
+                if (_useBounds)
+                    desired = ClampToBounds(desired);
+            }
+
+            _basePosition = Vector3.SmoothDamp(_basePosition, desired, ref _velocity, activeSmooth, Mathf.Infinity, deltaTime);
             transform.position = _basePosition + ShakeOffset() + PunchOffset();
+
+            if (_isReturningFromOverride &&
+                (_basePosition - desired).sqrMagnitude < 0.0025f &&
+                (_camera == null || Mathf.Abs(_camera.orthographicSize - _defaultOrthoSize) < 0.01f))
+            {
+                _isReturningFromOverride = false;
+            }
+        }
+
+        private void DampOrthoSize(float targetSize, float smoothTime, float deltaTime)
+        {
+            if (_camera == null || !_camera.orthographic || targetSize <= 0f)
+                return;
+            if (Mathf.Abs(_camera.orthographicSize - targetSize) <= 0.001f)
+            {
+                _camera.orthographicSize = targetSize;
+                _orthoVelocity = 0f;
+                return;
+            }
+            _camera.orthographicSize = Mathf.SmoothDamp(_camera.orthographicSize, targetSize, ref _orthoVelocity, smoothTime, Mathf.Infinity, deltaTime);
         }
 
         /// <summary>

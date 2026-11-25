@@ -17,6 +17,14 @@ namespace DeadCells.Core.Audio
         private AudioSource[] _sfxPool;
         private AudioSource _ambientSource;
         private int _nextIndex;
+        private float _ambientMultiplier = 1f;
+        private float _ambientFadeStart = 1f;
+        private float _ambientFadeTarget = 1f;
+        private float _ambientFadeDuration;
+        private float _ambientFadeElapsed;
+        private bool _isFadingAmbient;
+
+        public static float AmbientMultiplier => _instance != null ? _instance._ambientMultiplier : 1f;
 
         private void Awake()
         {
@@ -54,7 +62,62 @@ namespace DeadCells.Core.Audio
         private void OnDestroy()
         {
             if (_instance == this)
+            {
+                _ambientMultiplier = 1f;
+                _isFadingAmbient = false;
                 _instance = null;
+            }
+        }
+
+        private void Update()
+        {
+            if (_isFadingAmbient)
+                TickAmbientFade(Time.unscaledDeltaTime);
+        }
+
+        public static void SetAmbientMultiplier(float multiplier)
+        {
+            if (_instance == null)
+                return;
+            _instance._isFadingAmbient = false;
+            _instance.ApplyAmbientMultiplier(multiplier);
+        }
+
+        public static void FadeAmbient(float targetMultiplier, float duration)
+        {
+            if (_instance == null)
+                return;
+            float clampedTarget = Mathf.Clamp01(targetMultiplier);
+            if (duration <= 0f)
+            {
+                SetAmbientMultiplier(clampedTarget);
+                return;
+            }
+
+            _instance._ambientFadeStart = _instance._ambientMultiplier;
+            _instance._ambientFadeTarget = clampedTarget;
+            _instance._ambientFadeDuration = duration;
+            _instance._ambientFadeElapsed = 0f;
+            _instance._isFadingAmbient = true;
+        }
+
+        public void TickAmbientFade(float deltaTime)
+        {
+            if (!_isFadingAmbient || deltaTime <= 0f)
+                return;
+
+            _ambientFadeElapsed += deltaTime;
+            float t = Mathf.Clamp01(_ambientFadeElapsed / _ambientFadeDuration);
+            ApplyAmbientMultiplier(Mathf.Lerp(_ambientFadeStart, _ambientFadeTarget, t));
+            if (t >= 1f)
+                _isFadingAmbient = false;
+        }
+
+        private void ApplyAmbientMultiplier(float multiplier)
+        {
+            _ambientMultiplier = Mathf.Clamp01(multiplier);
+            if (_ambientSource != null)
+                _ambientSource.volume = AmbientVolume * _ambientMultiplier;
         }
 
         public static void Play(SfxId id, float volumeScale = 1f)
