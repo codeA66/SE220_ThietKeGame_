@@ -355,7 +355,6 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 ("Art_E_Pillar1", 24f),
                 ("Art_E_Pillar2", 24f),
                 ("Art_F_ExitArch", 32f),
-                ("Art_F_ExitGlow", 32f),
                 ("Art_M_ArmoryDome1", 0f),
                 ("Art_O_MonsterDoor", -16f),
                 ("Art_P_SewerExitDoor", -16f),
@@ -374,8 +373,13 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                     $"[A08/Grounded/{propName}] Visual bottom ({sr.bounds.min.y:F2}) must rest on floor y={floorY:F2}, not float.");
             }
             var exitGlow = GameObject.Find("Art_F_ExitGlow");
+            Assert.IsNotNull(exitGlow, "[A08/ExitGlow] Missing Art_F_ExitGlow.");
+            Assert.IsNull(exitGlow.GetComponent<SpriteRenderer>(),
+                "[A08/ExitGlowNoBox] Art_F_ExitGlow must not render a square portal interior overlay box over the closed exit arch.");
             Assert.IsNotNull(exitGlow.GetComponent<UnityEngine.Rendering.Universal.Light2D>(),
                 "[A08/ExitGlowLight] Art_F_ExitGlow must retain its warm Light2D beacon.");
+            var mainExit = Object.FindAnyObjectByType<ExitTrigger>();
+            Assert.IsNotNull(mainExit?.PromptIndicator, "[A08/MainExitPrompt] I5_ExitTrigger must wire an [E] PromptIndicator.");
         }
 
         [Test]
@@ -1155,12 +1159,14 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(sewerExit.SwitchDoor);
             Assert.IsNotNull(sewerExit.FirstGuardian);
             Assert.IsNotNull(sewerExit.SecondGuardian);
+            Assert.IsNotNull(sewerExit.PromptIndicator, "[A13/SewerExitPrompt] I15_SewerExitTrigger must wire an [E] PromptIndicator.");
 
             var promenadeExit = biomeExits.Single(e => e.name == "I18_PromenadeExitTrigger");
             Assert.AreEqual("Promenade of the Condemned", promenadeExit.BiomeName, "[A13/PromenadeBiomeName]");
             Assert.IsNull(promenadeExit.SwitchDoor, "[A13/PromenadeNoSwitchDoor] Promenade exit unlocks on guardians alone.");
             Assert.IsNotNull(promenadeExit.FirstGuardian, "[A13/PromenadeFirstGuardian]");
             Assert.IsNotNull(promenadeExit.SecondGuardian, "[A13/PromenadeSecondGuardian]");
+            Assert.IsNotNull(promenadeExit.PromptIndicator, "[A13/PromenadeExitPrompt] I18_PromenadeExitTrigger must wire an [E] PromptIndicator.");
             CollectionAssert.AreEquivalent(
                 new[] { "Enemy_Shield_T1", "Enemy_Grenadier_T1" },
                 new[] { promenadeExit.FirstGuardian.name, promenadeExit.SecondGuardian.name },
@@ -1265,19 +1271,20 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
                 }
             }
 
-            // 2. P0-02: Art_P_ExitGlow renders in front of Art_P_SewerExitDoor
+            // 2. P0-02: Biome exit doors stay clean (no square PortalBackOut overlay box) while retaining Light2D beacons
             var pDoor = GameObject.Find("Art_P_SewerExitDoor");
             var pGlow = GameObject.Find("Art_P_ExitGlow");
+            var tGlow = GameObject.Find("Art_T_ExitGlow");
             Assert.IsNotNull(pDoor, "Missing Art_P_SewerExitDoor.");
             Assert.IsNotNull(pGlow, "Missing Art_P_ExitGlow.");
-            var pDoorSr = pDoor.GetComponent<SpriteRenderer>();
-            var pGlowSr = pGlow.GetComponent<SpriteRenderer>();
-            Assert.IsNotNull(pDoorSr, "Missing SpriteRenderer on Art_P_SewerExitDoor.");
-            Assert.IsNotNull(pGlowSr, "Missing SpriteRenderer on Art_P_ExitGlow.");
-            Assert.AreEqual(pDoorSr.sortingLayerName, pGlowSr.sortingLayerName,
-                "P0-02: Art_P_ExitGlow and Art_P_SewerExitDoor must share sorting layer 'Ground'.");
-            Assert.Greater(pGlowSr.sortingOrder, pDoorSr.sortingOrder,
-                "P0-02: Art_P_ExitGlow sortingOrder must be strictly greater than Art_P_SewerExitDoor so glow is not occluded.");
+            Assert.IsNotNull(tGlow, "Missing Art_T_ExitGlow.");
+            Assert.IsNotNull(pDoor.GetComponent<SpriteRenderer>(), "Missing SpriteRenderer on Art_P_SewerExitDoor.");
+            Assert.IsNull(pGlow.GetComponent<SpriteRenderer>(),
+                "P0-02: Art_P_ExitGlow must not render a square portal overlay sprite over the closed Sewer door.");
+            Assert.IsNull(tGlow.GetComponent<SpriteRenderer>(),
+                "P0-02: Art_T_ExitGlow must not render a square portal overlay sprite over the closed Promenade arch.");
+            Assert.IsNotNull(pGlow.GetComponent<Light2D>(), "P0-02: Art_P_ExitGlow must retain its Light2D beacon.");
+            Assert.IsNotNull(tGlow.GetComponent<Light2D>(), "P0-02: Art_T_ExitGlow must retain its Light2D beacon.");
 
             // 3. P0-03: Zero shrunk toy-scale (scale < 0.70) armory_dome_00 or armory_corps_00 in the scene
             var allRenderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsInactive.Include);
@@ -2277,6 +2284,8 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(hintRect, "[A19/ControlsHintBadge.Rect]");
             Assert.AreEqual(new Vector2(1f, 0f), hintRect.anchorMin, "[A19/ControlsHintBadge.AnchorMin]");
             Assert.AreEqual(new Vector2(1f, 0f), hintRect.anchorMax, "[A19/ControlsHintBadge.AnchorMax]");
+            Assert.LessOrEqual(hintRect.anchoredPosition.x, -250f,
+                "[A19/ControlsHintBadge.ClearOfRunStats] ControlsHintBadge must shift left so bottom-right Run stats never overlap [E] Tương tác.");
             var hintText = hintTr.GetComponentInChildren<Text>(true);
             Assert.IsNotNull(hintText, "[A19/ControlsHintBadge.Text]");
             StringAssert.Contains("[Esc] Tạm dừng", hintText.text, "[A19/ControlsHintBadge.Esc]");
@@ -2824,7 +2833,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(wallAWest, "[A23/WallAWestIntact]");
             Assert.AreEqual(GeometryAuditHelper.LayerGround, wallAWest.gameObject.layer);
 
-            // 2. Room_VaultA prefab instance exists, starts inactive at rest, uses VaultVisualGrid & WallTapestry_04 (48 PPU)
+            // 2. Room_VaultA prefab instance exists, starts inactive at rest, uses VaultVisualGrid, bespoke cathedral architecture & crisp WallTapestry_04 (135 PPU)
             var roomsRoot = GameObject.Find("Rooms");
             Assert.IsNotNull(roomsRoot, "[A23/RoomsRoot]");
             var vaultTr = roomsRoot.transform.Find("Room_VaultA");
@@ -2835,12 +2844,20 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(vaultGrid, "[A23/VaultVisualGrid]");
             Assert.AreEqual("VaultVisualGrid", vaultGrid.name);
 
-            var tapestrySr = vaultTr.GetComponentsInChildren<SpriteRenderer>(true)
+            var vaultRenderers = vaultTr.GetComponentsInChildren<SpriteRenderer>(true);
+            var tapestrySr = vaultRenderers
                 .SingleOrDefault(sr => sr.sprite != null && sr.sprite.name == "WallTapestry_04");
             Assert.IsNotNull(tapestrySr, "[A23/WallTapestry04]");
-            Assert.AreEqual(48f, tapestrySr.sprite.pixelsPerUnit, 0.01f, "[A23/Tapestry48Ppu]");
-            Assert.AreEqual(191.5f, tapestrySr.transform.position.x, 0.05f, "[A23/TapestryX]");
-            Assert.AreEqual(37.2f, tapestrySr.transform.position.y, 0.05f, "[A23/TapestryY]");
+            Assert.AreEqual(135f, tapestrySr.sprite.pixelsPerUnit, 0.01f, "[A23/Tapestry135Ppu]");
+            Assert.AreEqual(190.0f, tapestrySr.transform.position.x, 0.05f, "[A23/TapestryX]");
+            Assert.AreEqual(37.6f, tapestrySr.transform.position.y, 0.05f, "[A23/TapestryY]");
+
+            Assert.IsTrue(vaultRenderers.Any(sr => sr.sprite != null && sr.sprite.name == "VaultA_CathedralBackdrop"),
+                "[A23/CathedralBackdrop] Room_VaultA must include the bespoke VaultA_CathedralBackdrop.");
+            Assert.IsTrue(vaultRenderers.Any(sr => sr.sprite != null && sr.sprite.name == "VaultA_AltarDais"),
+                "[A23/AltarDais] Room_VaultA must include the bespoke VaultA_AltarDais.");
+            Assert.GreaterOrEqual(vaultRenderers.Count(sr => sr.sprite != null && sr.sprite.name == "VaultA_SandstoneColumn"), 4,
+                "[A23/SandstoneColumns] Room_VaultA must frame the nave with at least 4 sculpted VaultA_SandstoneColumn pillars.");
 
             var vaultLights = vaultTr.GetComponentsInChildren<Light2D>(true)
                 .Where(l => l.lightType == Light2D.LightType.Point && l.intensity > 0.2f)
@@ -2863,9 +2880,9 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(seq.ChamberAudio, "[A23/ChamberAudio]");
             Assert.IsNotNull(seq.ChamberAudio.clip, "[A23/ChamberAudioClip]");
             Assert.AreEqual("RoomAmbient_VaultA", seq.ChamberAudio.clip.name, "[A23/ChamberAudioClipName]");
-            Assert.AreEqual(191.5f, seq.CameraFocusPoint.x, 0.05f);
-            Assert.AreEqual(37.2f, seq.CameraFocusPoint.y, 0.05f);
-            Assert.AreEqual(5.2f, seq.FocusOrthoSize, 0.05f);
+            Assert.AreEqual(190.0f, seq.CameraFocusPoint.x, 0.05f);
+            Assert.AreEqual(37.6f, seq.CameraFocusPoint.y, 0.05f);
+            Assert.AreEqual(6.6f, seq.FocusOrthoSize, 0.05f);
 
             var inscription = Object.FindAnyObjectByType<WallInscription>(FindObjectsInactive.Include);
             Assert.IsNotNull(inscription, "[A23/WallInscription]");
@@ -2874,14 +2891,14 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             StringAssert.Contains("khoảng nắng chẳng bao giờ tắt", inscription.Body);
             StringAssert.Contains("tình yêu thuần khiết và vĩnh hằng", inscription.Body);
 
-            // 4. Two VaultA PowerScrollPickups spaced >= 2.7u apart inside Room_VaultA
+            // 4. Two VaultA PowerScrollPickups spaced >= 2.7u apart atop relic plinths inside Room_VaultA
             var s1 = GameObject.Find("I20_Scroll_VaultA1");
             var s2 = GameObject.Find("I21_Scroll_VaultA2");
             Assert.IsNotNull(s1, "[A23/ScrollVaultA1]");
             Assert.IsNotNull(s2, "[A23/ScrollVaultA2]");
-            Assert.AreEqual(198.5f, s1.transform.position.x, GeometryAuditHelper.Eps);
+            Assert.AreEqual(199.6f, s1.transform.position.x, GeometryAuditHelper.Eps);
             Assert.AreEqual(29f, s1.transform.position.y, GeometryAuditHelper.Eps);
-            Assert.AreEqual(201.2f, s2.transform.position.x, GeometryAuditHelper.Eps);
+            Assert.AreEqual(202.3f, s2.transform.position.x, GeometryAuditHelper.Eps);
             Assert.AreEqual(29f, s2.transform.position.y, GeometryAuditHelper.Eps);
         }
 

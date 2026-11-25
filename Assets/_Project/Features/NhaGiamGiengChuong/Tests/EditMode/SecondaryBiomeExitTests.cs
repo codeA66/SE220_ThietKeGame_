@@ -131,9 +131,12 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             var lockedPromptGo = Track(new GameObject("LockedPromptIndicator"));
             lockedPromptGo.transform.SetParent(exitGo.transform, false);
             lockedPromptGo.SetActive(false);
+            var unlockedPromptGo = Track(new GameObject("PromptIndicator"));
+            unlockedPromptGo.transform.SetParent(exitGo.transform, false);
+            unlockedPromptGo.SetActive(false);
 
             var sewerExit = exitGo.AddComponent<SecondaryBiomeExitTrigger>();
-            sewerExit.Configure("I15", "Toxic Sewers", run, sd, shieldP, archerP, null, health, playerCol);
+            sewerExit.Configure("I15", "Toxic Sewers", run, sd, shieldP, archerP, null, health, playerCol, null, unlockedPromptGo);
             var so = new SerializedObject(sewerExit);
             var promptProp = so.FindProperty("_lockedPromptIndicator");
             if (promptProp != null)
@@ -142,16 +145,27 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
 
-            // 1. Outside trigger while locked -> prompt hidden.
+            const BindingFlags anyInstance = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+            Assert.IsNull(typeof(SecondaryBiomeExitTrigger).GetMethod("OnTriggerEnter2D", anyInstance),
+                "[BiomeExit/NoTouchEnter] Biome exits must require [E] press instead of auto-exiting on touch.");
+            Assert.IsNull(typeof(SecondaryBiomeExitTrigger).GetMethod("OnTriggerStay2D", anyInstance),
+                "[BiomeExit/NoTouchStay] Biome exits must require [E] press instead of auto-exiting on stay.");
+
+            // 1. Outside trigger while locked -> both prompts hidden.
             TickExitVisual(sewerExit);
             Assert.IsFalse(sewerExit.LockedPromptVisible, "[T1.5/SewerOutside]");
             Assert.IsFalse(lockedPromptGo.activeSelf);
+            Assert.IsFalse(sewerExit.PromptVisible);
+            Assert.IsFalse(unlockedPromptGo.activeSelf);
 
-            // 2. Overlapping trigger while locked -> prompt shown.
+            // 2. Overlapping trigger while locked -> locked prompt shown, unlocked prompt hidden, TryInteract rejected.
             playerGo.transform.position = new Vector3(224f, -16f, 0f);
             TickExitVisual(sewerExit);
             Assert.IsTrue(sewerExit.LockedPromptVisible, "[T1.5/SewerLockedOverlap] Locked prompt must show when overlapping locked exit.");
             Assert.IsTrue(lockedPromptGo.activeSelf, "[T1.5/SewerLockedOverlapGo]");
+            Assert.IsFalse(sewerExit.PromptVisible);
+            Assert.IsFalse(unlockedPromptGo.activeSelf);
+            Assert.IsFalse(sewerExit.TryInteract());
 
             // 3. Stepping back outside -> prompt hides.
             playerGo.transform.position = new Vector3(210f, -16f, 0f);
@@ -159,7 +173,7 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.IsFalse(sewerExit.LockedPromptVisible);
             Assert.IsFalse(lockedPromptGo.activeSelf);
 
-            // 4. Unlock switch door + defeat both guardians, then overlap exit -> prompt remains hidden!
+            // 4. Unlock switch door + defeat both guardians, then overlap exit -> locked prompt hides, [E] prompt shows, TryInteract wins!
             playerGo.transform.position = new Vector3(206f, -16f, 0f);
             Assert.IsTrue(sd.TryInteract());
             sewerExit.NotifyGuardianDied(shieldP);
@@ -168,8 +182,13 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
 
             playerGo.transform.position = new Vector3(224f, -16f, 0f);
             TickExitVisual(sewerExit);
-            Assert.IsFalse(sewerExit.LockedPromptVisible, "[T1.5/SewerUnlockedOverlap] Prompt must hide once unlocked.");
+            Assert.IsFalse(sewerExit.LockedPromptVisible, "[T1.5/SewerUnlockedOverlap] Locked prompt must hide once unlocked.");
             Assert.IsFalse(lockedPromptGo.activeSelf);
+            Assert.IsTrue(sewerExit.PromptVisible, "[T1.5/SewerUnlockedPrompt] [E] prompt must show when unlocked inside trigger.");
+            Assert.IsTrue(unlockedPromptGo.activeSelf);
+            Assert.IsTrue(sewerExit.TryInteract(), "[T1.5/SewerUnlockedInteract] Pressing [E] inside unlocked trigger must submit win.");
+            Assert.IsTrue(run.ResolvePendingOutcome(Time.frameCount + 1));
+            Assert.AreEqual(LevelOutcome.Win, run.Outcome);
         }
 
         private static void TickExitVisual(SecondaryBiomeExitTrigger exit)

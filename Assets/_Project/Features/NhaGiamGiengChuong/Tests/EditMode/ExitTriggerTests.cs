@@ -141,6 +141,65 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.AreEqual(-1, lastCandidateFrame);
         }
 
+        [Test]
+        public void ExitTrigger_RequiresExplicitInteract_ShowsPromptInsideTrigger_AndHasNoAutoTouchHandler()
+        {
+            const System.Reflection.BindingFlags privateInstance =
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+            Assert.IsNull(typeof(ExitTrigger).GetMethod("OnTriggerEnter2D", privateInstance),
+                "[ExitTrigger/NoTouchEnter] ExitTrigger must require [E] press instead of auto-exiting on touch.");
+            Assert.IsNull(typeof(ExitTrigger).GetMethod("OnTriggerStay2D", privateInstance),
+                "[ExitTrigger/NoTouchStay] ExitTrigger must require [E] press instead of auto-exiting on stay.");
+
+            var playerGo = Track(new GameObject("Player"));
+            playerGo.transform.position = new Vector3(1f, 32f, 0f);
+            var playerCol = playerGo.AddComponent<BoxCollider2D>();
+            playerCol.size = new Vector2(0.8f, 1.6f);
+            playerCol.offset = new Vector2(0f, 0.8f);
+            var health = playerGo.AddComponent<Health>();
+            health.Initialize(100, 0f);
+
+            var run = Track(new GameObject("Run")).AddComponent<LevelRunController>();
+            run.Configure(null, health);
+            run.TickIntro(new DummyPlayState(), 0f);
+
+            var zombie = SpawnEnemy(ZombiePrefabPath);
+            var archer = SpawnEnemy(ArcherPrefabPath);
+            var gate = Track(new GameObject("Gate")).AddComponent<EncounterGate>();
+            gate.Configure(run, zombie, archer, Track(new GameObject("Barrier")));
+            gate.NotifyEnemyDied(zombie);
+            gate.NotifyEnemyDied(archer);
+
+            var exitGo = Track(new GameObject("I5_ExitTrigger"));
+            exitGo.transform.position = new Vector3(5f, 33f, 0f);
+            var trig = exitGo.AddComponent<BoxCollider2D>();
+            trig.isTrigger = true;
+            trig.size = new Vector2(2f, 2f);
+            var promptGo = Track(new GameObject("PromptIndicator"));
+            promptGo.transform.SetParent(exitGo.transform, false);
+            promptGo.SetActive(false);
+
+            var exit = exitGo.AddComponent<ExitTrigger>();
+            exit.Configure(run, gate, null, health, playerCol, null, promptGo);
+
+            // Outside trigger -> prompt hidden and TryInteract rejected
+            exit.RefreshVisualState();
+            Assert.IsFalse(exit.PromptVisible);
+            Assert.IsFalse(promptGo.activeSelf);
+            Assert.IsFalse(exit.TryInteract());
+
+            // Step into trigger -> prompt appears, still no auto-win until TryInteract()
+            playerGo.transform.position = new Vector3(5f, 32f, 0f);
+            exit.RefreshVisualState();
+            Assert.IsTrue(exit.PromptVisible);
+            Assert.IsTrue(promptGo.activeSelf);
+            Assert.IsFalse(run.IsEnded);
+
+            Assert.IsTrue(exit.TryInteract());
+            Assert.IsTrue(run.ResolvePendingOutcome(Time.frameCount + 1));
+            Assert.AreEqual(LevelOutcome.Win, run.Outcome);
+        }
+
         private EnemyController SpawnEnemy(string prefabPath)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
