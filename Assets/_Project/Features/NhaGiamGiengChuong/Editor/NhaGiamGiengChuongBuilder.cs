@@ -507,6 +507,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonSolidFloor(solidTm, rimTm, pal, 22f, 42f, 7f, 8f);
             PaintPrisonCeiling(solidTm, rimTm, pal, 42f, 56f, 18.5f, 19f);
             PaintPrisonCeiling(solidTm, rimTm, pal, 22f, 42f, 13.5f, 14f);
+            // Seal upper bedrock cavity between Ceiling_D (y=14) and Floor_L (y=23) without touching Wall_H_EastUpper_22 (cx=22)
+            PaintVisualDirtSkirt(solidTm, pal, 23, 38, 14, 23);
 
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_BC_Header_42", 42f, 4f, 7f);
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_CD_Upper_42", 42f, 12f, 19f);
@@ -860,12 +862,12 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonOuterWall(solidTm, pal, 38f, 38.5f, 28f, 39f);
             PaintPrisonCeiling(solidTm, rimTm, pal, 22f, 38f, 38.5f, 39f);
 
-            // Wall_F_West [-0.5, 0]x[31, 38.5]: fill full exterior bedrock [-16..0, 31..45] first so cx=-1 has zero 0.5u slit, then dress carved wall face
-            PaintVisualDirtSkirt(solidTm, pal, -16, 0, 31, 45);
-            PaintVisualDirtSkirt(solidTm, pal, 0, 38, 39, 45);
-            PaintPrisonOuterWall(solidTm, pal, -0.5f, 0f, 32f, 38.5f);
+            // Wall_F_West [-0.5, 0]x[31, 38.5] & top ceilings: fill full 1x1 exterior earth (zero 0.5u vertical/horizontal slits behind Wall_F_West, Ceiling_E_West, Ceiling_F)
+            PaintPrisonCeilingRimOnly(rimTm, pal, 0f, 22f, 38f);
+            PaintVisualDirtSkirt(solidTm, pal, -16, 0, 31, 45, overwriteExisting: true);
+            PaintVisualDirtSkirt(solidTm, pal, 0, 22, 38, 45, overwriteExisting: true);
+            PaintVisualDirtSkirt(solidTm, pal, 22, 38, 39, 45);
             AddCarvedDividerWall(artRoot, "Beam_F_West", pal, mat, -0.25f, 31f, 38.5f);
-            PaintPrisonCeiling(solidTm, rimTm, pal, 0f, 22f, 38f, 38.5f);
 
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_EL_Header_22", 22f, 28f, 31f);
             PaintPrisonInteriorHeader(solidTm, artRoot, mat, pal, "Beam_LF_Header_22", 22f, 36f, 39f);
@@ -985,9 +987,10 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
 
             PaintPrisonCeiling(solidTm, rimTm, pal, 76f, 164f, 22.5f, 23f);
 
-            // Outer east bedrock (seals Wall_MN_East [164..164.5], outer east margin [164..168], and overhang east of Room T [144..168, 23..39])
-            PaintVisualDirtSkirt(solidTm, pal, 164, 168, -1, 23);
-            PaintVisualDirtSkirt(solidTm, pal, 144, 168, 23, 39);
+            // Outer east bedrock (seals Wall_MN_East [164..174] past orthoSize=7 viewport, plus overhang [156..172, 23..39] west of VaultA)
+            PaintVisualDirtSkirt(solidTm, pal, 164, 174, -1, 27);
+            PaintVisualDirtSkirt(solidTm, pal, 156, 172, 27, 39);
+            PaintVisualDirtSkirt(solidTm, pal, 144, 164, 23, 39);
 
             // Wall_N_WestUpper_76 [76, 76.5]x[15, 22.5]: cy=22 belongs to Ceiling_N (76, 22), so tile cy=15..22 + carved wall
             PaintPrisonOuterWall(solidTm, pal, 76f, 76.5f, 15f, 22f);
@@ -1459,16 +1462,13 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonSolidFloor(solidTm, rimTm, pal, 83f, 140f, 39f, 40f);
             PaintPrisonCeilingRimOnly(rimTm, pal, 83f, 92f, 39f);
 
-            // Wall_S_East + complete bedrock fill [92..144, 23..39] BEFORE half-cell outer wall so cx=92 has zero 0.5u parallax slit
-            PaintVisualDirtSkirt(solidTm, pal, 92, 144, 23, 39);
-            PaintPrisonOuterWall(solidTm, pal, 92f, 92.5f, 23f, 31f);
+            // Wall_S_East + full bedrock fill [92..156, 23..39] (no half-cell outer wall overwrite -> zero 0.5u parallax slits)
+            PaintVisualDirtSkirt(solidTm, pal, 92, 156, 23, 39, overwriteExisting: true);
 
             PaintPrisonCeiling(solidTm, rimTm, pal, 38f, 140f, 62.5f, 63f);
-            PaintVisualDirtSkirt(solidTm, pal, 34, 144, 63, 68);
-            PaintVisualDirtSkirt(solidTm, pal, 34, 38, 39, 63);
-            PaintVisualDirtSkirt(solidTm, pal, 140, 144, 39, 63);
-            PaintPrisonOuterWall(solidTm, pal, 37.5f, 38f, 39f, 63f);
-            PaintPrisonOuterWall(solidTm, pal, 140f, 140.5f, 39f, 63f);
+            PaintVisualDirtSkirt(solidTm, pal, 24, 156, 63, 68);
+            PaintVisualDirtSkirt(solidTm, pal, 24, 38, 39, 63, overwriteExisting: true);
+            PaintVisualDirtSkirt(solidTm, pal, 140, 156, 39, 63, overwriteExisting: true);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "U1_SubE", 56, 76, 15, 23);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "U1_Overhang", 92, 144, 23, 39);
             AddInterTierSlabStrata(artRoot, pal, mat, "U1_StoT_West", 38f, 77f, 39.45f);
@@ -2793,8 +2793,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
                 var scrollEast = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I11_Scroll_EastCourtyard", new Vector3(156.5f, 0f, 0f), 0, pal);
                 var scrollWest = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I12_Scroll_WestArmory", new Vector3(-95f, 24f, 0f), 1, pal);
                 var scrollHighBastion = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I17_Scroll_HighBastion", new Vector3(114f, 40f, 0f), 2, pal);
-                var scrollVaultA1 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I20_Scroll_VaultA1", new Vector3(199.6f, 29f, 0f), 3, pal);
-                var scrollVaultA2 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I21_Scroll_VaultA2", new Vector3(202.3f, 29f, 0f), 4, pal);
+                var scrollVaultA1 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I20_Scroll_VaultA1", new Vector3(199.6f, 29f, 0f), 3, pal, useCustomPlinth: true);
+                var scrollVaultA2 = CloneAndConfigureScroll(srcScroll, targetScene, scrollsRoot.transform, "I21_Scroll_VaultA2", new Vector3(202.3f, 29f, 0f), 4, pal, useCustomPlinth: true);
 
                 var soInteraction = new SerializedObject(scrollInteraction);
                 var scrollsProp = soInteraction.FindProperty("_scrolls");
@@ -3029,7 +3029,8 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             string instanceName,
             Vector3 worldPos,
             int auraIndex,
-            PrisonPalette pal)
+            PrisonPalette pal,
+            bool useCustomPlinth = false)
         {
             var clone = UnityEngine.Object.Instantiate(srcScroll);
             clone.name = instanceName;
@@ -3055,10 +3056,22 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             var iconTr = soScroll.FindProperty("_icon").objectReferenceValue as Transform;
             var glowGo = soScroll.FindProperty("_glow").objectReferenceValue as GameObject;
             var promptGo = soScroll.FindProperty("_prompt")?.objectReferenceValue as GameObject;
+            var vesselSr = soScroll.FindProperty("_vessel")?.objectReferenceValue as SpriteRenderer;
             if (iconTr == null)
                 throw new InvalidOperationException($"Cloned scroll '{instanceName}' is missing _icon Transform.");
             if (glowGo == null || glowGo.GetComponent<Light2D>() == null)
                 throw new InvalidOperationException($"Cloned scroll '{instanceName}' _glow must point to Scroll glow Light2D.");
+
+            if (useCustomPlinth)
+            {
+                // VaultA uses bespoke sandstone relic plinths; hide dark prison scroll vat and hover the scroll cleanly above the plinth cap (y = +2.04u)
+                if (vesselSr != null)
+                    vesselSr.gameObject.SetActive(false);
+                iconTr.localPosition = new Vector3(iconTr.localPosition.x, 2.04f, iconTr.localPosition.z);
+                glowGo.transform.localPosition = new Vector3(glowGo.transform.localPosition.x, 2.04f, glowGo.transform.localPosition.z);
+                if (promptGo != null)
+                    promptGo.transform.localPosition = new Vector3(promptGo.transform.localPosition.x, 2.78f, promptGo.transform.localPosition.z);
+            }
 
             int vfxLayerId = SortingLayerSetup.GetSortingLayerId("VFX");
             int groundLayerId = SortingLayerSetup.GetSortingLayerId("Ground");
@@ -3960,14 +3973,14 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             }
         }
 
-        private static void PaintVisualDirtSkirt(Tilemap solidTm, PrisonPalette pal, int xMin, int xMax, int yMin, int yMax)
+        private static void PaintVisualDirtSkirt(Tilemap solidTm, PrisonPalette pal, int xMin, int xMax, int yMin, int yMax, bool overwriteExisting = false)
         {
             for (int cx = xMin; cx < xMax; cx++)
             {
                 for (int cy = yMin; cy < yMax; cy++)
                 {
                     var cell = new Vector3Int(cx, cy, 0);
-                    if (solidTm.GetTile(cell) == null)
+                    if (overwriteExisting || solidTm.GetTile(cell) == null)
                         SetTileWithMatrix(solidTm, cell, pal.Dirt, Matrix4x4.identity);
                 }
             }
