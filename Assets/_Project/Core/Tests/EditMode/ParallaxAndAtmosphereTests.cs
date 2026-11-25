@@ -281,9 +281,9 @@ namespace DeadCells.Core.Tests
             Sparks sparks = null;
             try
             {
+                blood = CreateAndAwakeParticleSystem<BloodDrops>();
+                Assert.IsFalse(blood.enabled, "BloodDrops must start disabled after Awake when empty.");
                 BloodDrops.Emit(Vector2.zero, 1, BloodBurst.Light, 0);
-                blood = Object.FindAnyObjectByType<BloodDrops>();
-                Assert.IsNotNull(blood, "BloodDrops singleton must be created on Emit.");
                 Assert.IsTrue(blood.enabled, "BloodDrops must be enabled after Emit.");
 
                 ClearParticleListsAndTick(blood, "_active");
@@ -293,9 +293,9 @@ namespace DeadCells.Core.Tests
                 BloodDrops.Emit(Vector2.zero, 1, BloodBurst.Light, 0);
                 Assert.IsTrue(blood.enabled, "BloodDrops must re-enable on subsequent Emit.");
 
+                debris = CreateAndAwakeParticleSystem<Debris>();
+                Assert.IsFalse(debris.enabled, "Debris must start disabled after Awake when empty.");
                 Debris.Shockwave(Vector2.zero, 0, 0.25f, 4);
-                debris = Object.FindAnyObjectByType<Debris>();
-                Assert.IsNotNull(debris, "Debris singleton must be created on Shockwave.");
                 Assert.IsTrue(debris.enabled, "Debris must be enabled after Shockwave.");
 
                 ClearParticleListsAndTick(debris, "_active");
@@ -305,22 +305,25 @@ namespace DeadCells.Core.Tests
                 Debris.Shockwave(Vector2.zero, 0, 0.25f, 4);
                 Assert.IsTrue(debris.enabled, "Debris must re-enable on subsequent Shockwave.");
 
+                sparks = CreateAndAwakeParticleSystem<Sparks>();
+                Assert.IsFalse(sparks.enabled, "Sparks must start disabled after Awake when empty.");
                 Sparks.Emit(Vector2.zero, 1, SparkBurst.Shield, 0);
-                sparks = Object.FindAnyObjectByType<Sparks>();
-                Assert.IsNotNull(sparks, "Sparks singleton must be created on Emit.");
                 Assert.IsTrue(sparks.enabled, "Sparks must be enabled after Emit.");
 
                 ClearParticleListsAndTick(sparks, "_active", "_flashes");
                 Assert.IsFalse(sparks.enabled, "Sparks must disable after _active and _flashes drain and LateUpdate clears meshes.");
+                Assert.AreEqual(0, sparks.transform.Find("Glow").GetComponent<MeshFilter>().sharedMesh.vertexCount);
+                Assert.AreEqual(0, sparks.transform.Find("Cores").GetComponent<MeshFilter>().sharedMesh.vertexCount);
 
                 Sparks.Emit(Vector2.zero, 1, SparkBurst.Shield, 0);
                 Assert.IsTrue(sparks.enabled, "Sparks must re-enable on subsequent Emit.");
             }
             finally
             {
-                if (blood != null) Object.DestroyImmediate(blood.gameObject);
-                if (debris != null) Object.DestroyImmediate(debris.gameObject);
-                if (sparks != null) Object.DestroyImmediate(sparks.gameObject);
+                CleanupParticleSystem(blood, "_mesh");
+                CleanupParticleSystem(debris, "_mesh");
+                CleanupParticleSystem(sparks, "_coreMesh", "_glowMesh");
+                typeof(RuntimeSprites).GetMethod("ResetStatics", BindingFlags.Static | BindingFlags.NonPublic)?.Invoke(null, null);
             }
         }
 
@@ -389,6 +392,42 @@ namespace DeadCells.Core.Tests
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(localX, localY, 0f);
             return go.transform;
+        }
+
+        private static T CreateAndAwakeParticleSystem<T>() where T : MonoBehaviour
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
+            System.Type type = typeof(T);
+            var existing = (T)type.GetField("s_instance", flags)?.GetValue(null);
+            if (existing != null)
+                Object.DestroyImmediate(existing.gameObject);
+
+            var go = new GameObject(type.Name + "_Test");
+            var instance = go.AddComponent<T>();
+            type.GetMethod("Awake", flags)?.Invoke(instance, null);
+            type.GetField("s_instance", flags)?.SetValue(null, instance);
+            return instance;
+        }
+
+        private static void CleanupParticleSystem(MonoBehaviour system, params string[] meshFieldNames)
+        {
+            if (system == null)
+                return;
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
+            System.Type type = system.GetType();
+            for (int i = 0; i < meshFieldNames.Length; i++)
+            {
+                FieldInfo meshField = type.GetField(meshFieldNames[i], flags);
+                if (meshField != null && meshField.GetValue(system) is Mesh mesh && mesh != null)
+                {
+                    Object.DestroyImmediate(mesh);
+                    meshField.SetValue(system, null);
+                }
+            }
+
+            type.GetMethod("ResetStatics", flags)?.Invoke(null, null);
+            Object.DestroyImmediate(system.gameObject);
         }
 
         private static void ClearParticleListsAndTick(MonoBehaviour system, params string[] listFieldNames)
