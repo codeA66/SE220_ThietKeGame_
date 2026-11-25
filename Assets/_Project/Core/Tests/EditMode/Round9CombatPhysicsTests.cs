@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection;
 using DeadCells.Combat;
 using DeadCells.Enemies;
@@ -1507,6 +1508,260 @@ namespace DeadCells.Core.Tests
                     Object.DestroyImmediate(harness.Data);
                 if (gravityHarness.Data != null)
                     Object.DestroyImmediate(gravityHarness.Data);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void Combat_DoorAndWallOcclusion_BlocksMeleeStompAndBowMuzzle()
+        {
+            var root = new GameObject("__Round9DoorOcclusionTest");
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                var harness = CreatePlayerHarness(root.transform, Vector2.zero);
+                var enemy = CreateRound9EnemyTarget(root.transform, "OccludedEnemy", new Vector2(1.35f, 0f));
+
+                var doorGo = new GameObject("ClosedDoor_050");
+                doorGo.transform.SetParent(root.transform);
+                doorGo.layer = GroundLayer;
+                doorGo.transform.position = new Vector2(0.65f, 1.0f);
+                var doorCol = doorGo.AddComponent<BoxCollider2D>();
+                doorCol.size = new Vector2(0.50f, 2.0f);
+
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                var strike = harness.Context.Combat.MeleeWeapon.GetStrike(0);
+                harness.Context.Combat.BeginSwing();
+                Assert.AreEqual(0, harness.Context.Combat.PerformStrike(strike, facing: 1),
+                    "0.50u solid door between player and enemy must occlude melee swing.");
+                Assert.AreEqual(enemy.Max, enemy.Current);
+
+                Assert.AreEqual(0, harness.Context.Combat.PerformStomp(30, 1f, new Vector2(4f, 2f)),
+                    "0.50u solid door between player and enemy must occlude stomp.");
+                Assert.AreEqual(enemy.Max, enemy.Current);
+
+                Vector2 firedMuzzle = default;
+                int worldHitCount = 0;
+                harness.Context.Bow.Fired += (muzzle, _, _) => firedMuzzle = muzzle;
+                harness.Context.Bow.ArrowWorldHit += (_, _, _) => worldHitCount++;
+
+                Assert.IsTrue(harness.Context.Bow.TryFire(Vector2.zero, 1, crouching: false, harness.Context.Bow.GetNextShot()));
+                Assert.Less(firedMuzzle.x, 0.40f,
+                    "Bow muzzle must clamp in front of the 0.50u door face at x=0.40.");
+
+                var activeArrows = GetPrivateField<List<RecoverableArrow>>(harness.Context.Bow, "_activeArrows");
+                for (int step = 0; step < 10 && activeArrows.Count > 0; step++)
+                {
+                    foreach (var arrow in activeArrows.ToArray())
+                    {
+                        if (arrow != null && arrow.gameObject.activeSelf)
+                            InvokePrivateMethod(arrow, "FixedUpdate");
+                    }
+                }
+
+                Assert.AreEqual(1, worldHitCount, "Clamped bow shot must hit the closed door face.");
+                Assert.AreEqual(enemy.Max, enemy.Current, "Clamped bow shot must not tunnel past the closed door.");
+
+                // One-way platform must not occlude melee or stomp.
+                doorGo.layer = OneWayLayer;
+                Physics2D.SyncTransforms();
+
+                harness.Context.Combat.BeginSwing();
+                Assert.AreEqual(1, harness.Context.Combat.PerformStrike(strike, facing: 1),
+                    "OneWayPlatform must not occlude melee swings.");
+                enemy.RestoreFull();
+                Assert.AreEqual(1, harness.Context.Combat.PerformStomp(30, 1f, new Vector2(4f, 2f)),
+                    "OneWayPlatform must not occlude stomps.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void Combat_StarterSwordThirdHitCrit_IsBlockedByFrontShield()
+        {
+            var root = new GameObject("__Round9ShieldCritBlockTest");
+            GameObject shieldGo = null;
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                var harness = CreatePlayerHarness(root.transform, Vector2.zero);
+                var playerController = harness.PlayerGo.GetComponent<PlayerController>();
+
+                var shieldPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPaths[2]);
+                Assert.IsNotNull(shieldPrefab, $"Missing {EnemyPrefabPaths[2]}");
+                shieldGo = Object.Instantiate(shieldPrefab, new Vector3(1.5f, 0f, 0f), Quaternion.identity);
+
+                var shieldAnim = shieldGo.GetComponent<EnemyAnimator>();
+                var shieldController = shieldGo.GetComponent<EnemyController>();
+                var shieldHealth = shieldGo.GetComponent<Health>();
+                InvokePrivateMethod(shieldAnim, "Awake");
+                InvokePrivateMethod(shieldController, "Awake");
+                InvokePrivateMethod(shieldController, "Start");
+
+                var shieldContext = GetPrivateField<EnemyContext>(shieldController, "_context");
+                shieldContext.Face(-1);
+
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                var hit3 = harness.Context.Combat.MeleeWeapon.GetStrike(2);
+                Assert.IsTrue(hit3.CanCrit, "Precondition: starter sword 3rd hit must have CanCrit = true.");
+                Assert.AreEqual(0f, hit3.Stun, 0.0001f, "Precondition: starter sword 3rd hit must have Stun = 0.");
+
+                int staggeredDir = 0;
+                playerController.Staggered += dir => staggeredDir = dir;
+
+                harness.Context.Combat.BeginSwing();
+                int hits = harness.Context.Combat.PerformStrike(hit3, facing: 1);
+
+                Assert.AreEqual(0, hits, "Front shield must block starter sword 3rd hit despite CanCrit = true.");
+                Assert.AreEqual(shieldHealth.Max, shieldHealth.Current, "Shieldbearer HP must stay unchanged.");
+                Assert.AreEqual(-1, staggeredDir, "Blocked front melee strike must stagger the player backward.");
+                Assert.AreSame(harness.Machine.Hurt, harness.Machine.Current, "Shield stagger must push player into Hurt state.");
+            }
+            finally
+            {
+                if (shieldGo != null)
+                    Object.DestroyImmediate(shieldGo);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void Player_LowCeilingCrouch_PreventsStandingUpUntilClear_AndBowJumpClearsCrouch()
+        {
+            var root = new GameObject("__Round9LowCeilingCrouchTest");
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                var ceilingGo = new GameObject("LowCeiling");
+                ceilingGo.transform.SetParent(root.transform);
+                ceilingGo.layer = GroundLayer;
+                ceilingGo.transform.position = new Vector2(0f, 1.60f);
+                ceilingGo.AddComponent<BoxCollider2D>().size = new Vector2(4f, 1.0f);
+
+                var harness = CreatePlayerHarness(root.transform, Vector2.zero);
+                var col = harness.PlayerGo.GetComponent<BoxCollider2D>();
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                Assert.IsFalse(harness.Context.CanStandUp(), "Precondition: 1.10u solid ceiling blocks standing up.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), true);
+                ForceState(harness.Machine, harness.Machine.Crouch);
+                var crouchState = (PlayerCrouchState)harness.Machine.Crouch;
+                Assert.AreEqual(0.90f, col.size.y, 0.001f, "Crouching must shrink collider to 0.90u.");
+
+                // Releasing crouch and pressing jump under ceiling must stay crouched.
+                SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), false);
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveY), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), true);
+                harness.Context.RefreshFrame();
+                BeginSimulatedFrame(harness.Machine);
+                TickCrouch(crouchState, 0.02f);
+
+                Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current,
+                    "Under 1.10u ceiling, releasing crouch and pressing jump must keep PlayerCrouchState.");
+                Assert.AreEqual(0.90f, col.size.y, 0.001f, "Collider must remain 0.90u under low ceiling.");
+
+                // Finishing a bow shot under the ceiling must return to Crouch with 0.90u collider.
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), false);
+                harness.Context.Weapons.Equip(PlayerWeaponSlot.Bow);
+                ForceState(harness.Machine, harness.Machine.BowAttack);
+                var bowState = (PlayerBowAttackState)harness.Machine.Current;
+                Assert.AreEqual(0.90f, col.size.y, 0.001f, "Entering BowAttack under ceiling must keep 0.90u collider.");
+
+                var shot0 = harness.Context.Bow.Data.GetShot(0);
+                bowState.Tick(shot0.ChargeTime + 0.01f);
+                BeginSimulatedFrame(harness.Machine);
+                bowState.Tick(0.5f);
+
+                Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current,
+                    "Finishing BowAttack under 1.10u ceiling must transition to Crouch instead of standing.");
+                Assert.AreEqual(0.90f, col.size.y, 0.001f, "Collider must stay 0.90u on returning to Crouch.");
+
+                // Removing ceiling allows standing up cleanly to 1.60u.
+                ceilingGo.SetActive(false);
+                Physics2D.SyncTransforms();
+                Assert.IsTrue(harness.Context.CanStandUp());
+                BeginSimulatedFrame(harness.Machine);
+                TickCrouch(crouchState, 0.02f);
+
+                Assert.AreSame(harness.Machine.Idle, harness.Machine.Current,
+                    "Once ceiling clears, releasing crouch must stand up into Idle.");
+                Assert.AreEqual(1.60f, col.size.y, 0.001f, "Standing up must restore 1.60u collider.");
+
+                // Open-air jump during bow recovery must clear _crouching and restore 1.60u collider.
+                SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), true);
+                harness.Context.RefreshFrame();
+                ForceState(harness.Machine, harness.Machine.BowAttack);
+                bowState.Tick(shot0.ChargeTime + 0.01f);
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), true);
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpHeld), true);
+                harness.Context.RefreshFrame();
+                bowState.Tick(0.01f);
+
+                Assert.IsFalse(GetPrivateField<bool>(bowState, "_crouching"),
+                    "Open-air jump during bow recovery must clear _crouching.");
+                Assert.AreEqual(1.60f, col.size.y, 0.001f,
+                    "Open-air jump during bow recovery must restore 1.60u collider.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void RecoverableArrow_Quiver_UsesPassedDeltaTime()
+        {
+            var root = new GameObject("__Round9ArrowQuiverDeltaTimeTest");
+            try
+            {
+                var bowData = AssetDatabase.LoadAssetAtPath<BowWeaponData>(BowDataPath);
+                var arrowPrefab = AssetDatabase.LoadAssetAtPath<RecoverableArrow>(PlayerArrowPrefabPath);
+                Assert.IsNotNull(bowData, $"Missing {BowDataPath}");
+                Assert.IsNotNull(arrowPrefab, $"Missing {PlayerArrowPrefabPath}");
+
+                var wallGo = new GameObject("SolidWall");
+                wallGo.transform.SetParent(root.transform);
+                wallGo.layer = GroundLayer;
+                wallGo.transform.position = new Vector2(1.0f, 0f);
+                wallGo.AddComponent<BoxCollider2D>().size = new Vector2(1.0f, 4f);
+
+                var arrow = Object.Instantiate(arrowPrefab);
+                arrow.transform.SetParent(root.transform, false);
+                bool worldHit = false;
+                arrow.Initialize(_ => { });
+                arrow.WorldHit += (_, _, _) => worldHit = true;
+                arrow.Launch(Vector2.zero, 1, bowData, 10, (LayerMask)(1 << EnemyLayer), (LayerMask)(1 << GroundLayer), null);
+
+                Physics2D.SyncTransforms();
+                for (int i = 0; i < 5 && !worldHit; i++)
+                    InvokePrivateMethod(arrow, "FixedUpdate");
+
+                Assert.IsTrue(worldHit, "Precondition: arrow must impact wall into WorldImpact phase.");
+                Quaternion initialRot = arrow.transform.rotation;
+
+                arrow.Tick(0.05f);
+
+                Assert.AreEqual(0.05f, GetPrivateField<float>(arrow, "_impactTime"), 0.0001f,
+                    "Quiver must advance _impactTime using the deltaTime passed to Tick(dt).");
+                Assert.AreNotEqual(initialRot, arrow.transform.rotation,
+                    "Quiver must rotate the stuck arrow on Tick(dt).");
+                float expectedAngle = Mathf.Sin(0.05f * 55f) * 7f * (1f - 0.05f / 0.3f);
+                Assert.AreEqual(expectedAngle, Mathf.DeltaAngle(0f, arrow.transform.eulerAngles.z), 0.01f,
+                    "Arrow quiver angle must match elapsed deltaTime.");
+            }
+            finally
+            {
                 Object.DestroyImmediate(root);
             }
         }
