@@ -109,12 +109,9 @@ namespace DeadCells.NhaGiamGiengChuong
 
         public bool HandlePauseInput(bool escPressed)
         {
-            if (escPressed && DeadCells.HUD.MinimapHud.IsAnyFullMapOpen)
-            {
-                DeadCells.HUD.MinimapHud.Active.SetFullMapOpen(false);
+            if (DeadCells.HUD.MinimapHud.CloseAnyFullMap())
                 return false;
-            }
-            if (escPressed && DeadCells.HUD.MinimapHud.LastEscapeCloseFrame == Time.frameCount)
+            if (DeadCells.HUD.MinimapHud.LastEscapeCloseFrame == Time.frameCount)
                 return false;
             return TogglePause();
         }

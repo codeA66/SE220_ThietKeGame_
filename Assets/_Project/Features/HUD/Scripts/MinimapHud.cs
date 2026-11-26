@@ -69,6 +69,16 @@ namespace DeadCells.HUD
         public static bool IsAnyFullMapOpen => s_active != null && s_active.IsFullMapOpen;
         public static int LastEscapeCloseFrame { get; private set; } = -1;
 
+        public static bool CloseAnyFullMap()
+        {
+            if (!IsAnyFullMapOpen)
+                return false;
+
+            LastEscapeCloseFrame = Time.frameCount;
+            s_active.SetFullMapOpen(false);
+            return true;
+        }
+
         public MinimapMapData MapData => _mapData;
         public bool IsFullMapOpen => _view != null && _view.IsFullMapOpen;
 
@@ -233,7 +243,8 @@ namespace DeadCells.HUD
             if (!_view.IsFullMapOpen)
                 return;
 
-            if (kb != null && kb.escapeKey.wasPressedThisFrame)
+            if ((kb != null && kb.escapeKey.wasPressedThisFrame) ||
+                (gp != null && gp.startButton.wasPressedThisFrame))
             {
                 LastEscapeCloseFrame = Time.frameCount;
                 SetFullMapOpen(false);
