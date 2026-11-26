@@ -1721,6 +1721,160 @@ namespace DeadCells.Core.Tests
         }
 
         [Test]
+        public void Player_LowCeilingCrouchRollAndWeaponSwap_KeepsCrouchColliderUntilOpenAir()
+        {
+            var root = new GameObject("__Round9LowCeilingRollWeaponSwapTest");
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                var groundGo = root.transform.Find("FlatGround").gameObject;
+
+                var ceilingGo = new GameObject("LowCeiling");
+                ceilingGo.transform.SetParent(root.transform);
+                ceilingGo.layer = GroundLayer;
+                ceilingGo.transform.position = new Vector2(0f, 1.60f);
+                ceilingGo.AddComponent<BoxCollider2D>().size = new Vector2(4f, 1.0f);
+
+                var harness = CreatePlayerHarness(root.transform, Vector2.zero);
+                var col = harness.PlayerGo.GetComponent<BoxCollider2D>();
+                var controller = harness.PlayerGo.GetComponent<PlayerController>();
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+
+                Assert.IsTrue(harness.Context.IsGrounded);
+                Assert.IsFalse(harness.Context.CanStandUp(), "Precondition: 1.10u solid ceiling blocks standing up.");
+
+                // 1. Crouch -> Roll under low ceiling keeps < 1.50u collider and returns to Crouch when crouch is released.
+                SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), true);
+                ForceState(harness.Machine, harness.Machine.Crouch);
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), false);
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveY), 0f);
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), true);
+                harness.Context.RefreshFrame();
+                BeginSimulatedFrame(harness.Machine);
+                harness.Machine.Tick();
+
+                Assert.AreSame(harness.Machine.Roll, harness.Machine.Current,
+                    "Rolling from low-ceiling crouch must enter PlayerRollState.");
+                Assert.Less(col.size.y, 1.50f, "Collider must stay crouched (< 1.50u) during Roll under low ceiling.");
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                // Mid-roll jump cancel under low ceiling must stay blocked.
+                var rollState = (PlayerRollState)harness.Machine.Roll;
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), false);
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), true);
+                SetPrivateField(rollState, "_timer",
+                    harness.Context.Config.RollDuration * harness.Context.Config.RollCancelNormalizedTime + 0.01f);
+                harness.Context.RefreshFrame();
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Roll, harness.Machine.Current,
+                    "Mid-roll jump cancel must be blocked under low ceiling.");
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                // Completing the roll while still under ceiling with crouch released must enter Crouch, not Idle/Run.
+                SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), false);
+                SetPrivateField(rollState, "_timer", harness.Context.Config.RollDuration);
+                harness.Context.RefreshFrame();
+                harness.Machine.Tick();
+
+                Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current,
+                    "Finishing Roll under low ceiling with crouch released must return to PlayerCrouchState.");
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                // 2. BowAttack -> Roll and BowAttack -> WeaponSwap under low ceiling must stay crouched.
+                SetPrivateField(harness.Context, "_rollReadyTime", float.NegativeInfinity);
+                harness.Context.Weapons.Equip(PlayerWeaponSlot.Bow);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
+                harness.Context.RefreshFrame();
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.BowAttack, harness.Machine.Current);
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), true);
+                harness.Context.RefreshFrame();
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Roll, harness.Machine.Current);
+                Assert.AreEqual(0.90f, col.size.y, 0.001f,
+                    "Transitioning from crouched BowAttack to Roll under low ceiling must keep 0.90u collider.");
+
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), false);
+                SetPrivateField(rollState, "_timer", harness.Context.Config.RollDuration);
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current);
+
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.BowAttack, harness.Machine.Current);
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+                SetInput(harness.Input, nameof(PlayerInputReader.EquipSwordPressed), true);
+                InvokePrivateMethod(controller, "UpdateWeaponSelection");
+                SetInput(harness.Input, nameof(PlayerInputReader.EquipSwordPressed), false);
+
+                Assert.AreEqual(PlayerWeaponSlot.Sword, harness.Context.Weapons.Equipped);
+                Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current,
+                    "Weapon swap out of BowAttack under low ceiling with crouch released must enter PlayerCrouchState.");
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                // 3a. Rolling out into open air restores standing 1.60u collider cleanly.
+                SetPrivateField(harness.Context, "_rollReadyTime", float.NegativeInfinity);
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), true);
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Roll, harness.Machine.Current);
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), false);
+                harness.Body.position = new Vector2(5f, 0f);
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.CanStandUp(), "Precondition: open air at x=5 allows standing up.");
+
+                SetPrivateField(rollState, "_timer", harness.Context.Config.RollDuration);
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Idle, harness.Machine.Current,
+                    "Completing Roll in open air with crouch released must return to Idle.");
+                Assert.AreEqual(1.60f, col.size.y, 0.001f,
+                    "Completing Roll in open air must restore 1.60u standing collider.");
+
+                // 3b. Rolling off a ledge while crouched into Fall restores 1.60u collider once clear of ceiling.
+                harness.Body.position = Vector2.zero;
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), true);
+                ForceState(harness.Machine, harness.Machine.Crouch);
+                SetInput(harness.Input, nameof(PlayerInputReader.CrouchHeld), false);
+                SetPrivateField(harness.Context, "_rollReadyTime", float.NegativeInfinity);
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), true);
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Roll, harness.Machine.Current);
+
+                SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), false);
+                groundGo.SetActive(false);
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsFalse(harness.Context.IsGrounded);
+                Assert.IsFalse(harness.Context.CanStandUp());
+
+                SetPrivateField(rollState, "_timer", harness.Context.Config.RollDuration);
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Fall, harness.Machine.Current);
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
+                harness.Body.position = new Vector2(5f, 0f);
+                Physics2D.SyncTransforms();
+                harness.Machine.Tick();
+                Assert.AreEqual(1.60f, col.size.y, 0.001f,
+                    "Clearing ceiling while falling after a crouched roll must restore 1.60u standing collider.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
         public void RecoverableArrow_Quiver_UsesPassedDeltaTime()
         {
             var root = new GameObject("__Round9ArrowQuiverDeltaTimeTest");
