@@ -249,6 +249,27 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             Debug.Log("[NhaGiamGiengChuongBuilder] BuildAll completed cleanly.");
         }
 
+        public static void RebuildDividerWallRooms()
+        {
+            SortingLayerSetup.EnsureDeadCellsSortingLayers();
+            PrisonPropSpriteGenerator.EnsureAll();
+            EnvironmentMaterialBuilder.EnsureAll();
+
+            var spriteLit = AssetDatabase.LoadAssetAtPath<Material>(SpriteLitMatPath);
+            if (spriteLit == null)
+                throw new InvalidOperationException("Missing material: " + SpriteLitMatPath);
+            var spriteUnlit = AssetDatabase.LoadAssetAtPath<Material>(SpriteUnlitMatPath);
+            if (spriteUnlit == null)
+                throw new InvalidOperationException("Missing material: " + SpriteUnlitMatPath);
+
+            var palette = LoadPrisonPalette();
+            SaveRoomPrefab("G", root => BuildRoomG(root, spriteLit, spriteUnlit, palette));
+            SaveRoomPrefab("HJK", root => BuildRoomHJK(root, spriteLit, spriteUnlit, palette));
+            SaveRoomPrefab("ELF", root => BuildRoomELF(root, spriteLit, spriteUnlit, palette));
+            AssetDatabase.SaveAssets();
+            Debug.Log("[NhaGiamGiengChuongBuilder] Rebuilt G, HJK, and ELF room prefabs with carved divider walls.");
+        }
+
         [MenuItem("Tools/DeadCells/Build/Build Nha Giam Gieng Chuong (.exe)")]
         public static void BuildStandaloneWin64()
         {
@@ -666,7 +687,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonSolidFloor(solidTm, rimTm, pal, 56f, 65f, 7f, 8f);
             PaintPrisonSolidFloor(solidTm, rimTm, pal, 72f, 76f, 7f, 8f);
             PaintPrisonOuterWall(solidTm, pal, 76f, 76.5f, 4f, 7f);
+            AddCarvedDividerWall(artRoot, "Beam_GM_Lower_76", pal, mat, 76.25f, 4f, 7f);
             PaintPrisonOuterWall(solidTm, pal, 76f, 76.5f, 12f, 15f);
+            AddCarvedDividerWall(artRoot, "Beam_GM_Upper_76", pal, mat, 76.25f, 12f, 14.5f);
             PaintPrisonCeiling(solidTm, rimTm, pal, 56f, 76f, 14.5f, 15f);
             AddBedrockStrataStamps(artRoot, solidTm, pal, mat, "G_Sub", 56, 76, -21, -1);
             AddInterTierSlabStrata(artRoot, pal, mat, "G_LowerToUpper", 56f, 65f, 7.45f);
@@ -769,7 +792,9 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonSolidFloor(solidTm, rimTm, pal, -30f, 6f, 15f, 16f);
             PaintVisualDirtSkirt(solidTm, pal, -30, 6, 7, 15);
             PaintPrisonOuterWall(solidTm, pal, -30.5f, -30f, 20f, 23f);
+            AddCarvedDividerWall(artRoot, "Beam_KR_Lower_Neg30", pal, mat, -30.25f, 20f, 22.5f);
             PaintPrisonOuterWall(solidTm, pal, -30.5f, -30f, 28f, 31f);
+            AddCarvedDividerWall(artRoot, "Beam_KR_Upper_Neg30", pal, mat, -30.25f, 28f, 30.5f);
             PaintPrisonCeiling(solidTm, rimTm, pal, -16f, 22f, 22.5f, 23f);
             PaintPrisonCeiling(solidTm, rimTm, pal, -30f, -16f, 30.5f, 31f);
             PaintVisualDirtSkirt(solidTm, pal, -30, -16, 31, 45);
@@ -863,6 +888,7 @@ namespace DeadCells.NhaGiamGiengChuong.Editor
             PaintPrisonCeiling(solidTm, rimTm, pal, -16f, 0f, 31f, 31.5f);
 
             PaintPrisonOuterWall(solidTm, pal, 38f, 38.5f, 28f, 39f);
+            AddCarvedDividerWall(artRoot, "Beam_LS_Upper_38", pal, mat, 38.25f, 28f, 38.5f);
             PaintPrisonCeiling(solidTm, rimTm, pal, 22f, 38f, 38.5f, 39f);
 
             // Wall_F_West [-0.5, 0]x[31, 38.5] & top ceilings: fill full 1x1 exterior earth (zero 0.5u vertical/horizontal slits behind Wall_F_West, Ceiling_E_West, Ceiling_F)
