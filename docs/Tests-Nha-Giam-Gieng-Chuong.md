@@ -326,7 +326,7 @@ function Test-MapGate([ValidateSet('Q-M1','Q1')]$gate) {
 Test-MapGate Q-M1
 ```
 
-**Q1.** Ở checkout QA cuối, lặp 5.1 với manifest bản tích hợp **sau I1 và T1–T3**, nạp 5.2 rồi chạy lệnh dưới. Phải nhận đủ 16 U + 7 A + 7 P, bao gồm A01/P01 chạy lại. Dùng đúng manifest này cho nghiệm thu §5 trong plan và Verify lại sau nghiệm thu trước khi ký.
+**Q1.** Ở checkout QA cuối, lặp 5.1 với manifest bản tích hợp **sau I1 và T1–T3**, nạp 5.2 rồi chạy lệnh dưới. Phải nhận đủ 20 U + 27 A + 11 P, bao gồm A01/P01 chạy lại. Dùng đúng manifest này cho nghiệm thu §5 trong plan và Verify lại sau nghiệm thu trước khi ký.
 
 ```powershell
 Test-MapGate Q1
