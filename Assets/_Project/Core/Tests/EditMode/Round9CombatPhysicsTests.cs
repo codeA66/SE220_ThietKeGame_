@@ -1880,6 +1880,95 @@ namespace DeadCells.Core.Tests
         }
 
         [Test]
+        public void Player_CrouchIdle_HoldsCrouchPoseAndStaysCrouchedWhileDownHeld()
+        {
+            const string crouchIdlePath = "Assets/_Project/Features/Player/Animations/Player_CrouchIdle.anim";
+            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(crouchIdlePath);
+            Assert.IsNotNull(clip, $"Missing {crouchIdlePath}");
+
+            var bindings = AnimationUtility.GetObjectReferenceCurveBindings(clip);
+            Assert.Greater(bindings.Length, 0, "Player_CrouchIdle.anim must bind sprite frames.");
+            int spriteFrames = 0;
+            foreach (var binding in bindings)
+            {
+                var keys = AnimationUtility.GetObjectReferenceCurve(clip, binding);
+                foreach (var key in keys)
+                {
+                    if (key.value is Sprite sprite)
+                    {
+                        spriteFrames++;
+                        Assert.IsTrue(
+                            sprite.name.StartsWith("crouchIdle_00") || sprite.name.StartsWith("crouch_00"),
+                            $"Player_CrouchIdle.anim must hold crouched pose instead of stand-up frame '{sprite.name}'.");
+                    }
+                }
+            }
+            Assert.Greater(spriteFrames, 0, "Player_CrouchIdle.anim must contain crouched sprite keyframes.");
+
+            var root = new GameObject("__Round9CrouchHoldStabilityTest");
+            try
+            {
+                CreateFlatGround(root.transform, new Vector2(0f, -0.5f));
+                var harness = CreatePlayerHarness(root.transform, Vector2.zero);
+                var col = harness.PlayerGo.GetComponent<BoxCollider2D>();
+                Physics2D.SyncTransforms();
+                harness.Context.RefreshFrame();
+                Assert.IsTrue(harness.Context.IsGrounded);
+
+                SetInput(harness.Input, nameof(PlayerInputReader.MoveY), -1f);
+                ForceState(harness.Machine, harness.Machine.Idle);
+                BeginSimulatedFrame(harness.Machine);
+                harness.Machine.Tick();
+                Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current,
+                    "Holding MoveY = -1 (S) on flat ground must enter PlayerCrouchState.");
+
+                for (int frame = 0; frame < 12; frame++)
+                {
+                    Physics2D.SyncTransforms();
+                    harness.Context.RefreshFrame();
+                    BeginSimulatedFrame(harness.Machine);
+                    harness.Machine.Tick();
+                    harness.Machine.FixedTick();
+                    Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current,
+                        $"Holding S must stay in PlayerCrouchState on frame {frame} without bouncing to Idle/Fall.");
+                    Assert.AreEqual(0.90f, col.size.y, 0.001f,
+                        $"Collider height must remain crouched on frame {frame}.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void DividerWalls_ELF_G_HJK_IncludeCarvedMasonryWithoutAddingColliders()
+        {
+            var expectedBeams = new (string PrefabPath, string BeamName)[]
+            {
+                ("Assets/_Project/Features/NhaGiamGiengChuong/Rooms/ELF.prefab", "Beam_LS_Upper_38"),
+                ("Assets/_Project/Features/NhaGiamGiengChuong/Rooms/G.prefab", "Beam_GM_Lower_76"),
+                ("Assets/_Project/Features/NhaGiamGiengChuong/Rooms/G.prefab", "Beam_GM_Upper_76"),
+                ("Assets/_Project/Features/NhaGiamGiengChuong/Rooms/HJK.prefab", "Beam_KR_Lower_Neg30"),
+                ("Assets/_Project/Features/NhaGiamGiengChuong/Rooms/HJK.prefab", "Beam_KR_Upper_Neg30"),
+            };
+
+            foreach (var (prefabPath, beamName) in expectedBeams)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                Assert.IsNotNull(prefab, $"Missing room prefab: {prefabPath}");
+                var art = prefab.transform.Find("Art");
+                Assert.IsNotNull(art, $"Missing Art root in {prefabPath}");
+                var beam = art.Find(beamName);
+                Assert.IsNotNull(beam, $"Missing carved divider wall '{beamName}' in {prefabPath}");
+                Assert.Greater(beam.GetComponentsInChildren<SpriteRenderer>(true).Length, 0,
+                    $"Carved divider wall '{beamName}' in {prefabPath} must contain masonry SpriteRenderers.");
+                Assert.AreEqual(0, beam.GetComponentsInChildren<Collider2D>(true).Length,
+                    $"Carved divider wall '{beamName}' in {prefabPath} must be visual-only (0 colliders).");
+            }
+        }
+
+        [Test]
         public void RecoverableArrow_Quiver_UsesPassedDeltaTime()
         {
             var root = new GameObject("__Round9ArrowQuiverDeltaTimeTest");
