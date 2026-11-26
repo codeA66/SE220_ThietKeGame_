@@ -122,18 +122,26 @@ namespace DeadCells.Player.StateMachine.States
                 Ctx.NotifyLanded();
             _wasGrounded = Ctx.IsGrounded;
 
+            bool canStandOrAlreadyStanding = !Ctx.IsColliderCrouched || Ctx.CanStandUp();
             bool jumped = false;
-            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld && (!_crouching || Ctx.CanStandUp()))
+            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld)
             {
-                Ctx.StartJump();
-                _crouching = false;
-                Ctx.SetCrouchCollider(false);
-                Ctx.Animator.SetCrouching(false);
-                _holdingJump = true;
-                _jumpHoldTimer = 0f;
-                jumped = true;
+                if (canStandOrAlreadyStanding && (!_crouching || Ctx.CanStandUp()))
+                {
+                    Ctx.StartJump();
+                    _crouching = false;
+                    Ctx.TryStandUpCollider();
+                    Ctx.Animator.SetCrouching(false);
+                    _holdingJump = true;
+                    _jumpHoldTimer = 0f;
+                    jumped = true;
+                }
+                else
+                {
+                    Ctx.ClearJumpBuffer();
+                }
             }
-            else if (Ctx.CanAirJump)
+            else if (canStandOrAlreadyStanding && Ctx.CanAirJump)
             {
                 Ctx.StartAirJump();
                 _holdingJump = false;
@@ -147,8 +155,11 @@ namespace DeadCells.Player.StateMachine.States
 
         private void UpdateCrouching()
         {
-            _crouching = Ctx.IsGrounded && (Ctx.IsCrouchHeld || (_crouching && !Ctx.CanStandUp()));
-            Ctx.SetCrouchCollider(_crouching);
+            _crouching = Ctx.IsGrounded && (Ctx.IsCrouchHeld || ((_crouching || Ctx.IsColliderCrouched) && !Ctx.CanStandUp()));
+            if (_crouching)
+                Ctx.SetCrouchCollider(true);
+            else
+                Ctx.TryStandUpCollider();
             Ctx.Animator.SetCrouching(_crouching);
         }
 
