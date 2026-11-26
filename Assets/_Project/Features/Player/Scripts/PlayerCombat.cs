@@ -32,8 +32,6 @@ namespace DeadCells.Player
             };
         }
 
-        /// <summary>Arguments: number of targets hit, whether any hit was critical.</summary>
-        public event Action<int, bool> StrikeHit;
         /// <summary>Arguments: hits, isCritical, anyFatal, direction.</summary>
         public event Action<int, bool, bool, int> ImpactDealt;
         /// <summary>A combo hit lands (hit or miss). Arguments: strike, feet position, facing.</summary>
@@ -70,10 +68,7 @@ namespace DeadCells.Player
             _anyFatalInStrike = false;
             int hits = _query.Strike(center, size, info, _onTargetHit, lineOfSightOrigin: (Vector2)bounds.center);
             if (hits > 0)
-            {
-                StrikeHit?.Invoke(hits, info.IsCritical);
                 ImpactDealt?.Invoke(hits, info.IsCritical, _anyFatalInStrike, facing);
-            }
             return hits;
         }
 
@@ -92,10 +87,7 @@ namespace DeadCells.Player
             _anyFatalInStrike = false;
             int hits = _query.Strike(center, area, info, _onTargetHit, lineOfSightOrigin: new Vector2(bounds.center.x, bounds.min.y + 0.15f));
             if (hits > 0)
-            {
-                StrikeHit?.Invoke(hits, false);
                 ImpactDealt?.Invoke(hits, false, _anyFatalInStrike, 0);
-            }
             return hits;
         }
     }
