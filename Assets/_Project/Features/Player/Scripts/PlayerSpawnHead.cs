@@ -111,12 +111,35 @@ namespace DeadCells.Player
 
         private void Begin()
         {
-            // The head hops along the body's floor; it drops on the side whose column is clear down to it.
+            // The head hops along the body's floor; it drops on a side whose corridor, floor, and drop column are clear.
             float crawl = Mathf.Abs(_crawlDistance);
             _groundY = _context.Position.y + _restHeight;
             _targetX = _context.Position.x + _neckOffset.x * _context.FacingDirection;
-            _direction = IsColumnClear(-_context.FacingDirection) ? _context.FacingDirection : -_context.FacingDirection;
-            _position = new Vector2(_targetX - _direction * crawl, _groundY + _dropHeight);
+
+            int backSide = -_context.FacingDirection;
+            int frontSide = _context.FacingDirection;
+            float dropX;
+            if (IsColumnClear(backSide, crawl))
+            {
+                _direction = -backSide;
+                dropX = _targetX + backSide * crawl;
+            }
+            else if (IsColumnClear(frontSide, crawl))
+            {
+                _direction = -frontSide;
+                dropX = _targetX + frontSide * crawl;
+            }
+            else
+            {
+                float backSpace = MeasureHorizontalClearance(backSide, crawl);
+                float frontSpace = MeasureHorizontalClearance(frontSide, crawl);
+                int chosenSide = frontSpace > backSpace ? frontSide : backSide;
+                float clampedCrawl = Mathf.Max(0f, Mathf.Max(backSpace, frontSpace) - 0.5f);
+                _direction = -chosenSide;
+                dropX = _targetX + chosenSide * clampedCrawl;
+            }
+
+            _position = new Vector2(dropX, ComputeDropY(dropX));
 
             _velocityY = 0f;
             _angle = 0f;
@@ -129,11 +152,40 @@ namespace DeadCells.Player
             Apply(Vector2.one);
         }
 
-        private bool IsColumnClear(int side)
+        private bool IsColumnClear(int side, float crawl)
         {
-            float crawl = Mathf.Abs(_crawlDistance);
-            var top = new Vector2(_targetX + side * crawl, _groundY + _dropHeight);
+            float dropX = _targetX + side * crawl;
+            var neck = new Vector2(_targetX, _groundY);
+            var land = new Vector2(dropX, _groundY);
+
+            // Reject drops behind a solid wall (e.g. outside a room's outer wall where vertical void looks empty).
+            if (Physics2D.Linecast(neck, land, _groundMask).collider != null)
+                return false;
+
+            // Require actual floor beneath the landing point so the head never spawns over empty void.
+            if (Physics2D.Raycast(land, Vector2.down, _restHeight + 0.5f, _groundMask).collider == null)
+                return false;
+
+            var top = new Vector2(dropX, _groundY + _dropHeight);
             return Physics2D.Raycast(top, Vector2.down, _dropHeight - _restHeight, _groundMask).collider == null;
+        }
+
+        private float MeasureHorizontalClearance(int side, float maxDistance)
+        {
+            if (maxDistance <= 0f)
+                return 0f;
+            var neck = new Vector2(_targetX, _groundY);
+            RaycastHit2D hit = Physics2D.Raycast(neck, new Vector2(side, 0f), maxDistance, _groundMask);
+            return hit.collider != null ? hit.distance : maxDistance;
+        }
+
+        private float ComputeDropY(float dropX)
+        {
+            var land = new Vector2(dropX, _groundY);
+            RaycastHit2D ceiling = Physics2D.Raycast(land, Vector2.up, _dropHeight, _groundMask);
+            if (ceiling.collider != null)
+                return Mathf.Max(_groundY + _restHeight, ceiling.point.y - _restHeight);
+            return _groundY + _dropHeight;
         }
 
         private void Update()
