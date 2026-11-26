@@ -132,7 +132,7 @@ namespace DeadCells.VFX
             _mesh.MarkDynamic();
             gameObject.AddComponent<MeshFilter>().sharedMesh = _mesh;
             // The default sprite material, so the drops are lit like every other sprite effect.
-            RuntimeSprites.Prepare(gameObject.AddComponent<MeshRenderer>(), 0, SortingOrder);
+            RuntimeSprites.Prepare(gameObject.AddComponent<MeshRenderer>(), RuntimeSprites.VfxSortingLayerId, SortingOrder);
             if (_active.Count == 0)
                 enabled = false;
         }

@@ -79,7 +79,7 @@ namespace DeadCells.VFX
             _mesh = new Mesh { name = "Debris" };
             _mesh.MarkDynamic();
             gameObject.AddComponent<MeshFilter>().sharedMesh = _mesh;
-            RuntimeSprites.Prepare(gameObject.AddComponent<MeshRenderer>(), 0, SortingOrder);
+            RuntimeSprites.Prepare(gameObject.AddComponent<MeshRenderer>(), RuntimeSprites.VfxSortingLayerId, SortingOrder);
             if (_active.Count == 0)
                 enabled = false;
         }

@@ -172,7 +172,7 @@ namespace DeadCells.VFX
             var go = new GameObject(layerName);
             go.transform.SetParent(transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            RuntimeSprites.Prepare(go.AddComponent<MeshRenderer>(), 0, sortingOrder, texture, unlit: true);
+            RuntimeSprites.Prepare(go.AddComponent<MeshRenderer>(), RuntimeSprites.VfxSortingLayerId, sortingOrder, texture, unlit: true);
             return mesh;
         }
 
