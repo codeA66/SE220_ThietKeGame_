@@ -486,6 +486,103 @@ namespace DeadCells.Core.Tests
             }
         }
 
+        [Test]
+        public void ScriptableObjectDataAssets_DeserializeAllEncapsulatedFieldsCleanly()
+        {
+            var enemyExpectations = new (string Path, string DcId, int SkillCount, EnemyAttackKind PrimaryKind, int PrimaryDamage)[]
+            {
+                ("Assets/_Project/Features/Enemies/Data/Enemy_Zombie.asset", "Zombie", 2, EnemyAttackKind.Melee, 10),
+                ("Assets/_Project/Features/Enemies/Data/Enemy_Shield.asset", "Shield", 1, EnemyAttackKind.Dash, 10),
+                ("Assets/_Project/Features/Enemies/Data/Enemy_Archer.asset", "Archer", 1, EnemyAttackKind.Shoot, 12),
+                ("Assets/_Project/Features/Enemies/Data/Enemy_Grenadier.asset", "Grenader", 1, EnemyAttackKind.Grenade, 15),
+                ("Assets/_Project/Features/Enemies/Data/Enemy_Rat.asset", "Rat", 1, EnemyAttackKind.Lunge, 5),
+            };
+
+            foreach (var expected in enemyExpectations)
+            {
+                var enemy = UnityEditor.AssetDatabase.LoadAssetAtPath<EnemyData>(expected.Path);
+                Assert.IsNotNull(enemy, $"Failed to load {expected.Path}");
+                Assert.AreEqual(expected.DcId, enemy.DcId, $"Unexpected DcId on {expected.Path}");
+                Assert.IsNotNull(enemy.Skills, $"{expected.Path} Skills must not be null.");
+                Assert.AreEqual(expected.SkillCount, enemy.Skills.Length, $"Unexpected skill count on {expected.Path}");
+                Assert.IsNotEmpty(enemy.Skills, $"{expected.Path} Skills must not be empty.");
+
+                EnemyData.Skill primary = enemy.Skills[0];
+                Assert.AreEqual(expected.PrimaryKind, primary.Kind, $"Unexpected primary skill kind on {expected.Path}");
+                Assert.Greater(primary.Damage, 0, $"Primary skill damage must be > 0 on {expected.Path}");
+                Assert.AreEqual(expected.PrimaryDamage, primary.Damage, $"Unexpected primary skill damage on {expected.Path}");
+                Assert.IsFalse(string.IsNullOrEmpty(primary.ChargeAnim), $"ChargeAnim missing on {expected.Path}");
+                Assert.IsFalse(string.IsNullOrEmpty(primary.ExecuteAnim), $"ExecuteAnim missing on {expected.Path}");
+            }
+
+            var zombie = UnityEditor.AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/_Project/Features/Enemies/Data/Enemy_Zombie.asset");
+            Assert.AreEqual("jump", zombie.Skills[1].DcId);
+            Assert.AreEqual(EnemyAttackKind.Lunge, zombie.Skills[1].Kind);
+            Assert.AreEqual(20, zombie.Skills[1].Damage);
+            Assert.AreEqual(6f, zombie.Skills[1].TravelCells, 0.001f);
+
+            var shield = UnityEditor.AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/_Project/Features/Enemies/Data/Enemy_Shield.asset");
+            Assert.IsTrue(shield.HasFrontShield);
+            Assert.AreEqual(1f, shield.Skills[0].StunDealt, 0.001f);
+            Assert.AreEqual(8f, shield.Skills[0].TravelCells, 0.001f);
+
+            var archer = UnityEditor.AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/_Project/Features/Enemies/Data/Enemy_Archer.asset");
+            Assert.IsNotNull(archer.Skills[0].ProjectilePrefab, "Enemy_Archer must preserve ProjectilePrefab reference.");
+            Assert.AreEqual(7f, archer.Skills[0].ProjectileSpeed, 0.001f);
+            Assert.AreEqual(1, archer.Skills[0].ProjectileCount);
+
+            var grenadier = UnityEditor.AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/_Project/Features/Enemies/Data/Enemy_Grenadier.asset");
+            Assert.IsNotNull(grenadier.Skills[0].ProjectilePrefab, "Enemy_Grenadier must preserve ProjectilePrefab reference.");
+            Assert.IsNotNull(grenadier.Skills[0].BlastVfx, "Enemy_Grenadier must preserve BlastVfx reference.");
+            Assert.AreEqual(3, grenadier.Skills[0].ProjectileCount);
+            Assert.AreEqual(1.5f, grenadier.Skills[0].FuseTime, 0.001f);
+            Assert.AreEqual(2.9f, grenadier.Skills[0].BlastRadiusCells, 0.001f);
+
+            var sword = UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponData>("Assets/_Project/Features/Combat/Data/Weapon_StartSword.asset");
+            Assert.IsNotNull(sword, "Weapon_StartSword.asset must exist.");
+            Assert.AreEqual(3, sword.ComboLength, "Starter sword must deserialize 3 strikes.");
+
+            WeaponData.Strike strike1 = sword.GetStrike(0);
+            Assert.AreEqual("AttackA", strike1.AnimState);
+            Assert.AreEqual(25, strike1.Damage);
+            Assert.AreEqual(5, strike1.HitFrame);
+            Assert.AreEqual(1.4f, strike1.AnimSpeed, 0.001f);
+            Assert.AreEqual(2.9f, strike1.RangeWidthCells, 0.001f);
+            Assert.AreEqual(5.2f, strike1.Knockback, 0.001f);
+            Assert.IsFalse(strike1.CanCrit);
+            Assert.AreEqual(0f, strike1.Stun, 0.001f);
+            Assert.IsNotNull(strike1.SwingVfx);
+
+            WeaponData.Strike strike2 = sword.GetStrike(1);
+            Assert.AreEqual("AttackB", strike2.AnimState);
+            Assert.AreEqual(30, strike2.Damage);
+            Assert.IsFalse(strike2.CanCrit);
+            Assert.AreEqual(0f, strike2.Stun, 0.001f);
+            Assert.IsNotNull(strike2.SwingVfx);
+
+            WeaponData.Strike strike3 = sword.GetStrike(2);
+            Assert.AreEqual("AttackC", strike3.AnimState);
+            Assert.AreEqual(45, strike3.Damage);
+            Assert.AreEqual(9, strike3.HitFrame);
+            Assert.AreEqual(1.05f, strike3.AnimSpeed, 0.001f);
+            Assert.AreEqual(3.85f, strike3.RangeWidthCells, 0.001f);
+            Assert.AreEqual(2.7f, strike3.RangeHeightCells, 0.001f);
+            Assert.AreEqual(10.5f, strike3.Knockback, 0.001f);
+            Assert.IsTrue(strike3.CanCrit, "Starter sword strike 3 must preserve CanCrit == true.");
+            Assert.AreEqual(0f, strike3.Stun, 0.001f, "Starter sword strike 3 must keep Stun == 0f.");
+            Assert.IsNotNull(strike3.SwingVfx);
+
+            var bow = UnityEditor.AssetDatabase.LoadAssetAtPath<BowWeaponData>("Assets/_Project/Features/Combat/Data/Bow_StartBow.asset");
+            Assert.IsNotNull(bow, "Bow_StartBow.asset must exist.");
+            Assert.AreEqual(3, bow.ShotCount, "Bow_StartBow must deserialize 3 shots.");
+            Assert.IsTrue(bow.IsValid, "Bow_StartBow deserialized shot fields must satisfy IsValid.");
+            Assert.AreEqual(35, bow.GetShot(0).Damage);
+            Assert.AreEqual(40, bow.GetShot(1).Damage);
+            Assert.AreEqual(60, bow.GetShot(2).Damage);
+            Assert.AreEqual(0.4f, bow.GetShot(2).ChargeTime, 0.001f);
+            Assert.AreEqual(2.5f, bow.GetShot(2).AnimationSpeed, 0.001f);
+        }
+
         private static void SetPrivateField(object target, string fieldName, object value)
         {
             var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
