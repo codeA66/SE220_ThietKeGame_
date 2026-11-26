@@ -1762,11 +1762,15 @@ namespace DeadCells.Core.Tests
                 Assert.AreEqual(0.90f, col.size.y, 0.001f);
 
                 // Mid-roll jump cancel under low ceiling must stay blocked.
+                // Compensate for variable EditMode Time.deltaTime so _timer + Time.deltaTime lands strictly
+                // inside [RollCancelNormalizedTime, 1.0) during Tick().
                 var rollState = (PlayerRollState)harness.Machine.Roll;
                 SetInput(harness.Input, nameof(PlayerInputReader.RollPressed), false);
                 SetInput(harness.Input, nameof(PlayerInputReader.JumpPressed), true);
-                SetPrivateField(rollState, "_timer",
-                    harness.Context.Config.RollDuration * harness.Context.Config.RollCancelNormalizedTime + 0.01f);
+                float midRollTimer = harness.Context.Config.RollDuration
+                    * Mathf.Lerp(harness.Context.Config.RollCancelNormalizedTime, 0.95f, 0.25f)
+                    - Time.deltaTime;
+                SetPrivateField(rollState, "_timer", midRollTimer);
                 harness.Context.RefreshFrame();
                 harness.Machine.Tick();
                 Assert.AreSame(harness.Machine.Roll, harness.Machine.Current,
@@ -1805,6 +1809,7 @@ namespace DeadCells.Core.Tests
                 harness.Machine.Tick();
                 Assert.AreSame(harness.Machine.Crouch, harness.Machine.Current);
 
+                harness.Context.Bow.ResetShots();
                 SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
                 harness.Machine.Tick();
                 Assert.AreSame(harness.Machine.BowAttack, harness.Machine.Current);
