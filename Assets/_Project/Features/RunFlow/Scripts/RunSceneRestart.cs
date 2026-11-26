@@ -1,3 +1,4 @@
+using DeadCells.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -33,7 +34,7 @@ namespace DeadCells.RunFlow
             int sceneIndex = gameObject.scene.buildIndex;
             if (sceneIndex < 0 || !Application.CanStreamedLevelBeLoaded(sceneIndex))
             {
-                Debug.LogError("Add the run scene to the build scene list before playing.", this);
+                GameDebug.LogError("Add the run scene to the build scene list before playing.", LogTopic.Gameplay);
                 return;
             }
 
@@ -43,7 +44,7 @@ namespace DeadCells.RunFlow
             {
                 _restarting = false;
                 _screen.SetRetryAvailable(true);
-                Debug.LogError("Could not start reloading the run scene.", this);
+                GameDebug.LogError("Could not start reloading the run scene.", LogTopic.Gameplay);
             }
         }
     }

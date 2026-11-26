@@ -1,4 +1,5 @@
 using DeadCells.Combat;
+using DeadCells.Core;
 using UnityEngine;
 
 namespace DeadCells.HUD
@@ -13,7 +14,7 @@ namespace DeadCells.HUD
         {
             if (_health == null || _view == null)
             {
-                Debug.LogError("Assign the player health and health bar view.", this);
+                GameDebug.LogError("Assign the player health and health bar view.", LogTopic.UI);
                 return;
             }
 
