@@ -9,8 +9,7 @@ namespace DeadCells.Player.StateMachine
     /// </summary>
     public class PlayerStateMachine
     {
-        private bool _inTick;
-        private bool _transitionedInTick;
+        private readonly DeadCells.Core.StateMachine.StateMachine _core = new();
 
         public PlayerStateMachine(PlayerContext context)
         {
@@ -34,7 +33,7 @@ namespace DeadCells.Player.StateMachine
             ScriptedWalk = new PlayerScriptedWalkState(context, this);
         }
 
-        public IPlayerState Current { get; private set; }
+        public IPlayerState Current => (IPlayerState)_core.Current;
 
         public IPlayerState Idle { get; }
         public IPlayerState Run { get; }
@@ -61,11 +60,10 @@ namespace DeadCells.Player.StateMachine
         /// </summary>
         public bool ChangeState(IPlayerState next)
         {
-            if (_inTick && _transitionedInTick)
+            var previous = _core.Current;
+            if (!_core.ChangeState(next))
                 return false;
-            if (_inTick)
-                _transitionedInTick = true;
-            Switch(next);
+            GameDebug.Log($"{previous?.GetType().Name ?? "None"} -> {next.GetType().Name}", LogTopic.Gameplay);
             return true;
         }
 
@@ -75,34 +73,13 @@ namespace DeadCells.Player.StateMachine
         /// </summary>
         public void ForceChangeState(IPlayerState next)
         {
-            if (_inTick)
-                _transitionedInTick = true;
-            Switch(next);
+            var previous = _core.Current;
+            _core.ForceChangeState(next);
+            GameDebug.Log($"{previous?.GetType().Name ?? "None"} -> {next.GetType().Name}", LogTopic.Gameplay);
         }
 
-        private void Switch(IPlayerState next)
-        {
-            Current?.Exit();
-            GameDebug.Log($"{Current?.GetType().Name ?? "None"} -> {next.GetType().Name}", LogTopic.Gameplay);
-            Current = next;
-            Current.Enter();
-        }
+        public void Tick() => _core.Tick();
 
-        public void Tick()
-        {
-            _inTick = true;
-            _transitionedInTick = false;
-            try
-            {
-                Current?.Tick();
-            }
-            finally
-            {
-                _inTick = false;
-                _transitionedInTick = false;
-            }
-        }
-
-        public void FixedTick() => Current?.FixedTick();
+        public void FixedTick() => _core.FixedTick();
     }
 }
