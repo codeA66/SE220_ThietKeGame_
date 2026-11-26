@@ -1,8 +1,6 @@
 {
     "name": "Core",
     "rootNamespace": "DeadCells.Core",
-    "references": [
-        "Unity.InputSystem"
-    ],
+    "references": [],
     "autoReferenced": true
 }

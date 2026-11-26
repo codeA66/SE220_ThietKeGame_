@@ -19,5 +19,5 @@
         "Unity.RenderPipelines.Universal.2D.Runtime"
     ],
     "includePlatforms": ["Editor"],
-    "autoReferenced": true
+    "autoReferenced": false
 }
