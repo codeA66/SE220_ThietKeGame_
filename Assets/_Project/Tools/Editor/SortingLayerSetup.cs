@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.SceneManagement;
@@ -216,6 +217,16 @@ namespace DeadCells.Tools.Editor
         private const string QualitySettingsAssetPath = "ProjectSettings/QualitySettings.asset";
         private const string ProjectSettingsAssetPath = "ProjectSettings/ProjectSettings.asset";
 
+        // Verified 0-reference assets at HEAD (EnemyGoldDrops.cs excluded: still referenced by
+        // Main_Level.unity, NhaGiamGiengChuong.unity, MainLevelIntegrityTests, MapWiringTests,
+        // NhaGiamGiengChuongBuilder, and MainLevelSceneRemediator).
+        private static readonly string[] DeadAssetPaths =
+        {
+            "Assets/_Project/Features/Combat/Scripts/TrainingDummy.cs",
+            "Assets/_Project/Art/Shaders/MobFleshSwap2D.shader",
+            "Assets/_Project/Art/Shaders/PaletteSwap2D.shader",
+        };
+
         [MenuItem("Tools/Project/Fix Sandbox_Player URP 2D Lighting")]
         public static void ApplySandboxPlayerLighting()
         {
@@ -329,6 +340,56 @@ namespace DeadCells.Tools.Editor
                 $"decompressionFallback={PlayerSettings.WebGL.decompressionFallback}, " +
                 $"dataCaching={PlayerSettings.WebGL.dataCaching}, " +
                 $"stripEngineCode={PlayerSettings.stripEngineCode}");
+        }
+
+        [MenuItem("Tools/Project/Delete Confirmed Dead Assets")]
+        public static void DeleteDeadAssets()
+        {
+            if (!Application.isBatchMode &&
+                !EditorUtility.DisplayDialog(
+                    "Delete Confirmed Dead Assets",
+                    "Delete the verified unused script/shader assets via AssetDatabase?",
+                    "Delete",
+                    "Cancel"))
+            {
+                return;
+            }
+
+            int deletedCount = 0;
+            int skippedCount = 0;
+            var failedPaths = new List<string>();
+
+            for (int i = 0; i < DeadAssetPaths.Length; i++)
+            {
+                string assetPath = DeadAssetPaths[i];
+                if (!File.Exists(assetPath) && string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(assetPath)))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                if (AssetDatabase.DeleteAsset(assetPath))
+                {
+                    deletedCount++;
+                    Debug.Log($"[ReleaseSettingsSetup] Deleted dead asset: '{assetPath}'.");
+                }
+                else
+                {
+                    failedPaths.Add(assetPath);
+                    Debug.LogError($"[ReleaseSettingsSetup] Failed to delete dead asset: '{assetPath}'.");
+                }
+            }
+
+            if (deletedCount > 0)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+
+            if (failedPaths.Count > 0)
+                throw new InvalidOperationException($"Failed to delete dead assets: {string.Join(", ", failedPaths)}");
+
+            Debug.Log($"[ReleaseSettingsSetup] DeleteDeadAssets completed (deleted={deletedCount}, skipped={skippedCount}).");
         }
 
         private static int FindQualityLevelIndex(SerializedProperty levelsProp, string levelName)
