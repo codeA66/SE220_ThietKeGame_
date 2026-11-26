@@ -94,8 +94,23 @@ namespace DeadCells.Player
         private void Awake()
         {
             _block = new MaterialPropertyBlock();
-            _renderer.enabled = false;
+            if (_renderer != null)
+                _renderer.enabled = false;
+            EnsureVfxSortingLayer(_burst);
+            EnsureVfxSortingLayer(_trail);
             SetTrail(false);
+        }
+
+        private static void EnsureVfxSortingLayer(ParticleSystem system)
+        {
+            if (system == null)
+                return;
+            var renderer = system.GetComponent<ParticleSystemRenderer>();
+            if (renderer == null || renderer.sortingLayerID != 0)
+                return;
+            int vfxLayerId = SortingLayer.NameToID("VFX");
+            if (vfxLayerId != 0)
+                renderer.sortingLayerID = vfxLayerId;
         }
 
         /// <summary>The head sprite renderer, so effects can borrow its sprite, material and size.</summary>
