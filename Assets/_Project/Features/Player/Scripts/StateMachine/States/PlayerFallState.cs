@@ -17,7 +17,7 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.TryStandUpCollider();
 
             // Coyote jump: walked off a ledge but jump pressed shortly after.
-            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld)
+            if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld && (!Ctx.IsColliderCrouched || Ctx.CanStandUp()))
             {
                 Machine.ChangeState(Machine.Jump);
                 return;

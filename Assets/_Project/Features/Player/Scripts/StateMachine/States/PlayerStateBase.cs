@@ -104,7 +104,8 @@ namespace DeadCells.Player.StateMachine.States
         /// <summary>
         /// Jump again while airborne if an air jump is available. Returns true if a transition started.
         /// </summary>
-        protected bool TryAirJump() => Ctx.CanAirJump && Machine.ChangeState(Machine.AirJump);
+        protected bool TryAirJump() =>
+            (!Ctx.IsColliderCrouched || Ctx.CanStandUp()) && Ctx.CanAirJump && Machine.ChangeState(Machine.AirJump);
 
         protected void ApplyAirControl()
         {

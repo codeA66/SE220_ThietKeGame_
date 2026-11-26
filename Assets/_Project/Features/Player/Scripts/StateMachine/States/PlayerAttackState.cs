@@ -153,7 +153,8 @@ namespace DeadCells.Player.StateMachine.States
                 return;
             }
 
-            if (_hitDone && normalized >= Ctx.Config.ComboChainNormalizedTime && Ctx.Input.JumpPressed && !Ctx.IsDownHeld)
+            if (_hitDone && normalized >= Ctx.Config.ComboChainNormalizedTime && Ctx.Input.JumpPressed && !Ctx.IsDownHeld
+                && (!Ctx.IsColliderCrouched || Ctx.CanStandUp()))
             {
                 if (Ctx.IsGrounded || Ctx.WithinCoyoteTime)
                 {
