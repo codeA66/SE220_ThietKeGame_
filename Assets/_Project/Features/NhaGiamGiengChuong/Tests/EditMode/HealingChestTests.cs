@@ -566,6 +566,78 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             return player;
         }
 
+        [Test]
+        public void PlayerSpawnHead_BlockedBehindByRoomWall_DropsInsideOpenSideAndNeverBehindWall()
+        {
+            const int groundLayer = 6;
+
+            var floor = Track(new GameObject("RoomA_Floor"));
+            floor.layer = groundLayer;
+            floor.transform.position = new Vector3(10f, -0.5f, 0f);
+            floor.AddComponent<BoxCollider2D>().size = new Vector2(20f, 1f);
+
+            var leftWall = Track(new GameObject("RoomA_LeftWall"));
+            leftWall.layer = groundLayer;
+            leftWall.transform.position = new Vector3(-0.25f, 3f, 0f);
+            leftWall.AddComponent<BoxCollider2D>().size = new Vector2(0.5f, 6f);
+
+            var ceiling = Track(new GameObject("RoomA_Ceiling"));
+            ceiling.layer = groundLayer;
+            ceiling.transform.position = new Vector3(10f, 6f, 0f);
+            ceiling.AddComponent<BoxCollider2D>().size = new Vector2(20f, 1f);
+
+            var player = CreatePlayerFromPrefab(new Vector2(3f, 0f));
+            var spawnHead = player.GetComponentInChildren<PlayerSpawnHead>(true);
+            Assert.IsNotNull(spawnHead);
+            InvokeNonPublic(spawnHead, "Awake");
+            Physics2D.SyncTransforms();
+
+            try
+            {
+                spawnHead.Play(player.Context);
+                InvokeNonPublic(spawnHead, "Begin");
+
+                var posField = typeof(PlayerSpawnHead).GetField("_position", BindingFlags.Instance | BindingFlags.NonPublic);
+                var dirField = typeof(PlayerSpawnHead).GetField("_direction", BindingFlags.Instance | BindingFlags.NonPublic);
+                var dropPos = (Vector2)posField.GetValue(spawnHead);
+                int hopDir = (int)dirField.GetValue(spawnHead);
+
+                Assert.Greater(dropPos.x, 0.5f,
+                    "Spawn head must never drop behind Room A's left wall into empty void.");
+                Assert.AreEqual(8.24f, dropPos.x, 0.05f,
+                    "When behind-player crawl crosses the left wall, spawn head must choose the open right side inside Room A.");
+                Assert.Less(dropPos.y, 5.5f,
+                    "Spawn head must drop below Room A's ceiling (y = 5.5).");
+                Assert.AreEqual(-1, hopDir,
+                    "Head dropping on the right side must hop left toward the player's neck.");
+                Assert.IsTrue(spawnHead.Renderer.flipX,
+                    "Head hopping left must flip sprite to face toward the body.");
+            }
+            finally
+            {
+                var shardsField = typeof(PlayerSpawnHead).GetField("_shards", BindingFlags.Instance | BindingFlags.NonPublic);
+                var shardSpritesField = typeof(PlayerSpawnHead).GetField("_shardSprites", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (shardsField?.GetValue(spawnHead) is SpriteRenderer[] shards)
+                {
+                    foreach (var s in shards)
+                    {
+                        if (s != null)
+                            Object.DestroyImmediate(s.gameObject);
+                    }
+                    shardsField.SetValue(spawnHead, null);
+                }
+                if (shardSpritesField?.GetValue(spawnHead) is Sprite[] sprites)
+                {
+                    foreach (var sp in sprites)
+                    {
+                        if (sp != null)
+                            Object.DestroyImmediate(sp);
+                    }
+                    shardSpritesField.SetValue(spawnHead, null);
+                }
+            }
+        }
+
         private static void InvokeNonPublic(object target, string methodName)
         {
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
