@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.Enemies;
 using DeadCells.Player.StateMachine;
 using NUnit.Framework;
@@ -308,6 +309,78 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Vector2 feet = EncounterZone.GetColliderFeet(inst.GetComponent<BoxCollider2D>());
             Assert.AreEqual(0f, feet.x, 0.001f);
             Assert.AreEqual(0f, feet.y, 0.001f, "GetColliderFeet must stay flush at y=0 with edgeRadius.");
+        }
+
+        [Test]
+        public void ColliderBoundsUtility_IncludesBoxColliderEdgeRadius_MatchingOuterFeetAndWidth()
+        {
+            var go = Track(new GameObject("BoxEdgeRadiusProbe"));
+            go.transform.position = new Vector3(10f, 5f, 0f);
+            var box = go.AddComponent<BoxCollider2D>();
+            box.size = new Vector2(0.74f, 1.54f);
+            box.offset = new Vector2(0f, 0.8f);
+            box.edgeRadius = 0.03f;
+            box.enabled = false;
+
+            // Intentional: no Physics2D.SyncTransforms() and collider is disabled.
+            Bounds disabledBounds = ColliderBoundsUtility.GetWorldBounds(box);
+            Assert.AreEqual(10f, disabledBounds.center.x, 1e-4f);
+            Assert.AreEqual(5.8f, disabledBounds.center.y, 1e-4f);
+            Assert.AreEqual(0.80f, disabledBounds.size.x, 1e-4f, "Must add 2f * edgeRadius (0.06f) to BoxCollider2D width.");
+            Assert.AreEqual(1.60f, disabledBounds.size.y, 1e-4f, "Must add 2f * edgeRadius (0.06f) to BoxCollider2D height.");
+            Assert.AreEqual(9.6f, disabledBounds.min.x, 1e-4f);
+            Assert.AreEqual(10.4f, disabledBounds.max.x, 1e-4f);
+            Assert.AreEqual(5.0f, disabledBounds.min.y, 1e-4f, "Outer bottom must align flush with feet at y=5.0.");
+            Assert.AreEqual(6.6f, disabledBounds.max.y, 1e-4f);
+
+            box.enabled = true;
+            Bounds enabledBounds = ColliderBoundsUtility.GetWorldBounds(box);
+            Assert.AreEqual(disabledBounds.center, enabledBounds.center);
+            Assert.AreEqual(disabledBounds.size, enabledBounds.size);
+
+            Vector2 feet = EncounterZone.GetColliderFeet(box);
+            Assert.AreEqual(feet.x, enabledBounds.center.x, 1e-4f);
+            Assert.AreEqual(feet.y, enabledBounds.min.y, 1e-4f);
+
+            go.transform.localScale = new Vector3(-1f, 1f, 1f);
+            Bounds flippedBounds = ColliderBoundsUtility.GetWorldBounds(box);
+            Assert.AreEqual(0.80f, flippedBounds.size.x, 1e-4f);
+            Assert.AreEqual(1.60f, flippedBounds.size.y, 1e-4f);
+            Assert.AreEqual(5.0f, flippedBounds.min.y, 1e-4f);
+        }
+
+        [Test]
+        public void ColliderBoundsUtility_HandlesDisabledCircleCapsuleAndNullColliders()
+        {
+            Assert.AreEqual(default(Bounds), ColliderBoundsUtility.GetWorldBounds(null));
+
+            var circleGo = Track(new GameObject("CircleProbe"));
+            circleGo.transform.position = new Vector3(4f, 2f, 0f);
+            circleGo.transform.localScale = new Vector3(-2f, 1.5f, 1f);
+            var circle = circleGo.AddComponent<CircleCollider2D>();
+            circle.offset = new Vector2(0.5f, -0.5f);
+            circle.radius = 0.75f;
+            circle.enabled = false;
+
+            Bounds circleBounds = ColliderBoundsUtility.GetWorldBounds(circle);
+            Assert.AreEqual(3.0f, circleBounds.center.x, 1e-4f);
+            Assert.AreEqual(1.25f, circleBounds.center.y, 1e-4f);
+            Assert.AreEqual(3.0f, circleBounds.size.x, 1e-4f);
+            Assert.AreEqual(3.0f, circleBounds.size.y, 1e-4f);
+
+            var capsuleGo = Track(new GameObject("CapsuleProbe"));
+            capsuleGo.transform.position = new Vector3(-3f, 1f, 0f);
+            var capsule = capsuleGo.AddComponent<CapsuleCollider2D>();
+            capsule.direction = CapsuleDirection2D.Vertical;
+            capsule.size = new Vector2(0.8f, 2.0f);
+            capsule.offset = new Vector2(0f, 1.0f);
+            capsule.enabled = false;
+
+            Bounds capsuleBounds = ColliderBoundsUtility.GetWorldBounds(capsule);
+            Assert.AreEqual(-3f, capsuleBounds.center.x, 1e-4f);
+            Assert.AreEqual(2f, capsuleBounds.center.y, 1e-4f);
+            Assert.AreEqual(0.8f, capsuleBounds.size.x, 1e-4f);
+            Assert.AreEqual(2.0f, capsuleBounds.size.y, 1e-4f);
         }
 
         private (LevelRunController run, GameObject player, BoxCollider2D col, Health health, EncounterZone zone, EnemyController[] enemies, Dictionary<EnemyController, int> wakeCounts)
