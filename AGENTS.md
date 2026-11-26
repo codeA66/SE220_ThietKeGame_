@@ -55,3 +55,13 @@
 - Enemy_Archer.asset đã tham chiếu Projectile_Arrow.prefab. Enemy_Grenadier.asset đã tham chiếu Projectile_Grenade.prefab và Vfx_Explosion.asset.
 - Các reference fileID bằng 0 trong prefab có thể được gán bằng scene override hoặc Initialize tại runtime. Phải kiểm tra cả hai trước khi kết luận thiếu wiring.
 - Các hình PNG và file âm thanh đã được kiểm kê và đọc metadata import; chưa xem từng hình hoặc nghe từng âm thanh. Chưa chạy Play Mode, build hoặc test trong lần đọc này.
+
+## 6. Hiện trạng đã đối chiếu ngày 26/11/2026
+
+Đây là mốc đối chiếu file và biên dịch MSBuild (chưa chạy Unity GUI hoặc Play Mode trong lượt kiểm tra này).
+
+- Phiên bản Unity trong `ProjectSettings/ProjectVersion.txt`: `6000.6.9f1` (`6000.6.9f1 (8c45277fb9c5)`). `docs/ProjectConfig.yaml` ghi `target_platforms: [Windows, WebGL]`.
+- `ProjectSettings/EditorBuildSettings.asset`: index `0` là `Assets/_Project/Scenes/NhaGiamGiengChuong.unity` (enabled), index `1` là `Assets/_Project/Scenes/Main_Level.unity` (enabled).
+- `Assets/_Project/Scenes/NhaGiamGiengChuong.unity`: dựng theo 10 room prefab trong `Assets/_Project/Features/NhaGiamGiengChuong/Rooms/` (`AB`, `CD`, `ELF`, `G`, `HJK`, `U1_UpperPromenade`, `VaultA`, `W1_EastCourtyard`, `W2_SewerCistern`, `W3_WestBastion`) và chứa 34 instance địch (`Enemy_*`).
+- `Assets/_Project/Scenes/Sandbox_Player.unity`: không còn `TrainingDummy`; vẫn có `Player`, `VfxSpawner`, `CameraFollow2D`, `HitStop`, `ProjectileSpawner` và 7 instance địch (`Enemy_Zombie`, `Enemy_Rat`, `Enemy_Rat_3`, `Enemy_Grenadier`, `Enemy_Rat_2`, `Enemy_Shield`, `Enemy_Archer`).
+- `EnemyData.Skill`, `WeaponData.Strike` và `BowWeaponData.Shot` đóng gói các field serialize dạng `[FormerlySerializedAs("..."), SerializeField] private` với property đọc-chỉ; log runtime ở `HUD` và `RunFlow` đi qua `DeadCells.Core.GameDebug`.

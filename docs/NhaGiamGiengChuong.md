@@ -1,5 +1,7 @@
 # Nhà Giam Giếng Chuông · Thiết kế màn v7
 
+> **Trạng thái bản dựng thực tế (đối chiếu 26/11/2026):** Unity `6000.6.9f1`, target `[Windows, WebGL]`. `ProjectSettings/EditorBuildSettings.asset` đặt `Assets/_Project/Scenes/NhaGiamGiengChuong.unity` ở build index `0` và `Assets/_Project/Scenes/Main_Level.unity` ở build index `1`. Builder hiện tại (`NhaGiamGiengChuongBuilder` v8) tạo **10 room prefab** trong `Assets/_Project/Features/NhaGiamGiengChuong/Rooms/` (`AB`, `CD`, `ELF`, `G`, `HJK`, `W1_EastCourtyard`, `W2_SewerCistern`, `W3_WestBastion`, `U1_UpperPromenade`, `VaultA`) và scene `NhaGiamGiengChuong.unity` chứa **34 quái** (`Enemy_*`). Các mục bên dưới giữ nguyên đặc tả gốc v7 (5 tầng, 11 khu, 5 quái tuyến chính ban đầu).
+
 Màn mở đầu SE220 đưa người chơi từ buồng giam ở tầng 1 lên cửa thoát ở tầng 5. Tuyến cố định uốn qua hai giếng đứng, một cầu thang đá và một tháp bệ gỗ. Người chơi tự chọn tốc độ ở nửa đầu màn, đánh đổi thời gian và rủi ro để lấy hồi máu ở kho, rồi giải quyết một trận phối hợp cận chiến và tầm xa để mở đường ra mái.
 
 | Hạng mục | Phạm vi |

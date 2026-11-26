@@ -21,7 +21,7 @@ SE220_ThietKeGame_/            ← Open THIS folder (Unity project lives at the 
 
 ## Project
 
-SE220 course project: a 2D roguelite action-platformer inspired by Dead Cells. Unity 6.5 (6000.5.0f1), URP 2D, New Input System. Prototype scope: player movement (run/jump/roll/wall-climb), 3-hit sword combo, 5 enemies (zombie, zombieShield, grenadier, deadArcher, Rat), tilemap platforms.
+SE220 course project: a 2D roguelite action-platformer inspired by Dead Cells. Unity 6000.6.9f1, URP 2D, New Input System, targets `[Windows, WebGL]`. Primary scene: `Assets/_Project/Scenes/NhaGiamGiengChuong.unity` (build index `0`, 10 room prefabs, 34 enemies); `Main_Level.unity` at build index `1`. Prototype scope: player movement (run/jump/roll/wall-climb), 3-hit sword combo + bow, 5 enemies (zombie, zombieShield, grenadier, deadArcher, Rat), tilemap platforms.
 
 ## Project Config
 
