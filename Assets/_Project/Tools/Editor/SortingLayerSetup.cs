@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -216,6 +219,8 @@ namespace DeadCells.Tools.Editor
         private const string SandboxPlayerScenePath = "Assets/_Project/Scenes/Sandbox_Player.unity";
         private const string QualitySettingsAssetPath = "ProjectSettings/QualitySettings.asset";
         private const string ProjectSettingsAssetPath = "ProjectSettings/ProjectSettings.asset";
+        private const string ManifestJsonPath = "Packages/manifest.json";
+        private const double PackagePruneTimeoutSeconds = 600.0;
 
         // Verified 0-reference assets at HEAD (EnemyGoldDrops.cs excluded: still referenced by
         // Main_Level.unity, NhaGiamGiengChuong.unity, MainLevelIntegrityTests, MapWiringTests,
@@ -226,6 +231,26 @@ namespace DeadCells.Tools.Editor
             "Assets/_Project/Art/Shaders/MobFleshSwap2D.shader",
             "Assets/_Project/Art/Shaders/PaletteSwap2D.shader",
         };
+
+        // Verified 0-dependency direct entries in Packages/manifest.json (zero script/scene/prefab/asmdef/package dependents).
+        private static readonly string[] UnusedPackagesToRemove =
+        {
+            "com.unity.visualscripting",
+            "com.unity.ai.inference",
+            "com.unity.cinemachine",
+            "com.unity.timeline",
+            "com.unity.multiplayer.center",
+            "com.unity.recorder",
+            "com.unity.modules.cloth",
+            "com.unity.modules.terrain",
+            "com.unity.modules.terrainphysics",
+            "com.unity.modules.vehicles",
+            "com.unity.modules.wind",
+            "com.unity.modules.xr",
+        };
+
+        private static AddAndRemoveRequest _pruneRequest;
+        private static double _pruneDeadline;
 
         [MenuItem("Tools/Project/Fix Sandbox_Player URP 2D Lighting")]
         public static void ApplySandboxPlayerLighting()
@@ -390,6 +415,100 @@ namespace DeadCells.Tools.Editor
                 throw new InvalidOperationException($"Failed to delete dead assets: {string.Join(", ", failedPaths)}");
 
             Debug.Log($"[ReleaseSettingsSetup] DeleteDeadAssets completed (deleted={deletedCount}, skipped={skippedCount}).");
+        }
+
+        // Invoke headless WITHOUT -quit:
+        // -batchmode -nographics -projectPath <path> -executeMethod DeadCells.Tools.Editor.ReleaseSettingsSetup.PruneUnusedPackages -logFile -
+        [MenuItem("Tools/Project/Prune Unused UPM Packages")]
+        public static void PruneUnusedPackages()
+        {
+            if (_pruneRequest != null)
+            {
+                Debug.LogWarning("[ReleaseSettingsSetup] PruneUnusedPackages is already running.");
+                return;
+            }
+
+            if (!Application.isBatchMode &&
+                !EditorUtility.DisplayDialog(
+                    "Prune Unused UPM Packages",
+                    "Remove verified unused UPM packages via PackageManager.Client.AddAndRemove?",
+                    "Prune",
+                    "Cancel"))
+            {
+                return;
+            }
+
+            string[] toRemove = FilterPresentPackages(UnusedPackagesToRemove);
+            if (toRemove.Length == 0)
+            {
+                Debug.Log("[ReleaseSettingsSetup] PruneUnusedPackages: all target packages already absent from Packages/manifest.json.");
+                if (Application.isBatchMode)
+                    EditorApplication.Exit(0);
+                return;
+            }
+
+            Debug.Log($"[ReleaseSettingsSetup] Removing unused packages: {string.Join(", ", toRemove)}");
+            _pruneRequest = Client.AddAndRemove(null, toRemove);
+            _pruneDeadline = EditorApplication.timeSinceStartup + PackagePruneTimeoutSeconds;
+            EditorApplication.update += PollPruneUnusedPackages;
+        }
+
+        private static string[] FilterPresentPackages(string[] candidates)
+        {
+            if (!File.Exists(ManifestJsonPath))
+                return candidates;
+
+            string manifestJson = File.ReadAllText(ManifestJsonPath);
+            var present = new List<string>(candidates.Length);
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                string pkg = candidates[i];
+                if (manifestJson.IndexOf($"\"{pkg}\"", StringComparison.Ordinal) >= 0)
+                    present.Add(pkg);
+            }
+            return present.ToArray();
+        }
+
+        private static void PollPruneUnusedPackages()
+        {
+            if (_pruneRequest == null)
+            {
+                EditorApplication.update -= PollPruneUnusedPackages;
+                return;
+            }
+
+            if (!_pruneRequest.IsCompleted)
+            {
+                if (EditorApplication.timeSinceStartup > _pruneDeadline)
+                {
+                    EditorApplication.update -= PollPruneUnusedPackages;
+                    _pruneRequest = null;
+                    Debug.LogError("[ReleaseSettingsSetup] PruneUnusedPackages timed out waiting for PackageManager.");
+                    if (Application.isBatchMode)
+                        EditorApplication.Exit(2);
+                }
+                return;
+            }
+
+            EditorApplication.update -= PollPruneUnusedPackages;
+            AddAndRemoveRequest completed = _pruneRequest;
+            _pruneRequest = null;
+
+            if (completed.Status == StatusCode.Success)
+            {
+                string resolved = completed.Result != null
+                    ? string.Join(", ", completed.Result.Select(p => $"{p.name}@{p.version}"))
+                    : "none";
+                Debug.Log($"[ReleaseSettingsSetup] PruneUnusedPackages succeeded. Resolved packages: {resolved}");
+                if (Application.isBatchMode)
+                    EditorApplication.Exit(0);
+            }
+            else
+            {
+                Debug.LogError($"[ReleaseSettingsSetup] PruneUnusedPackages failed: {completed.Error?.message}");
+                if (Application.isBatchMode)
+                    EditorApplication.Exit(1);
+            }
         }
 
         private static int FindQualityLevelIndex(SerializedProperty levelsProp, string levelName)
