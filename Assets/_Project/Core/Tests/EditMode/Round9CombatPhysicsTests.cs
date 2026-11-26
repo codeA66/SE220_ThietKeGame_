@@ -1867,6 +1867,22 @@ namespace DeadCells.Core.Tests
                 Assert.AreSame(harness.Machine.Fall, harness.Machine.Current);
                 Assert.AreEqual(0.90f, col.size.y, 0.001f);
 
+                // Firing Bow while airborne in Fall under a low ceiling must keep the crouched collider intact.
+                harness.Context.Weapons.Equip(PlayerWeaponSlot.Bow);
+                harness.Context.Bow.ResetShots();
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), true);
+                BeginSimulatedFrame(harness.Machine);
+                harness.Machine.Tick();
+                SetInput(harness.Input, nameof(PlayerInputReader.AttackPressed), false);
+                Assert.AreSame(harness.Machine.BowAttack, harness.Machine.Current,
+                    "Airborne bow attack after crouched ledge roll must enter PlayerBowAttackState.");
+                Assert.AreEqual(0.90f, col.size.y, 0.001f,
+                    "Airborne BowAttack under low ceiling must NOT snap collider back to 1.60u.");
+
+                // Return to Fall by finishing bow attack while still airborne under ceiling.
+                ForceState(harness.Machine, harness.Machine.Fall);
+                Assert.AreEqual(0.90f, col.size.y, 0.001f);
+
                 harness.Body.position = new Vector2(5f, 0f);
                 Physics2D.SyncTransforms();
                 harness.Machine.Tick();
