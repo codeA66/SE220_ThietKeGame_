@@ -100,8 +100,6 @@ namespace DeadCells.Player
         public event Action<Vector2, int> WallJumped;
         /// <summary>Landed. Arguments: feet position, downward speed just before impact (positive).</summary>
         public event Action<Vector2, float> Landed;
-        /// <summary>Stomp impact landed. Argument: feet position.</summary>
-        public event Action<Vector2> StompLanded;
         /// <summary>A roll started. Argument: feet position where the perfect-dodge ghost stays.</summary>
         public event Action<Vector2> RollStarted;
         /// <summary>A hit landed on the perfect-dodge ghost.</summary>
@@ -366,8 +364,6 @@ namespace DeadCells.Player
             Landed?.Invoke(Position, Mathf.Max(0f, -_lastAirborneVelocityY));
             _lastAirborneVelocityY = 0f;
         }
-
-        public void NotifyStompLanded() => StompLanded?.Invoke(Position);
 
         public void RefillAirMoves()
         {
