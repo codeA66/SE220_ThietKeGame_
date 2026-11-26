@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.Enemies;
 using DeadCells.Player;
 using UnityEngine;
@@ -265,27 +266,11 @@ namespace DeadCells.NhaGiamGiengChuong
             if (col == null || _triggerZone == null)
                 return false;
 
-            Bounds triggerBounds = GetWorldBounds(_triggerZone);
-            Bounds actorBounds = GetWorldBounds(col);
+            Bounds triggerBounds = ColliderBoundsUtility.GetWorldBounds(_triggerZone);
+            Bounds actorBounds = ColliderBoundsUtility.GetWorldBounds(col);
 
             return actorBounds.max.x >= triggerBounds.min.x && actorBounds.min.x <= triggerBounds.max.x
                 && actorBounds.max.y >= triggerBounds.min.y && actorBounds.min.y <= triggerBounds.max.y;
-        }
-
-        private static Bounds GetWorldBounds(Collider2D collider)
-        {
-            if (collider is BoxCollider2D box)
-            {
-                Vector3 center = box.transform.TransformPoint(box.offset);
-                Vector3 scale = box.transform.lossyScale;
-                Vector3 size = new Vector3(
-                    Mathf.Abs(box.size.x * scale.x),
-                    Mathf.Abs(box.size.y * scale.y),
-                    1f);
-                return new Bounds(center, size);
-            }
-
-            return collider.bounds;
         }
 
         private BoxCollider2D ResolvePlayerCollider()

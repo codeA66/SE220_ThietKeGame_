@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.Core.Audio;
 using DeadCells.Player;
 using DeadCells.VFX;
@@ -397,8 +398,8 @@ namespace DeadCells.NhaGiamGiengChuong
             if (candidate == null || _switchTrigger == null)
                 return false;
 
-            Bounds triggerBounds = GetWorldBounds(_switchTrigger);
-            Bounds actorBounds = GetWorldBounds(candidate);
+            Bounds triggerBounds = ColliderBoundsUtility.GetWorldBounds(_switchTrigger);
+            Bounds actorBounds = ColliderBoundsUtility.GetWorldBounds(candidate);
 
             return actorBounds.max.x >= triggerBounds.min.x && actorBounds.min.x <= triggerBounds.max.x
                 && actorBounds.max.y >= triggerBounds.min.y && actorBounds.min.y <= triggerBounds.max.y;
@@ -428,7 +429,7 @@ namespace DeadCells.NhaGiamGiengChuong
                 if (col == null)
                     continue;
 
-                Bounds bounds = GetWorldBounds(col);
+                Bounds bounds = ColliderBoundsUtility.GetWorldBounds(col);
                 if (!hasAny)
                 {
                     combined = bounds;
@@ -441,22 +442,6 @@ namespace DeadCells.NhaGiamGiengChuong
             }
 
             return hasAny;
-        }
-
-        private static Bounds GetWorldBounds(Collider2D collider)
-        {
-            if (collider is BoxCollider2D box)
-            {
-                Vector3 center = box.transform.TransformPoint(box.offset);
-                Vector3 scale = box.transform.lossyScale;
-                Vector3 size = new Vector3(
-                    Mathf.Abs(box.size.x * scale.x),
-                    Mathf.Abs(box.size.y * scale.y),
-                    1f);
-                return new Bounds(center, size);
-            }
-
-            return collider.bounds;
         }
 
         private void OnInteractStarted(InputAction.CallbackContext context)

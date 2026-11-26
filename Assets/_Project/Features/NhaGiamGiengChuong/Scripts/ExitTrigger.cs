@@ -1,5 +1,6 @@
 using System;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.Player;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -155,25 +156,10 @@ namespace DeadCells.NhaGiamGiengChuong
             var col = ResolvePlayerCollider();
             if (col == null || _triggerZone == null)
                 return false;
-            Bounds tb = GetWorldBounds(_triggerZone);
-            Bounds ab = GetWorldBounds(col);
+            Bounds tb = ColliderBoundsUtility.GetWorldBounds(_triggerZone);
+            Bounds ab = ColliderBoundsUtility.GetWorldBounds(col);
             return ab.max.x >= tb.min.x && ab.min.x <= tb.max.x
                 && ab.max.y >= tb.min.y && ab.min.y <= tb.max.y;
-        }
-
-        private static Bounds GetWorldBounds(Collider2D collider)
-        {
-            if (collider is BoxCollider2D box)
-            {
-                Vector3 center = box.transform.TransformPoint(box.offset);
-                Vector3 scale = box.transform.lossyScale;
-                Vector3 size = new Vector3(
-                    Mathf.Abs(box.size.x * scale.x),
-                    Mathf.Abs(box.size.y * scale.y),
-                    1f);
-                return new Bounds(center, size);
-            }
-            return collider.bounds;
         }
 
         private bool IsInputBlocked()
