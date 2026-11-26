@@ -19,6 +19,7 @@ namespace DeadCells.Player.StateMachine.States
             bool wallJump = UsesHoldBoost && Ctx.IsWallJumpHorizontalLocked;
             _holding = UsesHoldBoost && !wallJump;
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
+            Ctx.TryStandUpCollider();
             if (!wallJump)
                 ApplyJumpImpulse();
         }

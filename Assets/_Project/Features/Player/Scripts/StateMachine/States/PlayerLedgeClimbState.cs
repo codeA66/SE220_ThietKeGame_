@@ -24,6 +24,7 @@ namespace DeadCells.Player.StateMachine.States
             _timer = 0f;
             _start = Ctx.Position;
             _end = Ctx.LedgeStandPoint;
+            Ctx.TryStandUpCollider();
             Ctx.SetKinematic(true);
             Ctx.Animator.SetClimbing(true);
         }

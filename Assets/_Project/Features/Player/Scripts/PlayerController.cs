@@ -228,10 +228,7 @@ namespace DeadCells.Player
             if (_machine.Current != _machine.Attack && _machine.Current != _machine.BowAttack)
                 return;
 
-            IPlayerState next = !_context.IsGrounded ? _machine.Fall
-                : _context.IsCrouchHeld ? _machine.Crouch
-                : _context.HasMoveInput ? _machine.Run : _machine.Idle;
-            _machine.ForceChangeState(next);
+            _machine.ForceChangeState(_machine.ResolveDefaultState());
         }
 
         /// <summary>
@@ -284,6 +281,7 @@ namespace DeadCells.Player
             _health.RestoreFull();
             _bow.ResetShots();
             _context.ClearComboCarry();
+            _context.SetCrouchCollider(false);
             _machine.ForceChangeState(_machine.Idle);
         }
     }

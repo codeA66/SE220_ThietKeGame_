@@ -10,9 +10,11 @@ namespace DeadCells.Player.StateMachine
     public class PlayerStateMachine
     {
         private readonly DeadCells.Core.StateMachine.StateMachine _core = new();
+        private readonly PlayerContext _context;
 
         public PlayerStateMachine(PlayerContext context)
         {
+            _context = context;
             Idle = new PlayerIdleState(context, this);
             Run = new PlayerRunState(context, this);
             Jump = new PlayerJumpState(context, this);
@@ -81,5 +83,18 @@ namespace DeadCells.Player.StateMachine
         public void Tick() => _core.Tick();
 
         public void FixedTick() => _core.FixedTick();
+
+        /// <summary>
+        /// Resolves the fallback state when an action completes or cancels: Fall when airborne,
+        /// Crouch while crouch is held or overhead clearance is blocked, otherwise Run or Idle.
+        /// </summary>
+        public IPlayerState ResolveDefaultState()
+        {
+            if (!_context.IsGrounded)
+                return Fall;
+            if (_context.IsCrouchHeld || !_context.CanStandUp())
+                return Crouch;
+            return _context.HasMoveInput ? Run : Idle;
+        }
     }
 }

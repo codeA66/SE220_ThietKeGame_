@@ -621,6 +621,15 @@ namespace DeadCells.Player
 
         // ---------- Crouch ----------
 
+        public bool IsColliderCrouched =>
+            Config.CrouchShrinkCollider && _collider.size.y < _standingColliderSize.y - 0.01f;
+
+        public void TryStandUpCollider()
+        {
+            if (IsColliderCrouched && CanStandUp())
+                SetCrouchCollider(false);
+        }
+
         public void SetCrouchCollider(bool crouching)
         {
             if (!Config.CrouchShrinkCollider)

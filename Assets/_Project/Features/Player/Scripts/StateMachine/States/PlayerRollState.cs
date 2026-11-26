@@ -44,6 +44,7 @@ namespace DeadCells.Player.StateMachine.States
         {
             Ctx.EndRoll();
             Ctx.OpenComboCarryWindow();
+            Ctx.TryStandUpCollider();
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
             Ctx.Animator.SetRolling(false);
         }
@@ -81,7 +82,17 @@ namespace DeadCells.Player.StateMachine.States
                 return false;
 
             if (Ctx.IsGrounded || Ctx.WithinCoyoteTime)
+            {
+                if (Ctx.IsColliderCrouched && !Ctx.CanStandUp())
+                {
+                    Ctx.ClearJumpBuffer();
+                    return false;
+                }
                 return Machine.ChangeState(Machine.Jump);
+            }
+
+            if (Ctx.IsColliderCrouched && !Ctx.CanStandUp())
+                return false;
 
             return TryAirJump();
         }

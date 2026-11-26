@@ -45,7 +45,7 @@ namespace DeadCells.Player.StateMachine.States
         {
             Ctx.Animator.HideBow();
             Ctx.Animator.SetCrouching(false);
-            Ctx.SetCrouchCollider(false);
+            Ctx.TryStandUpCollider();
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
         }
 
@@ -152,12 +152,6 @@ namespace DeadCells.Player.StateMachine.States
             Ctx.Animator.SetCrouching(_crouching);
         }
 
-        private void FinishAttack()
-        {
-            if (Ctx.IsGrounded && !Ctx.CanStandUp())
-                Machine.ChangeState(Machine.Crouch);
-            else
-                ReturnToDefault();
-        }
+        private void FinishAttack() => ReturnToDefault();
     }
 }

@@ -4,7 +4,11 @@ namespace DeadCells.Player.StateMachine.States
     {
         public PlayerIdleState(PlayerContext context, PlayerStateMachine machine) : base(context, machine) { }
 
-        public override void Enter() => Ctx.SetGravityScale(Ctx.Config.GravityScale);
+        public override void Enter()
+        {
+            Ctx.SetGravityScale(Ctx.Config.GravityScale);
+            Ctx.TryStandUpCollider();
+        }
 
         // Idling on a slope switches gravity off; hand it back on the way out.
         public override void Exit() => Ctx.SetGravityScale(Ctx.Config.GravityScale);

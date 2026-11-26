@@ -28,7 +28,7 @@ namespace DeadCells.Player.StateMachine.States
 
         public override void Exit()
         {
-            Ctx.SetCrouchCollider(false);
+            Ctx.TryStandUpCollider();
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
             Ctx.Animator.SetCrouching(false);
         }
