@@ -366,6 +366,78 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
         }
 
         [Test]
+        public void MinimapAndPause_GamepadStartClosesFullMapOnly_AndRestoresHitStopWithoutOpeningPause()
+        {
+            var run = CreateFixture(out _, out _, out var playerInput, out var panelRoot, out var menu, out _);
+            var hitStop = Object.FindAnyObjectByType<HitStop>();
+            Assert.IsNotNull(hitStop);
+            Assert.IsTrue(run.TickIntro(new DummyPlayState(), 0f));
+
+            var minimapGo = Track(new GameObject("MinimapHud"));
+            var minimap = minimapGo.AddComponent<MinimapHud>();
+            InvokeMethod(minimap, "OnEnable");
+            InvokeMethod(minimap, "Start");
+            Assert.AreSame(minimap, MinimapHud.Active);
+
+            var gamepad = InputSystem.AddDevice<Gamepad>();
+            try
+            {
+                // Order A: MinimapHud processes Gamepad Start first -> closes Full Map, stamps LastEscapeCloseFrame, blocks Pause.
+                minimap.ToggleFullMap();
+                Assert.IsTrue(minimap.IsFullMapOpen);
+                Assert.IsTrue(MinimapHud.IsAnyFullMapOpen);
+                Assert.IsTrue(hitStop.IsMenuPaused);
+                Assert.AreEqual(0f, Time.timeScale, 0.0001f);
+                Assert.IsFalse(playerInput.enabled);
+
+                InputSystem.QueueStateEvent(gamepad, new GamepadState(GamepadButton.Start));
+                InputSystem.Update();
+                InvokeMethod(minimap, "Update");
+
+                Assert.IsFalse(minimap.IsFullMapOpen);
+                Assert.IsFalse(MinimapHud.IsAnyFullMapOpen);
+                Assert.AreEqual(Time.frameCount, MinimapHud.LastEscapeCloseFrame);
+                Assert.IsFalse(hitStop.IsMenuPaused, "Closing Full Map via Gamepad Start must release HitStop menu pause.");
+                Assert.AreEqual(1f, Time.timeScale, 0.0001f);
+                Assert.IsTrue(playerInput.enabled);
+
+                Assert.IsFalse(menu.HandlePauseInput(false), "Same-frame Pause input after Full Map Start close must not open Pause.");
+                Assert.IsFalse(menu.IsPaused);
+                Assert.IsFalse(panelRoot.activeSelf);
+                Assert.IsFalse(hitStop.IsMenuPaused);
+                Assert.AreEqual(1f, Time.timeScale, 0.0001f);
+
+                // Order B: PauseMenuController processes Gamepad Start (HandlePauseInput(false)) before MinimapHud.
+                InputSystem.QueueStateEvent(gamepad, new GamepadState());
+                InputSystem.Update();
+
+                minimap.ToggleFullMap();
+                Assert.IsTrue(minimap.IsFullMapOpen);
+                Assert.IsTrue(hitStop.IsMenuPaused);
+                Assert.AreEqual(0f, Time.timeScale, 0.0001f);
+
+                Assert.IsFalse(menu.HandlePauseInput(false), "Gamepad Start while Full Map is open must close Full Map instead of opening Pause.");
+                Assert.IsFalse(minimap.IsFullMapOpen);
+                Assert.IsFalse(MinimapHud.IsAnyFullMapOpen);
+                Assert.IsFalse(menu.IsPaused);
+                Assert.IsFalse(panelRoot.activeSelf);
+                Assert.IsFalse(hitStop.IsMenuPaused, "HitStop menu pause ref-count must return to 0 without stacking.");
+                Assert.AreEqual(1f, Time.timeScale, 0.0001f);
+                Assert.IsTrue(playerInput.enabled);
+
+                InvokeMethod(minimap, "Update");
+                Assert.IsFalse(minimap.IsFullMapOpen);
+                Assert.IsFalse(menu.IsPaused);
+                Assert.IsFalse(hitStop.IsMenuPaused);
+                Assert.AreEqual(1f, Time.timeScale, 0.0001f);
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(gamepad);
+            }
+        }
+
+        [Test]
         public void PlayerController_SkipsInputPollingWhenInputReaderDisabled()
         {
             var floor = Track(new GameObject("Floor_PauseMenu_Test"));
