@@ -75,6 +75,10 @@ namespace DeadCells.Player
             Vector2 offset = _data.GetMuzzleOffset(crouching);
             offset.x *= facing;
             Vector2 origin = feet + offset;
+            Vector2 bodyOrigin = new Vector2(feet.x, origin.y);
+            RaycastHit2D wallHit = Physics2D.Linecast(bodyOrigin, origin, _solidGround);
+            if (wallHit.collider != null)
+                origin = wallHit.point - new Vector2(facing * 0.02f, 0f);
             Vector2 aimDir = ResolveAimDirection(origin, feet, facing, crouching);
             // The last shot of the combo is the heavy finisher (DC: 60 damage vs 35 and 40).
             bool heavy = _data.ShotCount > 1 && _nextShot == _data.ShotCount - 1;

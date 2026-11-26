@@ -14,7 +14,9 @@ namespace DeadCells.Combat
         private float _slowUntil = -1f;
         private float _slowScale = 1f;
         private bool _isActive;
-        private bool _menuPaused;
+        private int _menuPauseCount;
+
+        public bool IsMenuPaused => _menuPauseCount > 0;
 
         public void Trigger(float duration)
         {
@@ -30,7 +32,8 @@ namespace DeadCells.Combat
         {
             if (duration <= 0f)
                 return;
-            _slowUntil = Mathf.Max(_slowUntil, Time.unscaledTime + duration);
+            float start = Mathf.Max(Time.unscaledTime, _resumeAt);
+            _slowUntil = Mathf.Max(_slowUntil, start + duration);
             _slowScale = Mathf.Clamp01(scale);
             _isActive = true;
             ApplyTimeScale();
@@ -38,10 +41,19 @@ namespace DeadCells.Combat
 
         public void SetMenuPaused(bool paused)
         {
-            if (!isActiveAndEnabled)
-                return;
+            if (paused)
+            {
+                if (!isActiveAndEnabled)
+                    return;
+                _menuPauseCount++;
+            }
+            else
+            {
+                _menuPauseCount = Mathf.Max(0, _menuPauseCount - 1);
+                if (!isActiveAndEnabled)
+                    return;
+            }
 
-            _menuPaused = paused;
             ApplyTimeScale();
         }
 
@@ -62,18 +74,18 @@ namespace DeadCells.Combat
 
         private void OnDisable()
         {
-            if (_isActive || _menuPaused)
+            if (_isActive || _menuPauseCount > 0)
                 Time.timeScale = 1f;
             _resumeAt = -1f;
             _slowUntil = -1f;
             _isActive = false;
-            _menuPaused = false;
+            _menuPauseCount = 0;
         }
 
         private void ApplyTimeScale()
         {
             float now = Time.unscaledTime;
-            if (_menuPaused || now < _resumeAt)
+            if (_menuPauseCount > 0 || now < _resumeAt)
                 Time.timeScale = 0f;
             else if (now < _slowUntil)
                 Time.timeScale = _slowScale;

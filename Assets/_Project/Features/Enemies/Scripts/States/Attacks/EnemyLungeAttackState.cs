@@ -9,6 +9,8 @@ namespace DeadCells.Enemies.States
     /// </summary>
     public class EnemyLungeAttackState : EnemyAttackStateBase
     {
+        private const float MaxGroundedWait = 1.0f;
+
         private float _speedX;
 
         public EnemyLungeAttackState(EnemyContext context, EnemyStateMachine machine, int skillIndex)
@@ -26,7 +28,7 @@ namespace DeadCells.Enemies.States
             // Contact damage for the whole flight; the hit query lets it land only once.
             if (ExecuteTime < Skill.TravelDuration)
                 Ctx.Strike(Skill);
-            return ExecuteTime >= Skill.TravelDuration && Ctx.IsGrounded;
+            return ExecuteTime >= Skill.TravelDuration && (Ctx.IsGrounded || ExecuteTime >= Skill.TravelDuration + MaxGroundedWait);
         }
 
         protected override void ExecuteFixedTick()

@@ -161,6 +161,8 @@ namespace DeadCells.VFX
 
             _glowMesh = NewLayer("Glow", GlowSortingOrder, RuntimeSprites.GlowTexture);
             _coreMesh = NewLayer("Cores", CoreSortingOrder, null);
+            if (_active.Count == 0 && _flashes.Count == 0)
+                enabled = false;
         }
 
         private Mesh NewLayer(string layerName, int sortingOrder, Texture texture)
@@ -170,7 +172,7 @@ namespace DeadCells.VFX
             var go = new GameObject(layerName);
             go.transform.SetParent(transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            RuntimeSprites.Prepare(go.AddComponent<MeshRenderer>(), 0, sortingOrder, texture, unlit: true);
+            RuntimeSprites.Prepare(go.AddComponent<MeshRenderer>(), RuntimeSprites.VfxSortingLayerId, sortingOrder, texture, unlit: true);
             return mesh;
         }
 
@@ -206,6 +208,9 @@ namespace DeadCells.VFX
                 spark.Collision = collision;
                 _active.Add(spark);
             }
+
+            if (_active.Count > 0 || _flashes.Count > 0)
+                enabled = true;
         }
 
         private void Update()
@@ -239,7 +244,12 @@ namespace DeadCells.VFX
             }
         }
 
-        private void LateUpdate() => BuildMeshes();
+        private void LateUpdate()
+        {
+            BuildMeshes();
+            if (_active.Count == 0 && _flashes.Count == 0)
+                enabled = false;
+        }
 
         private static void Fly(Spark spark, float dt)
         {

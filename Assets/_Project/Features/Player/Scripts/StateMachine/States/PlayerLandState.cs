@@ -21,6 +21,12 @@ namespace DeadCells.Player.StateMachine.States
 
         public override void Tick()
         {
+            if (Ctx.IsColliderCrouched && !Ctx.CanStandUp())
+            {
+                Machine.ChangeState(Machine.Crouch);
+                return;
+            }
+
             if (TryGroundedActions() || TryCrouch())
                 return;
 

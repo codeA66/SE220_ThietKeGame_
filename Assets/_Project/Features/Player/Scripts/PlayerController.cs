@@ -58,7 +58,7 @@ namespace DeadCells.Player
             var collider = GetComponent<BoxCollider2D>();
             _context = new PlayerContext(_body, collider, _sprite, _groundMask, _rollPassThroughMask, _climbableMask, _config, _input, _animator);
             RunStats = new PlayerRunStats(_health);
-            _context.Combat = new PlayerCombat(transform, collider, _weapon, _attackTargets, RunStats);
+            _context.Combat = new PlayerCombat(transform, collider, _weapon, _attackTargets, RunStats, _context.SolidWallMask);
             if (_bow == null)
                 throw new System.InvalidOperationException("PlayerController requires its PlayerBow reference.");
             _bow.Initialize(_attackTargets, _groundMask, RunStats);
@@ -142,12 +142,16 @@ namespace DeadCells.Player
             transform.position = new Vector3(position.x, position.y, transform.position.z);
             if (_context != null && facingDirection != 0)
                 _context.Face(facingDirection > 0 ? 1 : -1);
+            Physics2D.SyncTransforms();
         }
 
         private void Update()
         {
             if (_respawnAt >= 0f && Time.time >= _respawnAt)
                 Respawn();
+
+            if (_input == null || !_input.isActiveAndEnabled)
+                return;
 
             _input.Poll();
             if (RunStats.BlocksGameplayInput)
@@ -224,10 +228,7 @@ namespace DeadCells.Player
             if (_machine.Current != _machine.Attack && _machine.Current != _machine.BowAttack)
                 return;
 
-            IPlayerState next = !_context.IsGrounded ? _machine.Fall
-                : _context.IsCrouchHeld ? _machine.Crouch
-                : _context.HasMoveInput ? _machine.Run : _machine.Idle;
-            _machine.ForceChangeState(next);
+            _machine.ForceChangeState(_machine.ResolveDefaultState());
         }
 
         /// <summary>
@@ -275,9 +276,12 @@ namespace DeadCells.Player
             _respawnAt = -1f;
             _body.position = _spawnPoint;
             _body.linearVelocity = Vector2.zero;
+            transform.position = new Vector3(_spawnPoint.x, _spawnPoint.y, transform.position.z);
+            Physics2D.SyncTransforms();
             _health.RestoreFull();
             _bow.ResetShots();
             _context.ClearComboCarry();
+            _context.SetCrouchCollider(false);
             _machine.ForceChangeState(_machine.Idle);
         }
     }

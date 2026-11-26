@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DeadCells.Combat
 {
@@ -10,11 +11,26 @@ namespace DeadCells.Combat
         [Serializable]
         public struct Shot
         {
-            [Min(1)] public int Damage;
-            [Min(0.01f)] public float ChargeTime;
-            [Min(0f)] public float RecoveryTime;
-            [Min(0f)] public float Cooldown;
-            [Min(0.01f)] public float AnimationSpeed;
+            [FormerlySerializedAs("Damage"), SerializeField, Min(1)] private int _damage;
+            [FormerlySerializedAs("ChargeTime"), SerializeField, Min(0.01f)] private float _chargeTime;
+            [FormerlySerializedAs("RecoveryTime"), SerializeField, Min(0f)] private float _recoveryTime;
+            [FormerlySerializedAs("Cooldown"), SerializeField, Min(0f)] private float _cooldown;
+            [FormerlySerializedAs("AnimationSpeed"), SerializeField, Min(0.01f)] private float _animationSpeed;
+
+            public Shot(int damage, float chargeTime, float recoveryTime = 0f, float cooldown = 0f, float animationSpeed = 1f)
+            {
+                _damage = damage;
+                _chargeTime = chargeTime;
+                _recoveryTime = recoveryTime;
+                _cooldown = cooldown;
+                _animationSpeed = animationSpeed;
+            }
+
+            public int Damage => _damage;
+            public float ChargeTime => _chargeTime;
+            public float RecoveryTime => _recoveryTime;
+            public float Cooldown => _cooldown;
+            public float AnimationSpeed => _animationSpeed;
         }
 
         [SerializeField] private CombatStat _scalingStat;

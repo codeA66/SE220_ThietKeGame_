@@ -60,6 +60,8 @@ namespace DeadCells.Player
         private float _wallJumpLockUntil = float.NegativeInfinity;
         private float _wallRegrabReadyAt = float.NegativeInfinity;
         private bool _wasOnSlope;
+        private Collider2D _lastEffectorCollider;
+        private PlatformEffector2D _lastEffector;
 
         public PlayerContext(
             Rigidbody2D body,
@@ -98,8 +100,6 @@ namespace DeadCells.Player
         public event Action<Vector2, int> WallJumped;
         /// <summary>Landed. Arguments: feet position, downward speed just before impact (positive).</summary>
         public event Action<Vector2, float> Landed;
-        /// <summary>Stomp impact landed. Argument: feet position.</summary>
-        public event Action<Vector2> StompLanded;
         /// <summary>A roll started. Argument: feet position where the perfect-dodge ghost stays.</summary>
         public event Action<Vector2> RollStarted;
         /// <summary>A hit landed on the perfect-dodge ghost.</summary>
@@ -120,6 +120,7 @@ namespace DeadCells.Player
 
         public SpriteRenderer Sprite => _sprite;
         public LayerMask GroundMask => _groundMask;
+        public LayerMask SolidWallMask => _solidWallMask;
 
         public void NotifyAwakened() => Awakened?.Invoke();
 
@@ -204,7 +205,7 @@ namespace DeadCells.Player
                 if (bounds.max.y < platformBounds.min.y || bounds.max.x < platformBounds.min.x || bounds.min.x > platformBounds.max.x)
                     _ledgeIgnoredPlatform = null;
             }
-            var hit = CastFeet(bounds.center.x, bounds.min.y);
+            var hit = CastFeet(bounds.center.x, bounds.min.y - _collider.edgeRadius);
 
             bool grounded = hit.collider != null
                             && hit.collider != _droppedPlatform
@@ -243,7 +244,9 @@ namespace DeadCells.Player
         /// </summary>
         private RaycastHit2D CastFeet(float centerX, float feetY)
         {
-            var size = new Vector2(_collider.bounds.size.x * FeetProbeWidthRatio, FeetProbeHeight);
+            // Unity 6 BoxCollider2D.bounds excludes edgeRadius; add 2*edgeRadius so the feet probe matches outer width.
+            float outerWidth = _collider.bounds.size.x + _collider.edgeRadius * 2f;
+            var size = new Vector2(outerWidth * FeetProbeWidthRatio, FeetProbeHeight);
             var origin = new Vector2(centerX, feetY + FeetProbeHeight * 0.5f);
             // On a slope the box only has to re-acquire the surface it is already standing on.
             float probeDist = _wasOnSlope
@@ -335,10 +338,12 @@ namespace DeadCells.Player
 
         // ---------- Jumps ----------
 
+        public void ClearJumpBuffer() => _lastJumpPressedTime = float.NegativeInfinity;
+
         public void StartJump()
         {
             SetVerticalVelocity(Config.JumpBaseVelocity);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             _lastGroundedTime = float.NegativeInfinity;
             Jumped?.Invoke(Position);
         }
@@ -347,7 +352,7 @@ namespace DeadCells.Player
         {
             AirJumpsRemaining--;
             SetVerticalVelocity(Config.AirJumpVelocity);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             AirJumped?.Invoke(Position);
         }
 
@@ -359,8 +364,6 @@ namespace DeadCells.Player
             Landed?.Invoke(Position, Mathf.Max(0f, -_lastAirborneVelocityY));
             _lastAirborneVelocityY = 0f;
         }
-
-        public void NotifyStompLanded() => StompLanded?.Invoke(Position);
 
         public void RefillAirMoves()
         {
@@ -448,14 +451,14 @@ namespace DeadCells.Player
         {
             if (!IsDownHeld || !Input.JumpPressed || _groundCollider == null)
                 return false;
-            if (!_groundCollider.TryGetComponent<PlatformEffector2D>(out _))
+            if (!TryGetCachedPlatformEffector(_groundCollider, out _))
                 return false;
 
             _droppedPlatform = _groundCollider;
             _ledgeIgnoredPlatform = _groundCollider;
             _dropRestoreTime = Time.time + Config.DropThroughDuration;
             Physics2D.IgnoreCollision(_collider, _droppedPlatform, true);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             _lastGroundedTime = float.NegativeInfinity;
             IsGrounded = false;
             return true;
@@ -609,7 +612,7 @@ namespace DeadCells.Player
             SetVerticalVelocity(Config.WallJumpVelocity.y);
             Face(awayDir);
             WallJumpsRemaining = Mathf.Max(0, WallJumpsRemaining - 1);
-            _lastJumpPressedTime = float.NegativeInfinity;
+            ClearJumpBuffer();
             _lastGroundedTime = float.NegativeInfinity;
             _wallJumpLockUntil = Time.time + Config.WallJumpHorizontalLockTime;
             _wallRegrabReadyAt = Time.time + Config.WallRegrabCooldown;
@@ -617,6 +620,15 @@ namespace DeadCells.Player
         }
 
         // ---------- Crouch ----------
+
+        public bool IsColliderCrouched =>
+            Config.CrouchShrinkCollider && _collider.size.y < _standingColliderSize.y - 0.01f;
+
+        public void TryStandUpCollider()
+        {
+            if (IsColliderCrouched && CanStandUp())
+                SetCrouchCollider(false);
+        }
 
         public void SetCrouchCollider(bool crouching)
         {
@@ -634,6 +646,21 @@ namespace DeadCells.Player
                 _collider.size = _standingColliderSize;
                 _collider.offset = _standingColliderOffset;
             }
+        }
+
+        public bool CanStandUp()
+        {
+            if (!Config.CrouchShrinkCollider)
+                return true;
+            float r = _collider.edgeRadius;
+            float crouchTopY = Config.CrouchColliderHeight;
+            float standTopY = _standingColliderOffset.y + _standingColliderSize.y * 0.5f + r;
+            float headHeight = standTopY - crouchTopY;
+            if (headHeight <= 0.02f)
+                return true;
+            float width = Mathf.Max(0.05f, (_standingColliderSize.x + r * 2f) - 0.04f);
+            Vector2 center = Position + new Vector2(_standingColliderOffset.x, crouchTopY + headHeight * 0.5f + 0.01f);
+            return Physics2D.OverlapBox(center, new Vector2(width, headHeight - 0.02f), 0f, _solidWallMask) == null;
         }
 
         // ---------- Ledge ----------
@@ -704,9 +731,28 @@ namespace DeadCells.Player
             return TryGetLedgeStandPoint(bounds, side.point.x, top.point.y, out standPoint);
         }
 
-        private static bool IsOneWayPlatform(Collider2D collider) =>
-            collider.usedByEffector && collider.TryGetComponent<PlatformEffector2D>(out var effector)
+        private bool IsOneWayPlatform(Collider2D collider) =>
+            collider != null && collider.usedByEffector
+            && TryGetCachedPlatformEffector(collider, out var effector)
             && effector.isActiveAndEnabled && effector.useOneWay;
+
+        private bool TryGetCachedPlatformEffector(Collider2D collider, out PlatformEffector2D effector)
+        {
+            if (collider == null)
+            {
+                effector = null;
+                return false;
+            }
+
+            if (collider != _lastEffectorCollider)
+            {
+                _lastEffectorCollider = collider;
+                collider.TryGetComponent(out _lastEffector);
+            }
+
+            effector = _lastEffector;
+            return effector != null;
+        }
 
         private bool TryGetLedgeStandPoint(Bounds bounds, float edgeX, float topY, out Vector2 standPoint)
         {

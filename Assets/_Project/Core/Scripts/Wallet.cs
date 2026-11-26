@@ -20,6 +20,7 @@ namespace DeadCells.Core
         {
             Gold = 0;
             Gems = 0;
+            Changed = null;
         }
 
         public static void AddGold(int amount)

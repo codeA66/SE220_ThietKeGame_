@@ -109,7 +109,6 @@ namespace DeadCells.Core.Tests
                 Assert.AreEqual(0f, harness.Context.Velocity.x, 0.001f);
 
                 // Wall Jump #1: kicks away at (-9.5, 13.2) and enforces horizontal & regrab locks
-                MovementSetPrivateField(harness.Machine, "_lastTransitionFrame", -1);
                 MovementSetInputProperty(harness.Input, nameof(PlayerInputReader.JumpPressed), true);
                 harness.Machine.Tick();
 
@@ -131,7 +130,6 @@ namespace DeadCells.Core.Tests
 
                 // AirJump within the 0.12s wall-jump lock must still fire StartAirJump()
                 int airJumpsBefore = harness.Context.AirJumpsRemaining;
-                MovementSetPrivateField(harness.Machine, "_lastTransitionFrame", -1);
                 MovementSetInputProperty(harness.Input, nameof(PlayerInputReader.JumpPressed), true);
                 harness.Machine.Tick();
                 Assert.AreSame(harness.Machine.AirJump, harness.Machine.Current,
@@ -365,7 +363,6 @@ namespace DeadCells.Core.Tests
         private static void ForceMovementState(PlayerStateMachine machine, IPlayerState state)
         {
             machine.ForceChangeState(state);
-            MovementSetPrivateField(machine, "_lastTransitionFrame", -1);
         }
 
         private static void ClearWallTimers(PlayerContext ctx)

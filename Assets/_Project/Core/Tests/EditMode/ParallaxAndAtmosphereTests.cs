@@ -1,13 +1,17 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
 using DeadCells.Enemies;
+using DeadCells.Player;
 using DeadCells.Tools.Editor;
 using DeadCells.VFX;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace DeadCells.Core.Tests
 {
@@ -39,29 +43,49 @@ namespace DeadCells.Core.Tests
             _spawned.Clear();
         }
 
+        private const string TagManagerPath = "ProjectSettings/TagManager.asset";
+
         [Test]
         public void SortingLayerSetup_RegistersAllDeadCellsLayersInOrderIdempotently()
         {
-            SortingLayerSetup.EnsureDeadCellsSortingLayers();
-            SortingLayerSetup.EnsureDeadCellsSortingLayers();
-
-            string[] layerNames = SortingLayer.layers.Select(l => l.name).ToArray();
-            Assert.IsNotEmpty(layerNames);
-            Assert.AreEqual("Default", layerNames[0], "Default sorting layer must remain at index 0.");
-            Assert.AreEqual(layerNames.Distinct().Count(), layerNames.Length, "Sorting layers must not contain duplicates.");
-
-            int previousIndex = -1;
-            foreach (string expected in ExpectedOrder)
+            byte[] beforeBytes = File.ReadAllBytes(TagManagerPath);
+            try
             {
-                int index = System.Array.IndexOf(layerNames, expected);
-                Assert.GreaterOrEqual(index, 0, $"Missing expected sorting layer '{expected}'.");
-                Assert.Greater(index, previousIndex, $"Sorting layer '{expected}' is out of strict relative order.");
-                previousIndex = index;
+                SortingLayerSetup.EnsureDeadCellsSortingLayers();
+                var firstPass = SortingLayer.layers.Select(l => (l.name, l.id)).ToArray();
 
-                int id = SortingLayerSetup.GetSortingLayerId(expected);
-                Assert.AreEqual(SortingLayer.NameToID(expected), id);
-                if (expected != "Default")
-                    Assert.AreNotEqual(0, id, $"Sorting layer '{expected}' must have a non-zero unique ID.");
+                SortingLayerSetup.EnsureDeadCellsSortingLayers();
+                var secondPass = SortingLayer.layers.Select(l => (l.name, l.id)).ToArray();
+                byte[] afterBytes = File.ReadAllBytes(TagManagerPath);
+
+                CollectionAssert.AreEqual(firstPass, secondPass, "EnsureDeadCellsSortingLayers must be idempotent.");
+                Assert.IsTrue(beforeBytes.SequenceEqual(afterBytes),
+                    "EnsureDeadCellsSortingLayers must not rewrite ProjectSettings/TagManager.asset when layers are already registered.");
+
+                string[] layerNames = SortingLayer.layers.Select(l => l.name).ToArray();
+                Assert.IsNotEmpty(layerNames);
+                Assert.AreEqual("Default", layerNames[0], "Default sorting layer must remain at index 0.");
+                Assert.AreEqual(layerNames.Distinct().Count(), layerNames.Length, "Sorting layers must not contain duplicates.");
+
+                int previousIndex = -1;
+                foreach (string expected in ExpectedOrder)
+                {
+                    int index = System.Array.IndexOf(layerNames, expected);
+                    Assert.GreaterOrEqual(index, 0, $"Missing expected sorting layer '{expected}'.");
+                    Assert.Greater(index, previousIndex, $"Sorting layer '{expected}' is out of strict relative order.");
+                    previousIndex = index;
+
+                    int id = SortingLayerSetup.GetSortingLayerId(expected);
+                    Assert.AreEqual(SortingLayer.NameToID(expected), id);
+                    if (expected != "Default")
+                        Assert.AreNotEqual(0, id, $"Sorting layer '{expected}' must have a non-zero unique ID.");
+                }
+            }
+            finally
+            {
+                byte[] currentBytes = File.ReadAllBytes(TagManagerPath);
+                if (!currentBytes.SequenceEqual(beforeBytes))
+                    File.WriteAllBytes(TagManagerPath, beforeBytes);
             }
         }
 
@@ -250,6 +274,390 @@ namespace DeadCells.Core.Tests
                 UnityEngine.Object.DestroyImmediate(projGo);
                 UnityEngine.Object.DestroyImmediate(arrowGo);
             }
+        }
+
+        [Test]
+        public void ParticleMeshSystems_DisableComponentWhenEmpty_AndReEnableOnEmit()
+        {
+            BloodDrops blood = null;
+            Debris debris = null;
+            Sparks sparks = null;
+            try
+            {
+                blood = CreateAndAwakeParticleSystem<BloodDrops>();
+                Assert.IsFalse(blood.enabled, "BloodDrops must start disabled after Awake when empty.");
+                BloodDrops.Emit(Vector2.zero, 1, BloodBurst.Light, 0);
+                Assert.IsTrue(blood.enabled, "BloodDrops must be enabled after Emit.");
+
+                ClearParticleListsAndTick(blood, "_active");
+                Assert.IsFalse(blood.enabled, "BloodDrops must disable after _active drains and LateUpdate clears mesh.");
+                Assert.AreEqual(0, blood.GetComponent<MeshFilter>().sharedMesh.vertexCount);
+
+                BloodDrops.Emit(Vector2.zero, 1, BloodBurst.Light, 0);
+                Assert.IsTrue(blood.enabled, "BloodDrops must re-enable on subsequent Emit.");
+
+                debris = CreateAndAwakeParticleSystem<Debris>();
+                Assert.IsFalse(debris.enabled, "Debris must start disabled after Awake when empty.");
+                Debris.Shockwave(Vector2.zero, 0, 0.25f, 4);
+                Assert.IsTrue(debris.enabled, "Debris must be enabled after Shockwave.");
+
+                ClearParticleListsAndTick(debris, "_active");
+                Assert.IsFalse(debris.enabled, "Debris must disable after _active drains and LateUpdate clears mesh.");
+                Assert.AreEqual(0, debris.GetComponent<MeshFilter>().sharedMesh.vertexCount);
+
+                Debris.Shockwave(Vector2.zero, 0, 0.25f, 4);
+                Assert.IsTrue(debris.enabled, "Debris must re-enable on subsequent Shockwave.");
+
+                sparks = CreateAndAwakeParticleSystem<Sparks>();
+                Assert.IsFalse(sparks.enabled, "Sparks must start disabled after Awake when empty.");
+                Sparks.Emit(Vector2.zero, 1, SparkBurst.Shield, 0);
+                Assert.IsTrue(sparks.enabled, "Sparks must be enabled after Emit.");
+
+                ClearParticleListsAndTick(sparks, "_active", "_flashes");
+                Assert.IsFalse(sparks.enabled, "Sparks must disable after _active and _flashes drain and LateUpdate clears meshes.");
+                Assert.AreEqual(0, sparks.transform.Find("Glow").GetComponent<MeshFilter>().sharedMesh.vertexCount);
+                Assert.AreEqual(0, sparks.transform.Find("Cores").GetComponent<MeshFilter>().sharedMesh.vertexCount);
+
+                Sparks.Emit(Vector2.zero, 1, SparkBurst.Shield, 0);
+                Assert.IsTrue(sparks.enabled, "Sparks must re-enable on subsequent Emit.");
+            }
+            finally
+            {
+                CleanupParticleSystem(blood, "_mesh");
+                CleanupParticleSystem(debris, "_mesh");
+                CleanupParticleSystem(sparks, "_coreMesh", "_glowMesh");
+                typeof(RuntimeSprites).GetMethod("ResetStatics", BindingFlags.Static | BindingFlags.NonPublic)?.Invoke(null, null);
+            }
+        }
+
+        [Test]
+        public void MeshParticleVfxSystems_RenderOnVfxSortingLayerAboveBackgroundAndActors()
+        {
+            SortingLayerSetup.EnsureDeadCellsSortingLayers();
+
+            int vfxLayerId = SortingLayer.NameToID("VFX");
+            int bgLayerId = SortingLayer.NameToID("Background");
+            int actorsLayerId = SortingLayer.NameToID("Actors");
+            Assert.AreNotEqual(0, vfxLayerId, "VFX sorting layer must exist with non-zero ID.");
+            Assert.AreEqual(vfxLayerId, RuntimeSprites.VfxSortingLayerId,
+                "RuntimeSprites.VfxSortingLayerId must resolve to the VFX sorting layer.");
+            Assert.Greater(
+                SortingLayer.GetLayerValueFromID(vfxLayerId),
+                SortingLayer.GetLayerValueFromID(bgLayerId),
+                "VFX sorting layer must sort above Background.");
+            Assert.Greater(
+                SortingLayer.GetLayerValueFromID(vfxLayerId),
+                SortingLayer.GetLayerValueFromID(actorsLayerId),
+                "VFX sorting layer must sort above Actors.");
+
+            BloodDrops blood = null;
+            Debris debris = null;
+            Sparks sparks = null;
+            try
+            {
+                blood = CreateAndAwakeParticleSystem<BloodDrops>();
+                var bloodRenderer = blood.GetComponent<MeshRenderer>();
+                Assert.IsNotNull(bloodRenderer, "BloodDrops must create a MeshRenderer in Awake.");
+                Assert.AreEqual(vfxLayerId, bloodRenderer.sortingLayerID, "BloodDrops must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", bloodRenderer.sortingLayerName);
+                Assert.IsNotNull(bloodRenderer.sharedMaterial, "BloodDrops MeshRenderer must have a material.");
+
+                debris = CreateAndAwakeParticleSystem<Debris>();
+                var debrisRenderer = debris.GetComponent<MeshRenderer>();
+                Assert.IsNotNull(debrisRenderer, "Debris must create a MeshRenderer in Awake.");
+                Assert.AreEqual(vfxLayerId, debrisRenderer.sortingLayerID, "Debris must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", debrisRenderer.sortingLayerName);
+                Assert.IsNotNull(debrisRenderer.sharedMaterial, "Debris MeshRenderer must have a material.");
+
+                sparks = CreateAndAwakeParticleSystem<Sparks>();
+                Transform glowChild = sparks.transform.Find("Glow");
+                Transform coresChild = sparks.transform.Find("Cores");
+                Assert.IsNotNull(glowChild, "Sparks must create a Glow child in Awake.");
+                Assert.IsNotNull(coresChild, "Sparks must create a Cores child in Awake.");
+
+                var glowRenderer = glowChild.GetComponent<MeshRenderer>();
+                var coresRenderer = coresChild.GetComponent<MeshRenderer>();
+                Assert.IsNotNull(glowRenderer, "Sparks Glow must have a MeshRenderer.");
+                Assert.IsNotNull(coresRenderer, "Sparks Cores must have a MeshRenderer.");
+                Assert.AreEqual(vfxLayerId, glowRenderer.sortingLayerID, "Sparks Glow must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", glowRenderer.sortingLayerName);
+                Assert.AreEqual(vfxLayerId, coresRenderer.sortingLayerID, "Sparks Cores must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", coresRenderer.sortingLayerName);
+                Assert.IsNotNull(glowRenderer.sharedMaterial, "Sparks Glow MeshRenderer must have a material.");
+                Assert.IsNotNull(coresRenderer.sharedMaterial, "Sparks Cores MeshRenderer must have a material.");
+                Assert.Greater(coresRenderer.sortingOrder, glowRenderer.sortingOrder,
+                    "Sparks Cores must sort above Sparks Glow.");
+            }
+            finally
+            {
+                CleanupParticleSystem(blood, "_mesh");
+                CleanupParticleSystem(debris, "_mesh");
+                CleanupParticleSystem(sparks, "_coreMesh", "_glowMesh");
+                typeof(RuntimeSprites).GetMethod("ResetStatics", BindingFlags.Static | BindingFlags.NonPublic)?.Invoke(null, null);
+            }
+        }
+
+        [Test]
+        public void PlayerSpawnHead_BurstAndTrailParticles_UseVfxSortingLayerOnPrefabAndAfterAwake()
+        {
+            SortingLayerSetup.EnsureDeadCellsSortingLayers();
+
+            int vfxLayerId = SortingLayer.NameToID("VFX");
+            int bgLayerId = SortingLayer.NameToID("Background");
+            int actorsLayerId = SortingLayer.NameToID("Actors");
+            Assert.AreNotEqual(0, vfxLayerId, "VFX sorting layer must exist with non-zero ID.");
+            Assert.Greater(SortingLayer.GetLayerValueFromID(vfxLayerId), SortingLayer.GetLayerValueFromID(bgLayerId));
+            Assert.Greater(SortingLayer.GetLayerValueFromID(vfxLayerId), SortingLayer.GetLayerValueFromID(actorsLayerId));
+
+            const string prefabPath = "Assets/_Project/Features/Player/Prefabs/Player.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.IsNotNull(prefab, $"Missing Player prefab at '{prefabPath}'.");
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            FieldInfo burstField = typeof(PlayerSpawnHead).GetField("_burst", flags);
+            FieldInfo trailField = typeof(PlayerSpawnHead).GetField("_trail", flags);
+            MethodInfo awakeMethod = typeof(PlayerSpawnHead).GetMethod("Awake", flags);
+            Assert.IsNotNull(burstField, "PlayerSpawnHead._burst field missing.");
+            Assert.IsNotNull(trailField, "PlayerSpawnHead._trail field missing.");
+            Assert.IsNotNull(awakeMethod, "PlayerSpawnHead.Awake method missing.");
+
+            var prefabHead = prefab.GetComponentInChildren<PlayerSpawnHead>(true);
+            Assert.IsNotNull(prefabHead, "Player.prefab must contain a PlayerSpawnHead component.");
+
+            var prefabBurst = burstField.GetValue(prefabHead) as ParticleSystem;
+            var prefabTrail = trailField.GetValue(prefabHead) as ParticleSystem;
+            Assert.IsNotNull(prefabBurst, "PlayerSpawnHead._burst must be wired on Player.prefab.");
+            Assert.IsNotNull(prefabTrail, "PlayerSpawnHead._trail must be wired on Player.prefab.");
+
+            var prefabBurstRenderer = prefabBurst.GetComponent<ParticleSystemRenderer>();
+            var prefabTrailRenderer = prefabTrail.GetComponent<ParticleSystemRenderer>();
+            Assert.IsNotNull(prefabBurstRenderer, "Burst must have a ParticleSystemRenderer.");
+            Assert.IsNotNull(prefabTrailRenderer, "Trail must have a ParticleSystemRenderer.");
+            Assert.AreEqual(vfxLayerId, prefabBurstRenderer.sortingLayerID,
+                "Player.prefab Burst ParticleSystemRenderer must serialize on VFX sorting layer.");
+            Assert.AreEqual("VFX", prefabBurstRenderer.sortingLayerName);
+            Assert.AreEqual(vfxLayerId, prefabTrailRenderer.sortingLayerID,
+                "Player.prefab Trail ParticleSystemRenderer must serialize on VFX sorting layer.");
+            Assert.AreEqual("VFX", prefabTrailRenderer.sortingLayerName);
+
+            GameObject instance = Object.Instantiate(prefab);
+            _spawned.Add(instance);
+            var instanceHead = instance.GetComponentInChildren<PlayerSpawnHead>(true);
+            var instanceBurstRenderer = ((ParticleSystem)burstField.GetValue(instanceHead)).GetComponent<ParticleSystemRenderer>();
+            var instanceTrailRenderer = ((ParticleSystem)trailField.GetValue(instanceHead)).GetComponent<ParticleSystemRenderer>();
+
+            // Simulate a Default (0) override and confirm Awake promotes both particle renderers to VFX.
+            instanceBurstRenderer.sortingLayerID = 0;
+            instanceTrailRenderer.sortingLayerID = 0;
+            awakeMethod.Invoke(instanceHead, null);
+
+            Assert.AreEqual(vfxLayerId, instanceBurstRenderer.sortingLayerID,
+                "PlayerSpawnHead.Awake must promote Burst from Default (0) to VFX sorting layer.");
+            Assert.AreEqual("VFX", instanceBurstRenderer.sortingLayerName);
+            Assert.AreEqual(vfxLayerId, instanceTrailRenderer.sortingLayerID,
+                "PlayerSpawnHead.Awake must promote Trail from Default (0) to VFX sorting layer.");
+            Assert.AreEqual("VFX", instanceTrailRenderer.sortingLayerName);
+        }
+
+        [Test]
+        public void ParallaxLayer2D_PinColumnsToFrustumEdges_PreservesColumnPositionsWithCachedCameraAndWidths()
+        {
+            var camGo = new GameObject("CamTest");
+            var layerGo = new GameObject("FgLayerTest");
+            var tex = new Texture2D(64, 32);
+            var sprite = Sprite.Create(tex, new Rect(0f, 0f, 64f, 32f), new Vector2(0.5f, 0.5f), 32f);
+            _spawned.Add(camGo);
+            _spawned.Add(layerGo);
+
+            try
+            {
+                var cam = camGo.AddComponent<Camera>();
+                cam.orthographic = true;
+                cam.orthographicSize = 6.75f;
+                cam.aspect = 16f / 9f;
+
+                var col0 = CreateColumn(layerGo.transform, "FgColumn_0", -30f, 1.5f);
+                var col1 = CreateColumn(layerGo.transform, "FgColumn_1", -10f, 1.5f);
+                var col2 = CreateColumn(layerGo.transform, "FgColumn_2", 10f, 1.5f);
+                var col3 = CreateColumn(layerGo.transform, "FgColumn_3", 30f, 1.5f);
+
+                var sr1 = col1.gameObject.AddComponent<SpriteRenderer>();
+                sr1.sprite = sprite;
+                col1.localScale = new Vector3(1.5f, 1f, 1f);
+
+                var sr2 = col2.gameObject.AddComponent<SpriteRenderer>();
+                sr2.sprite = sprite;
+                col2.localScale = new Vector3(0.5f, 1f, 1f);
+
+                var layer = layerGo.AddComponent<ParallaxLayer2D>();
+                layer.Configure(camGo.transform, Vector2.one, 0f, pixelSnap: true, pixelsPerUnit: 24f);
+                layer.ConfigureFrustumEdgePinning(enabled: true, edgeVisibleInsetUnits: 0.46f, outerGuardOffsetUnits: 26f);
+
+                layer.UpdateParallax(new Vector3(10f, 0f, -10f));
+                layer.UpdateParallax(new Vector3(25f, 0f, -10f));
+
+                float halfW = cam.orthographicSize * cam.aspect;
+                float expectedLeft = Mathf.Round((halfW + 1.5f - 0.46f) * 24f) / 24f;
+                float expectedRight = Mathf.Round((halfW + 0.5f - 0.46f) * 24f) / 24f;
+                float expectedOuter = Mathf.Round(Mathf.Max(38f, halfW + 26f) * 24f) / 24f;
+
+                Assert.AreEqual(-expectedOuter, col0.localPosition.x, 1e-4f);
+                Assert.AreEqual(-expectedLeft, col1.localPosition.x, 1e-4f);
+                Assert.AreEqual(expectedRight, col2.localPosition.x, 1e-4f);
+                Assert.AreEqual(expectedOuter, col3.localPosition.x, 1e-4f);
+                Assert.AreEqual(1.5f, col1.localPosition.y, 1e-4f);
+
+                const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+                Assert.AreSame(cam, typeof(ParallaxLayer2D).GetField("_cachedCamera", flags).GetValue(layer));
+                Assert.IsTrue((bool)typeof(ParallaxLayer2D).GetField("_columnWidthsCached", flags).GetValue(layer));
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        private static Transform CreateColumn(Transform parent, string name, float localX, float localY)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(localX, localY, 0f);
+            return go.transform;
+        }
+
+        private static T CreateAndAwakeParticleSystem<T>() where T : MonoBehaviour
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
+            System.Type type = typeof(T);
+            var existing = (T)type.GetField("s_instance", flags)?.GetValue(null);
+            if (existing != null)
+                Object.DestroyImmediate(existing.gameObject);
+
+            var go = new GameObject(type.Name + "_Test");
+            var instance = go.AddComponent<T>();
+            type.GetMethod("Awake", flags)?.Invoke(instance, null);
+            type.GetField("s_instance", flags)?.SetValue(null, instance);
+            return instance;
+        }
+
+        private static void CleanupParticleSystem(MonoBehaviour system, params string[] meshFieldNames)
+        {
+            if (system == null)
+                return;
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Static;
+            System.Type type = system.GetType();
+            for (int i = 0; i < meshFieldNames.Length; i++)
+            {
+                FieldInfo meshField = type.GetField(meshFieldNames[i], flags);
+                if (meshField != null && meshField.GetValue(system) is Mesh mesh && mesh != null)
+                {
+                    Object.DestroyImmediate(mesh);
+                    meshField.SetValue(system, null);
+                }
+            }
+
+            type.GetMethod("ResetStatics", flags)?.Invoke(null, null);
+            Object.DestroyImmediate(system.gameObject);
+        }
+
+        private static void ClearParticleListsAndTick(MonoBehaviour system, params string[] listFieldNames)
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            System.Type type = system.GetType();
+            for (int i = 0; i < listFieldNames.Length; i++)
+            {
+                FieldInfo field = type.GetField(listFieldNames[i], flags);
+                Assert.IsNotNull(field, $"{type.Name}.{listFieldNames[i]} field missing.");
+                var list = (System.Collections.IList)field.GetValue(system);
+                list.Clear();
+            }
+
+            type.GetMethod("Update", flags)?.Invoke(system, null);
+            MethodInfo lateUpdate = type.GetMethod("LateUpdate", flags);
+            Assert.IsNotNull(lateUpdate, $"{type.Name}.LateUpdate method missing.");
+            lateUpdate.Invoke(system, null);
+        }
+
+        [Test]
+        public void ScrollFocusBlurShader_CompilesInUrpWithClampedUvsAndVertexColorAlpha()
+        {
+            const string shaderName = "DeadCells/UI/Scroll Focus Blur";
+            const string shaderPath = "Assets/_Project/Features/HUD/Shaders/ScrollFocusBlur.shader";
+
+            Shader shader = Shader.Find(shaderName);
+            Assert.IsNotNull(shader, $"Missing shader '{shaderName}'.");
+            Assert.IsFalse(ShaderUtil.ShaderHasError(shader), $"Shader '{shaderName}' has compile errors.");
+
+            string source = File.ReadAllText(shaderPath);
+            StringAssert.Contains("\"RenderPipeline\" = \"UniversalPipeline\"", source);
+            StringAssert.Contains("HLSLPROGRAM", source);
+            StringAssert.Contains("TEXTURE2D(_MainTex)", source);
+            StringAssert.Contains("SAMPLE_TEXTURE2D(_MainTex", source);
+            StringAssert.Contains("clamp(", source);
+            StringAssert.Contains("COLOR", source);
+            StringAssert.Contains("input.color.a", source);
+            StringAssert.DoesNotContain("CGPROGRAM", source);
+            StringAssert.DoesNotContain("UnityCG.cginc", source);
+        }
+
+        [Test]
+        public void GroundMist2DShader_DisablesSpriteAtlasPackingAndCompilesCleanly()
+        {
+            const string shaderName = "DeadCells/GroundMist2D";
+            const string shaderPath = "Assets/_Project/Art/Shaders/GroundMist2D.shader";
+
+            Shader shader = Shader.Find(shaderName);
+            Assert.IsNotNull(shader, $"Missing shader '{shaderName}'.");
+            Assert.IsFalse(ShaderUtil.ShaderHasError(shader), $"Shader '{shaderName}' has compile errors.");
+
+            string source = File.ReadAllText(shaderPath);
+            StringAssert.Contains("\"CanUseSpriteAtlas\" = \"False\"", source);
+            StringAssert.DoesNotContain("\"CanUseSpriteAtlas\" = \"True\"", source);
+        }
+
+        [Test]
+        public void ParallaxGradientMap2DShader_CompilesWithNormalsRenderingPassFracScrollAndUnlitShortCircuit()
+        {
+            const string shaderName = "DeadCells/ParallaxGradientMap2D";
+            const string shaderPath = "Assets/_Project/Art/Shaders/ParallaxGradientMap2D.shader";
+
+            Shader shader = Shader.Find(shaderName);
+            Assert.IsNotNull(shader, $"Missing shader '{shaderName}'.");
+            Assert.IsFalse(ShaderUtil.ShaderHasError(shader), $"Shader '{shaderName}' has compile errors.");
+
+            string source = File.ReadAllText(shaderPath);
+            StringAssert.Contains("\"LightMode\" = \"Universal2D\"", source);
+            StringAssert.Contains("\"LightMode\" = \"NormalsRendering\"", source);
+            StringAssert.Contains("frac(", source);
+            StringAssert.Contains("_LitBlend <= 0.001h", source);
+        }
+
+        [Test]
+        public void UniversalRpAsset_EnablesHdrColorGradingMode()
+        {
+            const string assetPath = "Assets/Settings/UniversalRP.asset";
+            var urpAsset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(assetPath);
+            Assert.IsNotNull(urpAsset, $"Missing UniversalRenderPipelineAsset at '{assetPath}'.");
+            Assert.AreEqual(ColorGradingMode.HighDynamicRange, urpAsset.colorGradingMode,
+                "UniversalRP.asset must use HighDynamicRange color grading so highlights reach ACES tonemapping unclipped.");
+        }
+
+        [Test]
+        public void ReleaseSettingsSetup_ExposesHeadlessStaticEntryPoints()
+        {
+            MethodInfo lightingMethod = typeof(ReleaseSettingsSetup).GetMethod(
+                nameof(ReleaseSettingsSetup.ApplySandboxPlayerLighting),
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(lightingMethod, "ApplySandboxPlayerLighting must exist as public static.");
+            Assert.AreEqual(0, lightingMethod.GetParameters().Length);
+
+            MethodInfo qualityMethod = typeof(ReleaseSettingsSetup).GetMethod(
+                nameof(ReleaseSettingsSetup.ApplyReleaseQualityAndWebGlSettings),
+                BindingFlags.Public | BindingFlags.Static);
+            Assert.IsNotNull(qualityMethod, "ApplyReleaseQualityAndWebGlSettings must exist as public static.");
+            Assert.AreEqual(0, qualityMethod.GetParameters().Length);
         }
     }
 }

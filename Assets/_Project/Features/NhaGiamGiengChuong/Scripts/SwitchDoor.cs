@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.Core.Audio;
 using DeadCells.Player;
 using DeadCells.VFX;
@@ -180,11 +181,17 @@ namespace DeadCells.NhaGiamGiengChuong
 
             if (_doorBarrierRoot != null)
             {
+                bool hasBarrierBounds = TryCaptureBarrierBounds(_doorBarrierRoot, out Bounds barrierBounds);
                 // Always unlock physics passage immediately on frame 0
                 foreach (var barrierCol in _doorBarrierRoot.GetComponentsInChildren<Collider2D>(true))
                 {
                     if (barrierCol != null)
                         barrierCol.enabled = false;
+                }
+                if (hasBarrierBounds)
+                {
+                    Physics2D.SyncTransforms();
+                    DeadCells.HUD.MinimapHud.NotifyWorldGeometryChanged(barrierBounds);
                 }
             }
 
@@ -391,8 +398,8 @@ namespace DeadCells.NhaGiamGiengChuong
             if (candidate == null || _switchTrigger == null)
                 return false;
 
-            Bounds triggerBounds = GetWorldBounds(_switchTrigger);
-            Bounds actorBounds = GetWorldBounds(candidate);
+            Bounds triggerBounds = ColliderBoundsUtility.GetWorldBounds(_switchTrigger);
+            Bounds actorBounds = ColliderBoundsUtility.GetWorldBounds(candidate);
 
             return actorBounds.max.x >= triggerBounds.min.x && actorBounds.min.x <= triggerBounds.max.x
                 && actorBounds.max.y >= triggerBounds.min.y && actorBounds.min.y <= triggerBounds.max.y;
@@ -408,20 +415,33 @@ namespace DeadCells.NhaGiamGiengChuong
                 _switchRenderer.sprite = target;
         }
 
-        private static Bounds GetWorldBounds(Collider2D collider)
+        internal static bool TryCaptureBarrierBounds(GameObject root, out Bounds combined)
         {
-            if (collider is BoxCollider2D box)
+            combined = default;
+            if (root == null)
+                return false;
+
+            bool hasAny = false;
+            Collider2D[] colliders = root.GetComponentsInChildren<Collider2D>(true);
+            for (int i = 0; i < colliders.Length; i++)
             {
-                Vector3 center = box.transform.TransformPoint(box.offset);
-                Vector3 scale = box.transform.lossyScale;
-                Vector3 size = new Vector3(
-                    Mathf.Abs(box.size.x * scale.x),
-                    Mathf.Abs(box.size.y * scale.y),
-                    1f);
-                return new Bounds(center, size);
+                Collider2D col = colliders[i];
+                if (col == null)
+                    continue;
+
+                Bounds bounds = ColliderBoundsUtility.GetWorldBounds(col);
+                if (!hasAny)
+                {
+                    combined = bounds;
+                    hasAny = true;
+                }
+                else
+                {
+                    combined.Encapsulate(bounds);
+                }
             }
 
-            return collider.bounds;
+            return hasAny;
         }
 
         private void OnInteractStarted(InputAction.CallbackContext context)

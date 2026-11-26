@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DeadCells.Core.Audio
 {
@@ -13,6 +14,7 @@ namespace DeadCells.Core.Audio
         private const float AmbientVolume = 0.18f;
 
         private static CombatAudioHub _instance;
+        private static bool s_sceneHookRegistered;
 
         private AudioSource[] _sfxPool;
         private AudioSource _ambientSource;
@@ -25,6 +27,37 @@ namespace DeadCells.Core.Audio
         private bool _isFadingAmbient;
 
         public static float AmbientMultiplier => _instance != null ? _instance._ambientMultiplier : 1f;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            _instance = null;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void RegisterSceneHook()
+        {
+            if (s_sceneHookRegistered)
+                return;
+            s_sceneHookRegistered = true;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            EnsureInPlayableScene();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void EnsureInPlayableScene()
+        {
+            if (!Application.isPlaying || _instance != null)
+                return;
+            if (FindAnyObjectByType<CombatAudioHub>() != null)
+                return;
+            if (FindAnyObjectByType<AudioListener>() != null)
+                new GameObject("CombatAudioHub").AddComponent<CombatAudioHub>();
+        }
 
         private void Awake()
         {

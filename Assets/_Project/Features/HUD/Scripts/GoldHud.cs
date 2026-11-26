@@ -13,6 +13,8 @@ namespace DeadCells.HUD
 
         private void OnEnable()
         {
+            if (_wallet == null)
+                return;
             _wallet.Changed += Render;
             Render(_wallet.Balance);
         }
@@ -23,6 +25,10 @@ namespace DeadCells.HUD
                 _wallet.Changed -= Render;
         }
 
-        private void Render(int balance) => _amount.text = balance.ToString();
+        private void Render(int balance)
+        {
+            if (_amount != null)
+                _amount.text = balance.ToString();
+        }
     }
 }

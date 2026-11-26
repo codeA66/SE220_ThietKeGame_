@@ -1,18 +1,8 @@
+using DeadCells.Core.StateMachine;
+
 namespace DeadCells.Player.StateMachine
 {
-    public interface IPlayerState
+    public interface IPlayerState : IState
     {
-        void Enter();
-        void Exit();
-
-        /// <summary>
-        /// Called from Update: read input and decide transitions.
-        /// </summary>
-        void Tick();
-
-        /// <summary>
-        /// Called from FixedUpdate: apply physics.
-        /// </summary>
-        void FixedTick();
     }
 }

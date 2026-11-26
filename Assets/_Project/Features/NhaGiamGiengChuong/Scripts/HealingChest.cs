@@ -1,5 +1,6 @@
 using System;
 using DeadCells.Combat;
+using DeadCells.Core;
 using DeadCells.Core.Audio;
 using DeadCells.Player;
 using DeadCells.VFX;
@@ -122,14 +123,16 @@ namespace DeadCells.NhaGiamGiengChuong
             var health = ResolvePlayerHealth();
             var col = ResolvePlayerCollider();
             bool inTrigger = IsColliderInTrigger(col);
+            bool inputBlocked = IsInputBlocked();
             _promptVisible = !_consumed
                 && _run != null && _run.IsPlaying
+                && !inputBlocked
                 && health != null && health.IsAlive
                 && health.Current < health.Max
                 && inTrigger;
 
             if (_fullHealthFeedback != null &&
-                (!inTrigger || _consumed || _run == null || !_run.IsPlaying || health == null || !health.IsAlive || health.Current < health.Max))
+                (!inTrigger || _consumed || _run == null || !_run.IsPlaying || inputBlocked || health == null || !health.IsAlive || health.Current < health.Max))
             {
                 _fullHealthFeedback.SetActive(false);
             }
@@ -172,7 +175,7 @@ namespace DeadCells.NhaGiamGiengChuong
             if (_consumed || _isGranting)
                 return false;
 
-            if (_run == null || !_run.IsPlaying)
+            if (_run == null || !_run.IsPlaying || IsInputBlocked())
                 return false;
 
             var expectedCollider = ResolvePlayerCollider();
@@ -227,27 +230,11 @@ namespace DeadCells.NhaGiamGiengChuong
             if (candidate == null || _triggerZone == null)
                 return false;
 
-            Bounds triggerBounds = GetWorldBounds(_triggerZone);
-            Bounds actorBounds = GetWorldBounds(candidate);
+            Bounds triggerBounds = ColliderBoundsUtility.GetWorldBounds(_triggerZone);
+            Bounds actorBounds = ColliderBoundsUtility.GetWorldBounds(candidate);
 
             return actorBounds.max.x >= triggerBounds.min.x && actorBounds.min.x <= triggerBounds.max.x
                 && actorBounds.max.y >= triggerBounds.min.y && actorBounds.min.y <= triggerBounds.max.y;
-        }
-
-        private static Bounds GetWorldBounds(Collider2D collider)
-        {
-            if (collider is BoxCollider2D box)
-            {
-                Vector3 center = box.transform.TransformPoint(box.offset);
-                Vector3 scale = box.transform.lossyScale;
-                Vector3 size = new Vector3(
-                    Mathf.Abs(box.size.x * scale.x),
-                    Mathf.Abs(box.size.y * scale.y),
-                    1f);
-                return new Bounds(center, size);
-            }
-
-            return collider.bounds;
         }
 
         private void OnInteractStarted(InputAction.CallbackContext context)
@@ -280,6 +267,12 @@ namespace DeadCells.NhaGiamGiengChuong
 
         private PlayerController ResolvePlayer() =>
             _player != null ? _player : (_run != null ? _run.Player : null);
+
+        private bool IsInputBlocked()
+        {
+            var p = ResolvePlayer();
+            return p != null && ((p.RunStats != null && p.RunStats.BlocksGameplayInput) || p.IsInScriptedSequence);
+        }
 
         private BoxCollider2D ResolvePlayerCollider()
         {

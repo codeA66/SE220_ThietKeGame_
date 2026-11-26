@@ -17,7 +17,43 @@ namespace DeadCells.VFX
         private static readonly Dictionary<VfxDefinition, VfxDefinition> Cache = new Dictionary<VfxDefinition, VfxDefinition>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => Cache.Clear();
+        private static void ResetStatics() => ClearCacheAndDestroy();
+
+        public static void ClearCacheAndDestroy()
+        {
+            foreach (VfxDefinition def in Cache.Values)
+            {
+                if (def == null)
+                    continue;
+
+                if (def.Frames != null)
+                {
+                    for (int i = 0; i < def.Frames.Length; i++)
+                    {
+                        Sprite frame = def.Frames[i];
+                        if (frame == null)
+                            continue;
+                        Texture2D tex = frame.texture;
+                        DestroyObject(tex);
+                        DestroyObject(frame);
+                    }
+                }
+
+                DestroyObject(def);
+            }
+
+            Cache.Clear();
+        }
+
+        private static void DestroyObject(Object obj)
+        {
+            if (obj == null)
+                return;
+            if (Application.isPlaying)
+                Object.Destroy(obj);
+            else
+                Object.DestroyImmediate(obj);
+        }
 
         /// <summary>The blue version of a red definition. Returns the source itself if it has no frames.</summary>
         public static VfxDefinition Blue(VfxDefinition source)
@@ -38,6 +74,8 @@ namespace DeadCells.VFX
 
         private static Sprite RecolorFrame(Sprite frame)
         {
+            if (frame == null)
+                return null;
             Rect rect = frame.rect;
             Texture source = frame.texture;
             var target = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
@@ -69,9 +107,11 @@ namespace DeadCells.VFX
                     (byte)(Mathf.GammaToLinearSpace(ramp.b) * 255f), c.a);
             }
             pixels.SetPixels32(data);
-            pixels.Apply();
-            return Sprite.Create(pixels, new Rect(0f, 0f, rect.width, rect.height),
+            pixels.Apply(false, true);
+            Sprite recolored = Sprite.Create(pixels, new Rect(0f, 0f, rect.width, rect.height),
                 new Vector2(frame.pivot.x / rect.width, frame.pivot.y / rect.height), frame.pixelsPerUnit);
+            recolored.hideFlags = HideFlags.HideAndDontSave;
+            return recolored;
         }
     }
 }

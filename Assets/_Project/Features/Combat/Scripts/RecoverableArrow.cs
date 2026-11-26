@@ -141,7 +141,7 @@ namespace DeadCells.Combat
                 transform.position = (Vector2)_victim.transform.position + offset;
             }
             else if (_phase == Phase.WorldImpact && _impactTime < QuiverTime)
-                Quiver();
+                Quiver(deltaTime);
         }
 
         private void FixedUpdate()
@@ -232,9 +232,9 @@ namespace DeadCells.Combat
         private void OnDestroy() => DetachVictim();
 
         // Wobbles around the stuck angle, dying out over QuiverTime.
-        private void Quiver()
+        private void Quiver(float deltaTime)
         {
-            _impactTime += Time.deltaTime;
+            _impactTime += deltaTime;
             float strength = 1f - Mathf.Clamp01(_impactTime / QuiverTime);
             float angle = Mathf.Sin(_impactTime * QuiverSpeed) * QuiverAngle * strength;
             transform.rotation = _impactRotation * Quaternion.Euler(0f, 0f, angle);

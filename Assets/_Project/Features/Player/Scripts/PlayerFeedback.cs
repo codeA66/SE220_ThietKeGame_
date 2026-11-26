@@ -122,6 +122,8 @@ namespace DeadCells.Player
 
         private void OnKill(int kills)
         {
+            if (kills <= 0)
+                return;
             if (_hitStop != null)
                 _hitStop.Trigger(_killHitStop);
             if (_camera != null)

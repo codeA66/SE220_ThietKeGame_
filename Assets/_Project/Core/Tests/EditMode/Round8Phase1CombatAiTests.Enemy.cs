@@ -109,17 +109,15 @@ namespace DeadCells.Core.Tests
                 var ctx = CreateEnemyContextHarness(root.transform, Vector2.zero, groundMask, targetMask,
                     out var enemyGo, out var rb, out _, out data, new[]
                     {
-                        new EnemyData.Skill
-                        {
-                            Kind = EnemyAttackKind.Lunge,
-                            ChargeAnim = "LungeLoad",
-                            ExecuteAnim = "Lunge",
-                            Charge = 0f,
-                            TravelCells = 4f,
-                            TravelDuration = 0.5f,
-                            LungeUpSpeed = 6f,
-                            Recover = 0.2f
-                        }
+                        new EnemyData.Skill(
+                            kind: EnemyAttackKind.Lunge,
+                            chargeAnim: "LungeLoad",
+                            executeAnim: "Lunge",
+                            charge: 0f,
+                            recover: 0.2f,
+                            travelCells: 4f,
+                            travelDuration: 0.5f,
+                            lungeUpSpeed: 6f)
                     });
                 ctx.Player = playerGo.transform;
                 ctx.Face(1);

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DeadCells.Combat;
 using DeadCells.Core;
 using UnityEngine;
 
@@ -48,7 +49,9 @@ namespace DeadCells.Enemies
         private int _value;
         private GemStyle _gem;
         private Transform _player;
+        private Health _playerHealth;
         private LayerMask _groundMask;
+        private LayerMask _solidMask;
         private Vector2 _velocity;
         private float _age;
         private float _phase;
@@ -56,6 +59,11 @@ namespace DeadCells.Enemies
         private float _sparkleStartAge;
         private bool _isResting;
         private bool _isMagnetised;
+
+        public bool IsResting => _isResting;
+        public bool IsMagnetised => _isMagnetised;
+
+        public void StepSimulation(float dt) => Simulate(dt);
 
         public static void SpawnGold(int value, Vector3 position, Vector2 velocity, Transform player, LayerMask groundMask) =>
             Take().Play(LootKind.Gold, value, null, position, velocity, player, groundMask);
@@ -65,6 +73,88 @@ namespace DeadCells.Enemies
             EnsureSprites();
             GemStyle style = s_gems[(int)tier];
             Take().Play(LootKind.Gem, style.Value, style, position, velocity, player, groundMask);
+        }
+
+        /// <summary>Destroys every pooled pickup and clears the pool for test teardown isolation.</summary>
+        public static void ClearPoolForTests()
+        {
+            while (s_pool.Count > 0)
+            {
+                LootPickup pickup = s_pool.Pop();
+                if (pickup == null)
+                    continue;
+
+                DestroyAsset(pickup.gameObject);
+            }
+            s_pool.Clear();
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        public static void ResetStaticsForPlayMode()
+        {
+            ReleaseSprites();
+            ClearPoolForTests();
+        }
+
+        private static void ReleaseSprites()
+        {
+            DestroySpriteAndTexture(s_coinSmall);
+            DestroySpriteAndTexture(s_coinLarge);
+            DestroySpriteAndTexture(s_halo);
+            DestroySpriteAndTexture(s_sparkle);
+            if (s_gems != null)
+            {
+                for (int i = 0; i < s_gems.Length; i++)
+                {
+                    if (s_gems[i] != null)
+                        DestroySpriteAndTexture(s_gems[i].Sprite);
+                }
+            }
+
+            s_coinSmall = null;
+            s_coinLarge = null;
+            s_halo = null;
+            s_sparkle = null;
+            s_gems = null;
+        }
+
+        private static bool HasValidSprites()
+        {
+            if (s_gems == null || s_coinSmall == null || s_coinSmall.texture == null ||
+                s_coinLarge == null || s_coinLarge.texture == null ||
+                s_halo == null || s_halo.texture == null ||
+                s_sparkle == null || s_sparkle.texture == null)
+                return false;
+
+            for (int i = 0; i < s_gems.Length; i++)
+            {
+                if (s_gems[i] == null || s_gems[i].Sprite == null || s_gems[i].Sprite.texture == null)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static void DestroySpriteAndTexture(Sprite sprite)
+        {
+            if (sprite == null)
+                return;
+
+            Texture2D tex = sprite.texture;
+            DestroyAsset(sprite);
+            if (tex != null)
+                DestroyAsset(tex);
+        }
+
+        private static void DestroyAsset(Object asset)
+        {
+            if (asset == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(asset);
+            else
+                DestroyImmediate(asset);
         }
 
         private static LootPickup Take()
@@ -111,7 +201,11 @@ namespace DeadCells.Enemies
             _value = value;
             _gem = gem;
             _player = player;
+            _playerHealth = player != null ? player.GetComponent<Health>() : null;
             _groundMask = groundMask;
+            int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
+            int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
+            _solidMask = groundMask.value & ~oneWayBit;
             _velocity = velocity;
             _age = 0f;
             _phase = Random.value * Mathf.PI * 2f;
@@ -121,7 +215,9 @@ namespace DeadCells.Enemies
 
             bool isGem = kind == LootKind.Gem;
             _renderer.sprite = isGem ? gem.Sprite : value >= 3 ? s_coinLarge : s_coinSmall;
+            _halo.sprite = s_halo;
             _halo.enabled = isGem;
+            _sparkle.sprite = s_sparkle;
             _sparkle.enabled = false;
             if (isGem)
                 _sparkle.color = Color.Lerp(Color.white, gem.Glow, 0.25f);
@@ -131,14 +227,25 @@ namespace DeadCells.Enemies
             gameObject.SetActive(true);
         }
 
-        private void Update()
+        private void Update() => Tick(Time.deltaTime);
+
+        public void Tick(float dt)
         {
-            float dt = Time.deltaTime;
             _age += dt;
             if (_kind == LootKind.Gem)
                 AnimateGlow();
 
-            if (_age >= PickupDelay && _player != null)
+            bool playerAlive = _player != null && _player.gameObject.activeInHierarchy &&
+                               (_playerHealth == null || _playerHealth.IsAlive);
+            if (!playerAlive)
+            {
+                if (_isMagnetised)
+                {
+                    _isMagnetised = false;
+                    _velocity = Vector2.zero;
+                }
+            }
+            else if (_age >= PickupDelay)
             {
                 Vector3 target = _player.position + PlayerCenterOffset;
                 Vector3 toPlayer = target - _cachedTransform.position;
@@ -207,18 +314,31 @@ namespace DeadCells.Enemies
             if (!Mathf.Approximately(_velocity.x, 0f))
             {
                 float stepX = _velocity.x * dt;
-                RaycastHit2D wall = Physics2D.Raycast(position, new Vector2(Mathf.Sign(stepX), 0f), Mathf.Abs(stepX) + Radius, _groundMask);
-                if (wall.collider != null)
+                RaycastHit2D wall = Physics2D.Raycast(position, new Vector2(Mathf.Sign(stepX), 0f), Mathf.Abs(stepX) + Radius, _solidMask);
+                if (wall.collider != null && wall.distance > 0.0001f)
                     _velocity.x = -_velocity.x * Bounce;
                 else
                     position.x += stepX;
             }
 
             float stepY = _velocity.y * dt;
-            if (stepY < 0f)
+            if (stepY > 0f)
+            {
+                RaycastHit2D ceiling = Physics2D.Raycast(position, Vector2.up, stepY + Radius, _solidMask);
+                if (ceiling.collider != null && ceiling.distance > 0.0001f)
+                {
+                    position.y = ceiling.point.y - Radius;
+                    _velocity.y = -Mathf.Abs(_velocity.y) * Bounce;
+                }
+                else
+                {
+                    position.y += stepY;
+                }
+            }
+            else if (stepY < 0f)
             {
                 RaycastHit2D ground = Physics2D.Raycast(position, Vector2.down, -stepY + Radius, _groundMask);
-                if (ground.collider != null)
+                if (ground.collider != null && ground.distance > 0.0001f)
                 {
                     position.y = ground.point.y + Radius;
                     _velocity.y = -_velocity.y * Bounce;
@@ -233,10 +353,6 @@ namespace DeadCells.Enemies
                 {
                     position.y += stepY;
                 }
-            }
-            else
-            {
-                position.y += stepY;
             }
 
             _cachedTransform.position = position;
@@ -266,8 +382,10 @@ namespace DeadCells.Enemies
 
         private static void EnsureSprites()
         {
-            if (s_gems != null)
+            if (HasValidSprites())
                 return;
+
+            ReleaseSprites();
 
             var gold = Palette(new Color(0.30f, 0.17f, 0.04f), new Color(0.75f, 0.48f, 0.08f),
                 new Color(0.96f, 0.74f, 0.16f), new Color(1f, 0.95f, 0.62f));

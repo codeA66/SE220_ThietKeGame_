@@ -71,15 +71,9 @@ namespace DeadCells.Player.StateMachine.States
         protected bool TryCrouch() => Ctx.IsCrouchHeld && Ctx.IsGrounded && Machine.ChangeState(Machine.Crouch);
 
         /// <summary>
-        /// Idle or Run depending on input, or Fall when airborne.
+        /// Idle, Run or Crouch depending on grounding/ceiling/input, or Fall when airborne.
         /// </summary>
-        protected void ReturnToDefault()
-        {
-            if (!Ctx.IsGrounded)
-                Machine.ChangeState(Machine.Fall);
-            else
-                Machine.ChangeState(Ctx.HasMoveInput ? Machine.Run : Machine.Idle);
-        }
+        protected void ReturnToDefault() => Machine.ChangeState(Machine.ResolveDefaultState());
 
         protected bool TryRoll() => Ctx.Input.RollPressed && Ctx.CanRoll && Machine.ChangeState(Machine.Roll);
 
@@ -110,7 +104,8 @@ namespace DeadCells.Player.StateMachine.States
         /// <summary>
         /// Jump again while airborne if an air jump is available. Returns true if a transition started.
         /// </summary>
-        protected bool TryAirJump() => Ctx.CanAirJump && Machine.ChangeState(Machine.AirJump);
+        protected bool TryAirJump() =>
+            (!Ctx.IsColliderCrouched || Ctx.CanStandUp()) && Ctx.CanAirJump && Machine.ChangeState(Machine.AirJump);
 
         protected void ApplyAirControl()
         {

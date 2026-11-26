@@ -148,14 +148,12 @@ namespace DeadCells.Core.Tests
 
                 // 2. Light melee hit: hitStop ~0.045s, rightward punch ~0.12f
                 ResetHitStopProbe(hitStop);
-                var lightStrike = new WeaponData.Strike
-                {
-                    Damage = 10,
-                    RangeWidthCells = 3f,
-                    RangeHeightCells = 2f,
-                    Knockback = 3.5f,
-                    CanCrit = false
-                };
+                var lightStrike = new WeaponData.Strike(
+                    damage: 10,
+                    rangeWidthCells: 3f,
+                    rangeHeightCells: 2f,
+                    knockback: 3.5f,
+                    canCrit: false);
                 context.Combat.BeginSwing();
                 Assert.AreEqual(1, context.Combat.PerformStrike(lightStrike, 1), "Light strike must hit enemy.");
                 float lightDuration = FeelGetHitStopRemaining(hitStop);
@@ -177,14 +175,12 @@ namespace DeadCells.Core.Tests
 
                 // 4. Critical non-fatal hit: hitStop ~0.075s, stronger punch ~0.22f
                 ResetHitStopProbe(hitStop);
-                var critStrike = new WeaponData.Strike
-                {
-                    Damage = 10,
-                    RangeWidthCells = 3f,
-                    RangeHeightCells = 2f,
-                    Knockback = 8f,
-                    CanCrit = true
-                };
+                var critStrike = new WeaponData.Strike(
+                    damage: 10,
+                    rangeWidthCells: 3f,
+                    rangeHeightCells: 2f,
+                    knockback: 8f,
+                    canCrit: true);
                 context.Combat.BeginSwing();
                 Assert.AreEqual(1, context.Combat.PerformStrike(critStrike, 1), "Crit strike must hit alive enemy.");
                 Assert.IsTrue(enemyHealth.IsAlive, "Precondition: enemy must remain alive after non-fatal crit.");
@@ -195,14 +191,12 @@ namespace DeadCells.Core.Tests
 
                 // 5. Fatal kill hit: hitStop ~0.095s, strongest punch ~0.26f
                 ResetHitStopProbe(hitStop);
-                var killStrike = new WeaponData.Strike
-                {
-                    Damage = 200,
-                    RangeWidthCells = 3f,
-                    RangeHeightCells = 2f,
-                    Knockback = 8f,
-                    CanCrit = true
-                };
+                var killStrike = new WeaponData.Strike(
+                    damage: 200,
+                    rangeWidthCells: 3f,
+                    rangeHeightCells: 2f,
+                    knockback: 8f,
+                    canCrit: true);
                 context.Combat.BeginSwing();
                 Assert.AreEqual(1, context.Combat.PerformStrike(killStrike, 1), "Fatal strike must hit enemy.");
                 Assert.IsFalse(enemyHealth.IsAlive, "Precondition: fatal strike must kill enemy.");

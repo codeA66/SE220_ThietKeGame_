@@ -2,6 +2,7 @@ using System;
 using DeadCells.Combat;
 using DeadCells.VFX;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DeadCells.Enemies
 {
@@ -31,65 +32,150 @@ namespace DeadCells.Enemies
         public class Skill
         {
             [Tooltip("DC: skill id (reference only).")]
-            public string DcId;
-            public EnemyAttackKind Kind;
+            [FormerlySerializedAs("DcId"), SerializeField] private string _dcId;
+            [FormerlySerializedAs("Kind"), SerializeField] private EnemyAttackKind _kind;
             [Tooltip("Animator state played during the wind-up.")]
-            public string ChargeAnim = "AtkLoad";
+            [FormerlySerializedAs("ChargeAnim"), SerializeField] private string _chargeAnim = "AtkLoad";
             [Tooltip("Animator state played during the execution.")]
-            public string ExecuteAnim = "Atk";
+            [FormerlySerializedAs("ExecuteAnim"), SerializeField] private string _executeAnim = "Atk";
             [Tooltip("Usable when the player is at least this far (cells).")]
-            public float MinRangeCells;
+            [FormerlySerializedAs("MinRangeCells"), SerializeField] private float _minRangeCells;
             [Tooltip("Usable when the player is at most this far (cells). DC: skill.radius when set.")]
-            public float MaxRangeCells = 1.35f;
+            [FormerlySerializedAs("MaxRangeCells"), SerializeField] private float _maxRangeCells = 1.35f;
             [Tooltip("DC: skill.power")]
-            public int Damage = 10;
+            [FormerlySerializedAs("Damage"), SerializeField] private int _damage = 10;
             [Tooltip("Wind-up shown as a telegraph (s). DC: skill.charge")]
-            public float Charge = 0.8f;
+            [FormerlySerializedAs("Charge"), SerializeField] private float _charge = 0.8f;
             [Tooltip("Seconds before this skill can be used again. DC: skill.coolDown")]
-            public float Cooldown = 1f;
+            [FormerlySerializedAs("Cooldown"), SerializeField] private float _cooldown = 1f;
             [Tooltip("Seconds the AI stays locked after the skill. DC: skill.lockAiAfter")]
-            public float Recover = 0.2f;
+            [FormerlySerializedAs("Recover"), SerializeField] private float _recover = 0.2f;
             [Tooltip("Frame of the execution clip (30 fps) on which the hit lands. DC: skill.hitFrame")]
-            public int HitFrame;
+            [FormerlySerializedAs("HitFrame"), SerializeField] private int _hitFrame;
             [Tooltip("Hit box width in front of the enemy centre (cells).")]
-            public float HitReachCells = 1.35f;
+            [FormerlySerializedAs("HitReachCells"), SerializeField] private float _hitReachCells = 1.35f;
             [Tooltip("Hit box height (cells).")]
-            public float HitHeightCells = 2f;
+            [FormerlySerializedAs("HitHeightCells"), SerializeField] private float _hitHeightCells = 2f;
             [Tooltip("Knockback given to the player (units/s).")]
-            public float Knockback = 4f;
+            [FormerlySerializedAs("Knockback"), SerializeField] private float _knockback = 4f;
             [Tooltip("Stun given to the player (s). DC: props.stunTime")]
-            public float StunDealt;
+            [FormerlySerializedAs("StunDealt"), SerializeField] private float _stunDealt;
 
             [Header("Lunge / Dash")]
             [Tooltip("Travel distance (cells). DC: props.distance")]
-            public float TravelCells = 4f;
+            [FormerlySerializedAs("TravelCells"), SerializeField] private float _travelCells = 4f;
             [Tooltip("Travel duration (s). DC: props.duration")]
-            public float TravelDuration = 0.4f;
+            [FormerlySerializedAs("TravelDuration"), SerializeField] private float _travelDuration = 0.4f;
             [Tooltip("Upward speed of a lunge (units/s).")]
-            public float LungeUpSpeed = 5f;
+            [FormerlySerializedAs("LungeUpSpeed"), SerializeField] private float _lungeUpSpeed = 5f;
 
             [Header("Projectiles")]
-            public Projectile ProjectilePrefab;
-            public float ProjectileSpeed = 7f;
+            [FormerlySerializedAs("ProjectilePrefab"), SerializeField] private Projectile _projectilePrefab;
+            [FormerlySerializedAs("ProjectileSpeed"), SerializeField] private float _projectileSpeed = 7f;
             [Tooltip("Height above the feet the projectile leaves from (units).")]
-            public float MuzzleHeight = 1f;
+            [FormerlySerializedAs("MuzzleHeight"), SerializeField] private float _muzzleHeight = 1f;
             [Tooltip("DC: props.count")]
-            [Min(1)] public int ProjectileCount = 1;
+            [FormerlySerializedAs("ProjectileCount"), SerializeField, Min(1)] private int _projectileCount = 1;
             [Tooltip("Bomb fuse after landing (s). DC: props.triggerDelay")]
-            public float FuseTime = 1.5f;
+            [FormerlySerializedAs("FuseTime"), SerializeField] private float _fuseTime = 1.5f;
             [Tooltip("Blast radius (cells). DC: skill.radius")]
-            public float BlastRadiusCells = 2.9f;
+            [FormerlySerializedAs("BlastRadiusCells"), SerializeField] private float _blastRadiusCells = 2.9f;
             [Tooltip("Spread of bomb landing points around the player (cells).")]
-            public float LandingSpreadCells = 1.5f;
-            public VfxDefinition BlastVfx;
+            [FormerlySerializedAs("LandingSpreadCells"), SerializeField] private float _landingSpreadCells = 1.5f;
+            [FormerlySerializedAs("BlastVfx"), SerializeField] private VfxDefinition _blastVfx;
 
-            public float MinRange => MinRangeCells * WeaponData.CellSize;
-            public float MaxRange => MaxRangeCells * WeaponData.CellSize;
-            public float HitReach => HitReachCells * WeaponData.CellSize;
-            public float HitHeight => HitHeightCells * WeaponData.CellSize;
-            public float TravelDistance => TravelCells * WeaponData.CellSize;
-            public float BlastRadius => BlastRadiusCells * WeaponData.CellSize;
-            public float LandingSpread => LandingSpreadCells * WeaponData.CellSize;
+            public Skill() { }
+
+            public Skill(
+                EnemyAttackKind kind,
+                string dcId = null,
+                string chargeAnim = "AtkLoad",
+                string executeAnim = "Atk",
+                float minRangeCells = 0f,
+                float maxRangeCells = 1.35f,
+                int damage = 10,
+                float charge = 0.8f,
+                float cooldown = 1f,
+                float recover = 0.2f,
+                int hitFrame = 0,
+                float hitReachCells = 1.35f,
+                float hitHeightCells = 2f,
+                float knockback = 4f,
+                float stunDealt = 0f,
+                float travelCells = 4f,
+                float travelDuration = 0.4f,
+                float lungeUpSpeed = 5f,
+                Projectile projectilePrefab = null,
+                float projectileSpeed = 7f,
+                float muzzleHeight = 1f,
+                int projectileCount = 1,
+                float fuseTime = 1.5f,
+                float blastRadiusCells = 2.9f,
+                float landingSpreadCells = 1.5f,
+                VfxDefinition blastVfx = null)
+            {
+                _kind = kind;
+                _dcId = dcId;
+                _chargeAnim = chargeAnim;
+                _executeAnim = executeAnim;
+                _minRangeCells = minRangeCells;
+                _maxRangeCells = maxRangeCells;
+                _damage = damage;
+                _charge = charge;
+                _cooldown = cooldown;
+                _recover = recover;
+                _hitFrame = hitFrame;
+                _hitReachCells = hitReachCells;
+                _hitHeightCells = hitHeightCells;
+                _knockback = knockback;
+                _stunDealt = stunDealt;
+                _travelCells = travelCells;
+                _travelDuration = travelDuration;
+                _lungeUpSpeed = lungeUpSpeed;
+                _projectilePrefab = projectilePrefab;
+                _projectileSpeed = projectileSpeed;
+                _muzzleHeight = muzzleHeight;
+                _projectileCount = projectileCount;
+                _fuseTime = fuseTime;
+                _blastRadiusCells = blastRadiusCells;
+                _landingSpreadCells = landingSpreadCells;
+                _blastVfx = blastVfx;
+            }
+
+            public string DcId => _dcId;
+            public EnemyAttackKind Kind => _kind;
+            public string ChargeAnim => _chargeAnim;
+            public string ExecuteAnim => _executeAnim;
+            public float MinRangeCells => _minRangeCells;
+            public float MaxRangeCells => _maxRangeCells;
+            public int Damage => _damage;
+            public float Charge => _charge;
+            public float Cooldown => _cooldown;
+            public float Recover => _recover;
+            public int HitFrame => _hitFrame;
+            public float HitReachCells => _hitReachCells;
+            public float HitHeightCells => _hitHeightCells;
+            public float Knockback => _knockback;
+            public float StunDealt => _stunDealt;
+            public float TravelCells => _travelCells;
+            public float TravelDuration => _travelDuration;
+            public float LungeUpSpeed => _lungeUpSpeed;
+            public Projectile ProjectilePrefab => _projectilePrefab;
+            public float ProjectileSpeed => _projectileSpeed;
+            public float MuzzleHeight => _muzzleHeight;
+            public int ProjectileCount => _projectileCount;
+            public float FuseTime => _fuseTime;
+            public float BlastRadiusCells => _blastRadiusCells;
+            public float LandingSpreadCells => _landingSpreadCells;
+            public VfxDefinition BlastVfx => _blastVfx;
+
+            public float MinRange => _minRangeCells * WeaponData.CellSize;
+            public float MaxRange => _maxRangeCells * WeaponData.CellSize;
+            public float HitReach => _hitReachCells * WeaponData.CellSize;
+            public float HitHeight => _hitHeightCells * WeaponData.CellSize;
+            public float TravelDistance => _travelCells * WeaponData.CellSize;
+            public float BlastRadius => _blastRadiusCells * WeaponData.CellSize;
+            public float LandingSpread => _landingSpreadCells * WeaponData.CellSize;
         }
 
         [Header("Identity")]

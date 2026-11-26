@@ -16,8 +16,11 @@ namespace DeadCells.HUD
         [SerializeField] private AudioClip _goldSound;
         [SerializeField] private AudioClip _weaponSound;
 
+        private int _lastBalance;
+
         private void OnEnable()
         {
+            _lastBalance = _wallet != null ? _wallet.Balance : 0;
             if (_wallet != null)
                 _wallet.Changed += OnGoldCollected;
             if (_weapons != null)
@@ -42,6 +45,10 @@ namespace DeadCells.HUD
 
         private void OnGoldCollected(int balance)
         {
+            int previous = _lastBalance;
+            _lastBalance = balance;
+            if (balance <= previous)
+                return;
             if (_effects != null && _glint != null && _player != null)
                 _effects.Play(_glint, _player.position + Vector3.up * 0.8f);
             if (_audio != null && _goldSound != null)

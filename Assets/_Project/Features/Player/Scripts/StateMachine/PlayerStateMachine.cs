@@ -9,10 +9,12 @@ namespace DeadCells.Player.StateMachine
     /// </summary>
     public class PlayerStateMachine
     {
-        private int _lastTransitionFrame = -1;
+        private readonly DeadCells.Core.StateMachine.StateMachine _core = new();
+        private readonly PlayerContext _context;
 
         public PlayerStateMachine(PlayerContext context)
         {
+            _context = context;
             Idle = new PlayerIdleState(context, this);
             Run = new PlayerRunState(context, this);
             Jump = new PlayerJumpState(context, this);
@@ -33,7 +35,7 @@ namespace DeadCells.Player.StateMachine
             ScriptedWalk = new PlayerScriptedWalkState(context, this);
         }
 
-        public IPlayerState Current { get; private set; }
+        public IPlayerState Current => (IPlayerState)_core.Current;
 
         public IPlayerState Idle { get; }
         public IPlayerState Run { get; }
@@ -55,39 +57,44 @@ namespace DeadCells.Player.StateMachine
         public PlayerScriptedWalkState ScriptedWalk { get; }
 
         /// <summary>
-        /// Switches state. Only one transition is accepted per frame.
-        /// Returns false if a transition already happened this frame.
+        /// Switches state. Only one transition is accepted per Tick.
+        /// Returns false if a transition already happened in the current Tick.
         /// </summary>
         public bool ChangeState(IPlayerState next)
         {
-            int frame = UnityEngine.Time.frameCount;
-            if (frame == _lastTransitionFrame)
+            var previous = _core.Current;
+            if (!_core.ChangeState(next))
                 return false;
-            _lastTransitionFrame = frame;
-            Switch(next);
+            GameDebug.Log($"{previous?.GetType().Name ?? "None"} -> {next.GetType().Name}", LogTopic.Gameplay);
             return true;
         }
 
         /// <summary>
-        /// Switches state even if a transition already happened this frame. Only for interrupts that
+        /// Switches state even if a transition already happened in this Tick. Only for interrupts that
         /// must not be lost (taking damage, dying).
         /// </summary>
         public void ForceChangeState(IPlayerState next)
         {
-            _lastTransitionFrame = UnityEngine.Time.frameCount;
-            Switch(next);
+            var previous = _core.Current;
+            _core.ForceChangeState(next);
+            GameDebug.Log($"{previous?.GetType().Name ?? "None"} -> {next.GetType().Name}", LogTopic.Gameplay);
         }
 
-        private void Switch(IPlayerState next)
+        public void Tick() => _core.Tick();
+
+        public void FixedTick() => _core.FixedTick();
+
+        /// <summary>
+        /// Resolves the fallback state when an action completes or cancels: Fall when airborne,
+        /// Crouch while crouch is held or overhead clearance is blocked, otherwise Run or Idle.
+        /// </summary>
+        public IPlayerState ResolveDefaultState()
         {
-            Current?.Exit();
-            GameDebug.Log($"{Current?.GetType().Name ?? "None"} -> {next.GetType().Name}", LogTopic.Gameplay);
-            Current = next;
-            Current.Enter();
+            if (!_context.IsGrounded)
+                return Fall;
+            if (_context.IsCrouchHeld || !_context.CanStandUp())
+                return Crouch;
+            return _context.HasMoveInput ? Run : Idle;
         }
-
-        public void Tick() => Current?.Tick();
-
-        public void FixedTick() => Current?.FixedTick();
     }
 }

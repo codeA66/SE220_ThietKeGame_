@@ -27,6 +27,7 @@ namespace DeadCells.Player.StateMachine.States
             _wasGrounded = Ctx.IsGrounded;
             _holdingJump = false;
             _jumpHoldTimer = 0f;
+            _crouching = Ctx.IsGrounded && !Ctx.CanStandUp();
             BeginDraw();
         }
 
@@ -44,7 +45,7 @@ namespace DeadCells.Player.StateMachine.States
         {
             Ctx.Animator.HideBow();
             Ctx.Animator.SetCrouching(false);
-            Ctx.SetCrouchCollider(false);
+            Ctx.TryStandUpCollider();
             Ctx.SetGravityScale(Ctx.Config.GravityScale);
         }
 
@@ -58,7 +59,7 @@ namespace DeadCells.Player.StateMachine.States
                 return;
             }
 
-            TickJumpAndLanding();
+            bool jumped = TickJumpAndLanding();
 
             _timer += deltaTime;
             if (_released)
@@ -73,19 +74,20 @@ namespace DeadCells.Player.StateMachine.States
                     BeginDraw();
                     return;
                 }
-                ReturnToDefault();
+                FinishAttack();
                 return;
             }
 
             Ctx.FaceInput();
-            UpdateCrouching();
+            if (!jumped)
+                UpdateCrouching();
             Ctx.Animator.DrawBow(_crouching, Mathf.Clamp01(_timer / _shot.ChargeTime));
             if (_timer < _shot.ChargeTime)
                 return;
 
             if (!Ctx.Bow.TryFire(Ctx.Position, Ctx.FacingDirection, _crouching, _shot))
             {
-                ReturnToDefault();
+                FinishAttack();
                 return;
             }
 
@@ -114,19 +116,32 @@ namespace DeadCells.Player.StateMachine.States
         }
 
         /// <summary>Ground jump (with coyote time) or air jump without leaving the bow state.</summary>
-        private void TickJumpAndLanding()
+        private bool TickJumpAndLanding()
         {
             if (Ctx.IsGrounded && !_wasGrounded)
                 Ctx.NotifyLanded();
             _wasGrounded = Ctx.IsGrounded;
 
+            bool canStandOrAlreadyStanding = !Ctx.IsColliderCrouched || Ctx.CanStandUp();
+            bool jumped = false;
             if (Ctx.JumpBuffered && Ctx.WithinCoyoteTime && !Ctx.IsDownHeld)
             {
-                Ctx.StartJump();
-                _holdingJump = true;
-                _jumpHoldTimer = 0f;
+                if (canStandOrAlreadyStanding && (!_crouching || Ctx.CanStandUp()))
+                {
+                    Ctx.StartJump();
+                    _crouching = false;
+                    Ctx.TryStandUpCollider();
+                    Ctx.Animator.SetCrouching(false);
+                    _holdingJump = true;
+                    _jumpHoldTimer = 0f;
+                    jumped = true;
+                }
+                else
+                {
+                    Ctx.ClearJumpBuffer();
+                }
             }
-            else if (Ctx.CanAirJump)
+            else if (canStandOrAlreadyStanding && Ctx.CanAirJump)
             {
                 Ctx.StartAirJump();
                 _holdingJump = false;
@@ -134,13 +149,20 @@ namespace DeadCells.Player.StateMachine.States
 
             if (_holdingJump && !Ctx.Input.JumpHeld)
                 _holdingJump = false;
+
+            return jumped;
         }
 
         private void UpdateCrouching()
         {
-            _crouching = Ctx.IsGrounded && Ctx.IsCrouchHeld;
-            Ctx.SetCrouchCollider(_crouching);
+            _crouching = Ctx.IsGrounded && (Ctx.IsCrouchHeld || ((_crouching || Ctx.IsColliderCrouched) && !Ctx.CanStandUp()));
+            if (_crouching)
+                Ctx.SetCrouchCollider(true);
+            else
+                Ctx.TryStandUpCollider();
             Ctx.Animator.SetCrouching(_crouching);
         }
+
+        private void FinishAttack() => ReturnToDefault();
     }
 }

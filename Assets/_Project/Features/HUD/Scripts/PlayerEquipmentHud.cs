@@ -1,3 +1,4 @@
+using DeadCells.Core;
 using DeadCells.Player;
 using UnityEngine;
 
@@ -41,7 +42,7 @@ namespace DeadCells.HUD
             if (_player == null || _player.Weapons == null || _bow == null ||
                 _swordSlot == null || _bowSlot == null || _ammo == null)
             {
-                Debug.LogError("Assign the player, bow and equipment HUD views.", this);
+                GameDebug.LogError("Assign the player, bow and equipment HUD views.", LogTopic.UI);
                 return;
             }
 

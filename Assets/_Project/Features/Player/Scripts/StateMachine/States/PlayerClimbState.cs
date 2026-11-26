@@ -25,6 +25,7 @@ namespace DeadCells.Player.StateMachine.States
 
         public override void Enter()
         {
+            Ctx.TryStandUpCollider();
             Ctx.BeginClimb();
             Ctx.Animator.SetClimbingChain(true);
         }

@@ -116,5 +116,26 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Unit
             Assert.AreEqual(7f, cam.orthographicSize, 0.001f,
                 "EndFocusOverride(0f) must immediately snap orthographicSize back to default before SnapToTarget or OnDisable.");
         }
+
+        [Test]
+        public void CameraFollow2D_StepCameraWithZeroDeltaTime_AppliesUnscaledPunchAndShake()
+        {
+            var follow = CreateCameraFixture(out _, out _);
+            typeof(CameraFollow2D)
+                .GetMethod("Start", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(follow, null);
+
+            Vector3 basePos = follow.transform.position;
+            follow.Punch(Vector2.right, 0.25f, 0.15f);
+            follow.StepCamera(0f);
+            Assert.Greater(follow.transform.position.x, basePos.x,
+                "StepCamera(0f) must still apply unscaled directional Punch offset during HitStop.");
+
+            Random.InitState(42);
+            follow.Shake(0.4f, 0.2f);
+            follow.StepCamera(0f);
+            Assert.AreNotEqual(basePos, follow.transform.position,
+                "StepCamera(0f) must still apply unscaled Shake offset during HitStop.");
+        }
     }
 }

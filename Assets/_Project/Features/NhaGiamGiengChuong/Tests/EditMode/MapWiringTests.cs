@@ -261,12 +261,18 @@ namespace DeadCells.NhaGiamGiengChuong.Tests.Assets
             Assert.IsNotNull(uiMod, "[A07/InputSystemUIInputModule]");
             Assert.IsNotNull(uiMod.actionsAsset, "[A07/UIInputActions]");
 
-            // 11. Scene registered in EditorBuildSettings (and Main_Level remains index 0)
+            // 11. Scene registered in EditorBuildSettings with NhaGiamGiengChuong at index 0 and Main_Level at index 1
             var buildScenes = EditorBuildSettings.scenes;
-            Assert.IsTrue(buildScenes.Any(s => s.path == GeometryAuditHelper.ScenePath && s.enabled),
-                "[A07/BuildSettings] NhaGiamGiengChuong.unity must be enabled in EditorBuildSettings.");
-            Assert.AreEqual("Assets/_Project/Scenes/Main_Level.unity", buildScenes[0].path,
-                "[A07/BuildSettings] Main_Level.unity must remain entry scene at index 0.");
+            Assert.GreaterOrEqual(buildScenes.Length, 2,
+                "[A07/BuildSettings] Both NhaGiamGiengChuong.unity and Main_Level.unity must be registered in EditorBuildSettings.");
+            Assert.AreEqual(GeometryAuditHelper.ScenePath, buildScenes[0].path,
+                "[A07/BuildSettings] NhaGiamGiengChuong.unity must be entry scene at index 0.");
+            Assert.IsTrue(buildScenes[0].enabled,
+                "[A07/BuildSettings] NhaGiamGiengChuong.unity at index 0 must be enabled.");
+            Assert.AreEqual("Assets/_Project/Scenes/Main_Level.unity", buildScenes[1].path,
+                "[A07/BuildSettings] Main_Level.unity must be registered at index 1.");
+            Assert.IsTrue(buildScenes[1].enabled,
+                "[A07/BuildSettings] Main_Level.unity at index 1 must be enabled.");
         }
 
         [Test]

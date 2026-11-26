@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace DeadCells.HUD
@@ -20,20 +21,28 @@ namespace DeadCells.HUD
         private static readonly Color Ember = new Color32(196, 88, 30, 255);
         private static readonly Color Blood = new Color32(200, 70, 64, 255);
 
-        // The trail waits this long after a hit, then drains at this speed (bar fractions per second).
-        private const float TrailDelay = 0.35f;
-        private const float TrailSpeed = 0.6f;
         private const float LowHealth = 0.3f;
 
+        private static bool s_sceneHookRegistered;
         private static Font s_font;
 
         private HealthBarView _health;
         private RectTransform _fill;
-        private RectTransform _trail;
         private Image _fillImage;
-        private float _trailFraction = 1f;
-        private float _lastFraction = 1f;
-        private float _holdUntil;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => s_font = null;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void RegisterSceneHook()
+        {
+            if (s_sceneHookRegistered)
+                return;
+            s_sceneHookRegistered = true;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => CreateInScene();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void CreateInScene()
@@ -49,7 +58,13 @@ namespace DeadCells.HUD
             get
             {
                 if (s_font == null)
+                {
+#if !UNITY_WEBGL
                     s_font = Font.CreateDynamicFontFromOSFont(new[] { "Georgia", "Palatino Linotype", "Cambria", "Times New Roman" }, 16);
+#endif
+                    if (s_font == null)
+                        s_font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                }
                 return s_font;
             }
         }
@@ -70,29 +85,14 @@ namespace DeadCells.HUD
 
         private void Update()
         {
-            if (_fill == null || _trail == null)
+            if (_fill == null || _fillImage == null)
                 return;
 
-            float fraction = _fill.anchorMax.x;
-            if (fraction < _lastFraction)
-                _holdUntil = Time.unscaledTime + TrailDelay;
-            _lastFraction = fraction;
-
-            if (fraction >= _trailFraction)
-                _trailFraction = fraction;
-            else if (Time.unscaledTime >= _holdUntil)
-                _trailFraction = Mathf.MoveTowards(_trailFraction, fraction, TrailSpeed * Time.unscaledDeltaTime);
-            Vector2 end = _trail.anchorMax;
-            end.x = _trailFraction;
-            _trail.anchorMax = end;
-
             // Under a third of health the bar pulses, slowly at first and quicker the lower it gets.
-            if (_fillImage != null)
-            {
-                float danger = fraction < LowHealth ? 1f - fraction / LowHealth : 0f;
-                float pulse = danger > 0f ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * (4f + danger * 6f)) : 0f;
-                _fillImage.color = Color.Lerp(Crimson, CrimsonBright, pulse * danger);
-            }
+            float fraction = _fill.anchorMax.x;
+            float danger = fraction < LowHealth ? 1f - fraction / LowHealth : 0f;
+            float pulse = danger > 0f ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * (4f + danger * 6f)) : 0f;
+            _fillImage.color = Color.Lerp(Crimson, CrimsonBright, pulse * danger);
         }
 
         // ---------- Health ----------
@@ -107,20 +107,11 @@ namespace DeadCells.HUD
             Tint(root, "Track", Obsidian);
             Tint(root, "Highlight", new Color(1f, 0.45f, 0.4f, 0.28f));
             _fill = _health.Fill;
-            _fillImage = _fill.GetComponent<Image>();
-            if (_fillImage != null)
+            if (_fill != null && _fill.TryGetComponent(out _fillImage))
                 _fillImage.color = Crimson;
 
-            // The lagging ember trail sits just behind the fill.
-            var trailObject = new GameObject("DamageTrail", typeof(RectTransform), typeof(Image));
-            _trail = (RectTransform)trailObject.transform;
-            _trail.SetParent(_fill.parent, false);
-            _trail.anchorMin = _fill.anchorMin;
-            _trail.anchorMax = _fill.anchorMax;
-            _trail.offsetMin = _fill.offsetMin;
-            _trail.offsetMax = _fill.offsetMax;
-            trailObject.GetComponent<Image>().color = Ember;
-            _trail.SetSiblingIndex(_fill.GetSiblingIndex());
+            if (_health.TrailFill != null && _health.TrailFill.TryGetComponent(out Image trailImage))
+                trailImage.color = Ember;
 
             StyleText(_health.Value, Bone);
             RectTransform bar = (RectTransform)root;

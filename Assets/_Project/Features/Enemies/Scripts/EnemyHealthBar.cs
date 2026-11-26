@@ -34,6 +34,19 @@ namespace DeadCells.Enemies
 
         private static Sprite s_barSprite;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            if (s_barSprite != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(s_barSprite);
+                else
+                    DestroyImmediate(s_barSprite);
+                s_barSprite = null;
+            }
+        }
+
         private Health _health;
         private Transform _root;
         private Transform _fill;
@@ -144,6 +157,9 @@ namespace DeadCells.Enemies
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = GetBarSprite();
             sr.color = color;
+            int vfxLayer = SortingLayer.NameToID("VFX");
+            if (vfxLayer != 0)
+                sr.sortingLayerID = vfxLayer;
             sr.sortingOrder = order;
             return go.transform;
         }

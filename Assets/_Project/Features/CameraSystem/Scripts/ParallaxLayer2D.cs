@@ -29,6 +29,11 @@ namespace DeadCells.CameraSystem
         private float _wrapAnchorX;
         private Transform[] _pinnedColumns;
         private Vector3[] _pinnedColumnRestLocalPositions;
+        private Camera _cachedCamera;
+        private Transform _cachedCameraOwner;
+        private float _leftInnerHalfW;
+        private float _rightInnerHalfW;
+        private bool _columnWidthsCached;
 
         private void Awake()
         {
@@ -157,18 +162,28 @@ namespace DeadCells.CameraSystem
             if (_pinnedColumns == null || _pinnedColumns.Length < 4)
                 return;
 
-            Camera cam = _cameraTransform != null ? _cameraTransform.GetComponent<Camera>() : null;
-            if (cam == null)
-                cam = Camera.main;
+            if (_cameraTransform != null)
+            {
+                if (_cameraTransform != _cachedCameraOwner || _cachedCamera == null)
+                {
+                    _cachedCameraOwner = _cameraTransform;
+                    _cachedCamera = _cameraTransform.GetComponent<Camera>();
+                }
+            }
+            else
+            {
+                _cachedCameraOwner = null;
+                _cachedCamera = null;
+            }
+
+            Camera cam = _cachedCamera != null ? _cachedCamera : Camera.main;
 
             float aspect = (cam != null && cam.aspect > 0.01f) ? cam.aspect : (16f / 9f);
             float ortho = (cam != null && cam.orthographic && cam.orthographicSize > 0.01f) ? cam.orthographicSize : 6.75f;
             float halfW = ortho * aspect;
 
-            float leftInnerHalfW = MeasureColumnHalfWidth(_pinnedColumns[1]);
-            float rightInnerHalfW = MeasureColumnHalfWidth(_pinnedColumns[2]);
-            float leftInnerX = SnapUnits(halfW + leftInnerHalfW - _frustumEdgeVisibleInsetUnits);
-            float rightInnerX = SnapUnits(halfW + rightInnerHalfW - _frustumEdgeVisibleInsetUnits);
+            float leftInnerX = SnapUnits(halfW + _leftInnerHalfW - _frustumEdgeVisibleInsetUnits);
+            float rightInnerX = SnapUnits(halfW + _rightInnerHalfW - _frustumEdgeVisibleInsetUnits);
             float outerX = SnapUnits(Mathf.Max(38f, halfW + _frustumOuterGuardOffsetUnits));
 
             SetColumnLocalX(0, -outerX);
@@ -179,25 +194,33 @@ namespace DeadCells.CameraSystem
 
         private void EnsureColumnRestStateCached()
         {
-            if (_pinnedColumns != null && _pinnedColumns.Length > 0)
-                return;
-
-            var cols = new List<Transform>();
-            for (int i = 0; i < transform.childCount; i++)
+            if (_pinnedColumns == null || _pinnedColumns.Length == 0)
             {
-                Transform child = transform.GetChild(i);
-                if (child.name.StartsWith("FgColumn_", StringComparison.Ordinal))
-                    cols.Add(child);
+                var cols = new List<Transform>();
+                for (int i = 0; i < transform.childCount; i++)
+                {
+                    Transform child = transform.GetChild(i);
+                    if (child.name.StartsWith("FgColumn_", StringComparison.Ordinal))
+                        cols.Add(child);
+                }
+
+                if (cols.Count == 0)
+                    return;
+
+                cols.Sort((a, b) => a.localPosition.x.CompareTo(b.localPosition.x));
+                _pinnedColumns = cols.ToArray();
+                _pinnedColumnRestLocalPositions = new Vector3[_pinnedColumns.Length];
+                for (int i = 0; i < _pinnedColumns.Length; i++)
+                    _pinnedColumnRestLocalPositions[i] = _pinnedColumns[i].localPosition;
+                _columnWidthsCached = false;
             }
 
-            if (cols.Count == 0)
-                return;
-
-            cols.Sort((a, b) => a.localPosition.x.CompareTo(b.localPosition.x));
-            _pinnedColumns = cols.ToArray();
-            _pinnedColumnRestLocalPositions = new Vector3[_pinnedColumns.Length];
-            for (int i = 0; i < _pinnedColumns.Length; i++)
-                _pinnedColumnRestLocalPositions[i] = _pinnedColumns[i].localPosition;
+            if (!_columnWidthsCached && _pinnedColumns.Length >= 4)
+            {
+                _leftInnerHalfW = MeasureColumnHalfWidth(_pinnedColumns[1]);
+                _rightInnerHalfW = MeasureColumnHalfWidth(_pinnedColumns[2]);
+                _columnWidthsCached = true;
+            }
         }
 
         private static float MeasureColumnHalfWidth(Transform column)

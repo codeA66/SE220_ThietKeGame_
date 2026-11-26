@@ -35,7 +35,7 @@ namespace DeadCells.Enemies
             int oneWayLayer = LayerMask.NameToLayer("OneWayPlatform");
             int oneWayBit = oneWayLayer >= 0 ? (1 << oneWayLayer) : (1 << 9);
             _solidWallMask = groundMask.value & ~oneWayBit;
-            _hits = new HitQuery(attackTargets);
+            _hits = new HitQuery(attackTargets, _solidWallMask);
             _skillReadyTime = new float[data.Skills.Length];
         }
 
@@ -64,8 +64,10 @@ namespace DeadCells.Enemies
         public void RefreshFrame()
         {
             var b = _collider.bounds;
-            IsGrounded = Physics2D.BoxCast(new Vector2(b.center.x, b.min.y + 0.02f), new Vector2(b.size.x * 0.9f, 0.04f),
-                0f, Vector2.down, GroundProbe, _groundMask);
+            LayerMask mask = _body.linearVelocity.y > 0.05f ? _solidWallMask : _groundMask;
+            float width = Mathf.Max(0.05f, b.size.x - 0.02f);
+            IsGrounded = Physics2D.BoxCast(new Vector2(b.center.x, b.min.y + 0.02f), new Vector2(width, 0.04f),
+                0f, Vector2.down, GroundProbe, mask);
         }
 
         // ---------- Skills ----------
@@ -119,14 +121,17 @@ namespace DeadCells.Enemies
         /// Turns toward a direction after Data.TurnDelay seconds of wanting to (instant when 0).
         /// Returns true once facing that way.
         /// </summary>
-        public bool TurnToward(int direction)
+        public bool TurnToward(int direction) => TurnToward(direction, Time.deltaTime);
+
+        /// <summary>Deterministic overload for EditMode tests driving TurnDelay with explicit deltaTime.</summary>
+        public bool TurnToward(int direction, float deltaTime)
         {
             if (direction == 0 || direction == Facing)
             {
                 _turnTimer = 0f;
                 return true;
             }
-            _turnTimer += Time.deltaTime;
+            _turnTimer += deltaTime;
             if (_turnTimer < Data.TurnDelay)
                 return false;
             Face(direction);
@@ -196,7 +201,7 @@ namespace DeadCells.Enemies
             var b = _collider.bounds;
             var center = new Vector2(b.center.x + Facing * skill.HitReach * 0.5f, b.min.y + skill.HitHeight * 0.5f);
             var info = new DamageInfo(skill.Damage, Facing, skill.Knockback, skill.StunDealt, false, Owner);
-            return _hits.Strike(center, new Vector2(skill.HitReach, skill.HitHeight), info);
+            return _hits.Strike(center, new Vector2(skill.HitReach, skill.HitHeight), info, lineOfSightOrigin: (Vector2)b.center);
         }
     }
 }

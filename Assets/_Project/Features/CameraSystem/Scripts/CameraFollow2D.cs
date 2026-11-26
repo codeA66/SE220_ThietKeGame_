@@ -124,7 +124,11 @@ namespace DeadCells.CameraSystem
             if (_camera == null)
                 _camera = GetComponent<Camera>();
             if (deltaTime <= 0f)
+            {
+                // Still apply unscaled Shake and Punch offsets while HitStop freezes scaled deltaTime.
+                transform.position = _basePosition + ShakeOffset() + PunchOffset();
                 return;
+            }
             if (!_focusOverrideActive && _target == null)
                 return;
 

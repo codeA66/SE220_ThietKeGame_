@@ -6,6 +6,7 @@
         "Combat",
         "Enemies",
         "Player",
+        "HUD",
         "CameraSystem",
         "VFX",
         "Unity.InputSystem",

@@ -13,7 +13,7 @@ Ngày đối chiếu: 14/11/2026. Đây là hướng dẫn chuẩn bị, chưa p
 
 | Hạng mục | Nguồn đã đối chiếu | Ý nghĩa khi dựng map |
 | --- | --- | --- |
-| Unity 6000.5.0f1 | `ProjectSettings/ProjectVersion.txt` | Mở đúng phiên bản project |
+| Unity 6000.6.9f1 | `ProjectSettings/ProjectVersion.txt` | Mở đúng phiên bản project |
 | GothicDungeon | `Assets/_Project/Art/Environment/GothicDungeon/` | Bộ asset cần đối chiếu với ảnh; không mặc định mọi chi tiết ảnh đều có tile tương ứng |
 | 4 palette: Terrain, Architecture, Props, Nature | Các prefab trong `Assets/_Project/Art/Environment/GothicDungeon/Palettes/` | Grid của cả bốn palette đang là `(1, 1, 0)` |
 | 612 Tile asset | `Assets/_Project/Art/Environment/GothicDungeon/Tiles/` | Terrain 159, Architecture 179, Props 149, Nature 125; cả 612 file có `m_ColliderType: 0` |
@@ -42,7 +42,7 @@ Ngày đối chiếu: 14/11/2026. Đây là hướng dẫn chuẩn bị, chưa p
 - Camera sandbox đang dùng orthographic size=7 và bounds `x=-15.5, y=-1, width=59, height=20` (`Sandbox_Player.unity:1411`, `:1461`). Đây là cấu hình của sandbox, không phải kích thước mặc định cho ảnh mới.
 - `PlayerMovementConfig.asset:15` có run speed=7, air speed=6.5, một air jump (`:25`) và crouch shrink đang bật (`:52`). Không suy ra khoảng nhảy an toàn từ mỗi vận tốc; không sửa movement đã được người dùng xác nhận hoàn thiện.
 - Chưa xác nhận wall run/wall jump hoạt động trong nhiệm vụ này. Không dựa vào task trong SprintPlan để coi các cơ chế đó đã có hoặc chưa có.
-- Build Settings hiện ghi `Assets/Scenes/SampleScene.unity` (`ProjectSettings/EditorBuildSettings.asset:9`). Chỉ cập nhật danh sách scene khi có nhiệm vụ build/tích hợp tương ứng.
+- Build Settings hiện ghi `Assets/_Project/Scenes/NhaGiamGiengChuong.unity` ở index `0` (`ProjectSettings/EditorBuildSettings.asset:9`, 10 room prefab, 34 địch) và `Assets/_Project/Scenes/Main_Level.unity` ở index `1` (`ProjectSettings/EditorBuildSettings.asset:12`). Chỉ cập nhật danh sách scene khi có nhiệm vụ build/tích hợp tương ứng.
 - Không tự tạo/sửa/xóa `.meta`; để Unity quản lý chúng. Không chạy lại importer chỉ để bắt đầu vẽ map: `GothicDungeonImporter.Import` có ghi asset và prefab.
 
 ## Checklist bàn giao

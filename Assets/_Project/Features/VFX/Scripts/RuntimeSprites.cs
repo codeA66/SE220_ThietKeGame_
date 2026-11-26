@@ -7,6 +7,7 @@ namespace DeadCells.VFX
     public static class RuntimeSprites
     {
         private const string UnlitShaderName = "Universal Render Pipeline/2D/Sprite-Unlit-Default";
+        private const string VfxSortingLayerName = "VFX";
         private const int GlowSize = 64;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
@@ -14,6 +15,9 @@ namespace DeadCells.VFX
         private static Material s_material;
         private static Material s_unlitMaterial;
         private static Texture2D s_glow;
+
+        /// <summary>The VFX sorting layer ID, or 0 (Default) if the layer is not registered.</summary>
+        public static int VfxSortingLayerId => SortingLayer.NameToID(VfxSortingLayerName);
 
         /// <summary>The pipeline's default sprite material, borrowed from a throwaway SpriteRenderer.</summary>
         public static Material DefaultMaterial

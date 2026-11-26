@@ -3,6 +3,7 @@
     "rootNamespace": "DeadCells.RunFlow",
     "references": [
         "Combat",
+        "Core",
         "UnityEngine.UI"
     ],
     "autoReferenced": true
