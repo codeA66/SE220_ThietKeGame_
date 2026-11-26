@@ -2027,17 +2027,15 @@ namespace DeadCells.Core.Tests
                 LayerMask groundMask = (1 << GroundLayer) | (1 << OneWayLayer);
                 var skills = new[]
                 {
-                    new EnemyData.Skill
-                    {
-                        Kind = EnemyAttackKind.Lunge,
-                        ChargeAnim = "AtkLoad",
-                        ExecuteAnim = "Atk",
-                        Charge = 0f,
-                        TravelCells = 4f,
-                        TravelDuration = 0.4f,
-                        LungeUpSpeed = 5f,
-                        Recover = 0.2f
-                    }
+                    new EnemyData.Skill(
+                        kind: EnemyAttackKind.Lunge,
+                        chargeAnim: "AtkLoad",
+                        executeAnim: "Atk",
+                        charge: 0f,
+                        recover: 0.2f,
+                        travelCells: 4f,
+                        travelDuration: 0.4f,
+                        lungeUpSpeed: 5f)
                 };
                 var harness = CreateEnemyHarness(root.transform, new Vector2(0f, 5f), groundMask, out data, skills);
                 SetPrivateField(data, "_backstepDuration", 0.25f);
