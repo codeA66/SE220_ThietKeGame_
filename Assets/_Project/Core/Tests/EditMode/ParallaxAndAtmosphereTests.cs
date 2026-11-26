@@ -5,6 +5,7 @@ using System.Reflection;
 using DeadCells.CameraSystem;
 using DeadCells.Combat;
 using DeadCells.Enemies;
+using DeadCells.Player;
 using DeadCells.Tools.Editor;
 using DeadCells.VFX;
 using NUnit.Framework;
@@ -327,6 +328,135 @@ namespace DeadCells.Core.Tests
                 CleanupParticleSystem(sparks, "_coreMesh", "_glowMesh");
                 typeof(RuntimeSprites).GetMethod("ResetStatics", BindingFlags.Static | BindingFlags.NonPublic)?.Invoke(null, null);
             }
+        }
+
+        [Test]
+        public void MeshParticleVfxSystems_RenderOnVfxSortingLayerAboveBackgroundAndActors()
+        {
+            SortingLayerSetup.EnsureDeadCellsSortingLayers();
+
+            int vfxLayerId = SortingLayer.NameToID("VFX");
+            int bgLayerId = SortingLayer.NameToID("Background");
+            int actorsLayerId = SortingLayer.NameToID("Actors");
+            Assert.AreNotEqual(0, vfxLayerId, "VFX sorting layer must exist with non-zero ID.");
+            Assert.AreEqual(vfxLayerId, RuntimeSprites.VfxSortingLayerId,
+                "RuntimeSprites.VfxSortingLayerId must resolve to the VFX sorting layer.");
+            Assert.Greater(
+                SortingLayer.GetLayerValueFromID(vfxLayerId),
+                SortingLayer.GetLayerValueFromID(bgLayerId),
+                "VFX sorting layer must sort above Background.");
+            Assert.Greater(
+                SortingLayer.GetLayerValueFromID(vfxLayerId),
+                SortingLayer.GetLayerValueFromID(actorsLayerId),
+                "VFX sorting layer must sort above Actors.");
+
+            BloodDrops blood = null;
+            Debris debris = null;
+            Sparks sparks = null;
+            try
+            {
+                blood = CreateAndAwakeParticleSystem<BloodDrops>();
+                var bloodRenderer = blood.GetComponent<MeshRenderer>();
+                Assert.IsNotNull(bloodRenderer, "BloodDrops must create a MeshRenderer in Awake.");
+                Assert.AreEqual(vfxLayerId, bloodRenderer.sortingLayerID, "BloodDrops must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", bloodRenderer.sortingLayerName);
+                Assert.IsNotNull(bloodRenderer.sharedMaterial, "BloodDrops MeshRenderer must have a material.");
+
+                debris = CreateAndAwakeParticleSystem<Debris>();
+                var debrisRenderer = debris.GetComponent<MeshRenderer>();
+                Assert.IsNotNull(debrisRenderer, "Debris must create a MeshRenderer in Awake.");
+                Assert.AreEqual(vfxLayerId, debrisRenderer.sortingLayerID, "Debris must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", debrisRenderer.sortingLayerName);
+                Assert.IsNotNull(debrisRenderer.sharedMaterial, "Debris MeshRenderer must have a material.");
+
+                sparks = CreateAndAwakeParticleSystem<Sparks>();
+                Transform glowChild = sparks.transform.Find("Glow");
+                Transform coresChild = sparks.transform.Find("Cores");
+                Assert.IsNotNull(glowChild, "Sparks must create a Glow child in Awake.");
+                Assert.IsNotNull(coresChild, "Sparks must create a Cores child in Awake.");
+
+                var glowRenderer = glowChild.GetComponent<MeshRenderer>();
+                var coresRenderer = coresChild.GetComponent<MeshRenderer>();
+                Assert.IsNotNull(glowRenderer, "Sparks Glow must have a MeshRenderer.");
+                Assert.IsNotNull(coresRenderer, "Sparks Cores must have a MeshRenderer.");
+                Assert.AreEqual(vfxLayerId, glowRenderer.sortingLayerID, "Sparks Glow must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", glowRenderer.sortingLayerName);
+                Assert.AreEqual(vfxLayerId, coresRenderer.sortingLayerID, "Sparks Cores must render on VFX sorting layer.");
+                Assert.AreEqual("VFX", coresRenderer.sortingLayerName);
+                Assert.IsNotNull(glowRenderer.sharedMaterial, "Sparks Glow MeshRenderer must have a material.");
+                Assert.IsNotNull(coresRenderer.sharedMaterial, "Sparks Cores MeshRenderer must have a material.");
+                Assert.Greater(coresRenderer.sortingOrder, glowRenderer.sortingOrder,
+                    "Sparks Cores must sort above Sparks Glow.");
+            }
+            finally
+            {
+                CleanupParticleSystem(blood, "_mesh");
+                CleanupParticleSystem(debris, "_mesh");
+                CleanupParticleSystem(sparks, "_coreMesh", "_glowMesh");
+                typeof(RuntimeSprites).GetMethod("ResetStatics", BindingFlags.Static | BindingFlags.NonPublic)?.Invoke(null, null);
+            }
+        }
+
+        [Test]
+        public void PlayerSpawnHead_BurstAndTrailParticles_UseVfxSortingLayerOnPrefabAndAfterAwake()
+        {
+            SortingLayerSetup.EnsureDeadCellsSortingLayers();
+
+            int vfxLayerId = SortingLayer.NameToID("VFX");
+            int bgLayerId = SortingLayer.NameToID("Background");
+            int actorsLayerId = SortingLayer.NameToID("Actors");
+            Assert.AreNotEqual(0, vfxLayerId, "VFX sorting layer must exist with non-zero ID.");
+            Assert.Greater(SortingLayer.GetLayerValueFromID(vfxLayerId), SortingLayer.GetLayerValueFromID(bgLayerId));
+            Assert.Greater(SortingLayer.GetLayerValueFromID(vfxLayerId), SortingLayer.GetLayerValueFromID(actorsLayerId));
+
+            const string prefabPath = "Assets/_Project/Features/Player/Prefabs/Player.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.IsNotNull(prefab, $"Missing Player prefab at '{prefabPath}'.");
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            FieldInfo burstField = typeof(PlayerSpawnHead).GetField("_burst", flags);
+            FieldInfo trailField = typeof(PlayerSpawnHead).GetField("_trail", flags);
+            MethodInfo awakeMethod = typeof(PlayerSpawnHead).GetMethod("Awake", flags);
+            Assert.IsNotNull(burstField, "PlayerSpawnHead._burst field missing.");
+            Assert.IsNotNull(trailField, "PlayerSpawnHead._trail field missing.");
+            Assert.IsNotNull(awakeMethod, "PlayerSpawnHead.Awake method missing.");
+
+            var prefabHead = prefab.GetComponentInChildren<PlayerSpawnHead>(true);
+            Assert.IsNotNull(prefabHead, "Player.prefab must contain a PlayerSpawnHead component.");
+
+            var prefabBurst = burstField.GetValue(prefabHead) as ParticleSystem;
+            var prefabTrail = trailField.GetValue(prefabHead) as ParticleSystem;
+            Assert.IsNotNull(prefabBurst, "PlayerSpawnHead._burst must be wired on Player.prefab.");
+            Assert.IsNotNull(prefabTrail, "PlayerSpawnHead._trail must be wired on Player.prefab.");
+
+            var prefabBurstRenderer = prefabBurst.GetComponent<ParticleSystemRenderer>();
+            var prefabTrailRenderer = prefabTrail.GetComponent<ParticleSystemRenderer>();
+            Assert.IsNotNull(prefabBurstRenderer, "Burst must have a ParticleSystemRenderer.");
+            Assert.IsNotNull(prefabTrailRenderer, "Trail must have a ParticleSystemRenderer.");
+            Assert.AreEqual(vfxLayerId, prefabBurstRenderer.sortingLayerID,
+                "Player.prefab Burst ParticleSystemRenderer must serialize on VFX sorting layer.");
+            Assert.AreEqual("VFX", prefabBurstRenderer.sortingLayerName);
+            Assert.AreEqual(vfxLayerId, prefabTrailRenderer.sortingLayerID,
+                "Player.prefab Trail ParticleSystemRenderer must serialize on VFX sorting layer.");
+            Assert.AreEqual("VFX", prefabTrailRenderer.sortingLayerName);
+
+            GameObject instance = Object.Instantiate(prefab);
+            _spawned.Add(instance);
+            var instanceHead = instance.GetComponentInChildren<PlayerSpawnHead>(true);
+            var instanceBurstRenderer = ((ParticleSystem)burstField.GetValue(instanceHead)).GetComponent<ParticleSystemRenderer>();
+            var instanceTrailRenderer = ((ParticleSystem)trailField.GetValue(instanceHead)).GetComponent<ParticleSystemRenderer>();
+
+            // Simulate a Default (0) override and confirm Awake promotes both particle renderers to VFX.
+            instanceBurstRenderer.sortingLayerID = 0;
+            instanceTrailRenderer.sortingLayerID = 0;
+            awakeMethod.Invoke(instanceHead, null);
+
+            Assert.AreEqual(vfxLayerId, instanceBurstRenderer.sortingLayerID,
+                "PlayerSpawnHead.Awake must promote Burst from Default (0) to VFX sorting layer.");
+            Assert.AreEqual("VFX", instanceBurstRenderer.sortingLayerName);
+            Assert.AreEqual(vfxLayerId, instanceTrailRenderer.sortingLayerID,
+                "PlayerSpawnHead.Awake must promote Trail from Default (0) to VFX sorting layer.");
+            Assert.AreEqual("VFX", instanceTrailRenderer.sortingLayerName);
         }
 
         [Test]
