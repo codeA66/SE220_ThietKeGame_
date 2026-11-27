@@ -11,6 +11,7 @@
         "Player",
         "RunFlow",
         "VFX",
+        "DeadCells.Build.Editor",
         "TilesetTools.Editor",
         "UnityEngine.UI",
         "Unity.RenderPipelines.Core.Runtime",
