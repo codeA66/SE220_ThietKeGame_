@@ -8,9 +8,19 @@
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
 [Rr]ecordings/
+[Cc]rash[Rr]eports/
+[Cc]ode[Cc]overage/
+[Tt]est[Rr]esults/
+/.utmp/
+/.gradle/
+/[Ee]xported[Oo]bj/
 
 # Asset meta data should only be ignored when the corresponding asset is also ignored
 !/[Aa]ssets/**/*.meta
+
+# Auto-generated JetBrains Rider plugin in Assets
+/[Aa]ssets/[Pp]lugins/[Ee]ditor/[Jj]et[Bb]rains*
+/[Aa]ssets/[Pp]lugins/[Ee]ditor/[Jj]et[Bb]rains*.meta
 
 # IDE / generated project files
 .vs/
@@ -34,11 +44,18 @@
 *.pdb.meta
 *.mdb.meta
 
-# Builds
+# Builds & CLI diagnostics
 *.apk
 *.aab
 *.unitypackage
 *.app
+/*.exe
+/*.binlog
+/*.log
+/TestResults*.xml
+/test-results*.xml
+/test-results*.json
+/proxy-request.json
 
 # Crash reports
 sysinfo.txt
@@ -58,6 +75,8 @@ Thumbs.db
 # Local code intelligence (rebuild from source; do not commit caches)
 /.codegraph/
 /graphify-out/
+/codegraph.json
+/.graphifyignore
 
 # Isolated local Fortress agent repositories; never stage their snapshots in the parent repo
 /.fortress-workspaces/
@@ -66,16 +85,35 @@ Thumbs.db
 /[Aa]ssets/_Recovery/
 /[Aa]ssets/_Recovery.meta
 
-# Local agent persona & scratch files (never commit to course repo)
+# AI / Agent harnesses, session state, plans & generated scratch outputs
+/.superpowers/
+/.ags/
+/.agents/
+/.codex/
+/.gemini/
+/.antigravity/
+/.cursor/
+/.windsurf/
+/.cline/
+/.roo/
+/.opencode/
+/.caveman/
+/.ponytail/
+/.aider*
+/.mcp.json
+/project.local.yaml
+/CLAUDE.local.md
+/AGENTS.local.md
 /AGENTS.habayakka.md
 /GEMINI.txt
 /*MASTER PROMPT*.md
+/.claude/settings.local.json
+/.claude/*.local.*
+/.claude/worktrees/
+/.claude/plans/
+/.claude/todos/
 /tools/caveman-posttooluse.patch
 /tools/fortress/
-/.agents/
-/.codex/
-/codegraph.json
-/.graphifyignore
 /docs/superpowers/
 /docs/Fortress/
 /docs/Prompt-Lap-Plan-Nha-Giam-Gieng-Chuong.md
