@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+set -eu
+
+MSG_FILE="$1"
+FIRST_LINE="$(head -n 1 "$MSG_FILE" | tr -d '\r')"
+
+# Allow Git-generated merge, revert, fixup, and squash commits
+case "$FIRST_LINE" in
+    Merge\ *|Revert\ *|fixup!\ *|squash!\ *)
+        exit 0
+        ;;
+esac
+
+PATTERN='^(feat|fix|refactor|docs|test|chore|style|perf|ci|build)(\([a-zA-Z0-9_.,/-]+\))?!?: .+$'
+if ! printf '%s\n' "$FIRST_LINE" | grep -Eq "$PATTERN"; then
+    echo "ERROR [COMMIT-MSG]: Commit message must follow Conventional Commits (docs/GIT_CONVENTIONS.md):" >&2
+    echo "  <type>(<scope>): <imperative summary>" >&2
+    echo "  Allowed types: feat, fix, refactor, docs, test, chore, style, perf, ci, build" >&2
+    echo "  Got: $FIRST_LINE" >&2
+    exit 1
+fi
+
+LEN="${#FIRST_LINE}"
+if [ "$LEN" -gt 72 ]; then
+    echo "ERROR [COMMIT-MSG]: Subject line is $LEN chars (max 72): $FIRST_LINE" >&2
+    exit 1
+fi
