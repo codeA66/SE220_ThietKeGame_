@@ -1,0 +1,57 @@
+name: Bug Report
+description: Báo lỗi gameplay, UI, vật lý, âm thanh hoặc lỗi build/scene trong dự án
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Mức độ nghiêm trọng (Severity)
+      options:
+        - S1 — Crash / Softlock / Hỏng build hoặc chặn tiến độ
+        - S2 — Lỗi tính năng chính thấy rõ trong gameplay
+        - S3 — Lỗi trường hợp biên (edge case) / sai lệch nhỏ
+        - S4 — Thẩm mỹ / UI / Gợi ý tinh chỉnh
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scene
+    attributes:
+      label: Scene / Môi trường gặp lỗi
+      options:
+        - NhaGiamGiengChuong.unity
+        - Main_Level.unity
+        - Sandbox_Player.unity
+        - WebGL Build
+        - Windows x64 Build
+        - Unity Editor / Tests
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Các bước tái hiện (Steps to Reproduce)
+      placeholder: |
+        1. Mở scene ...
+        2. Di chuyển tới phòng ...
+        3. Thực hiện thao tác ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Hành vi mong đợi vs. Thực tế
+      placeholder: |
+        - Mong đợi: ...
+        - Thực tế: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Log Console / Ảnh chụp / Bằng chứng code (nếu có)
+      render: text
