@@ -102,7 +102,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Restore Unity Editor installer cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.config/unityhub/downloads
           key: unity-downloads-webgl-6000.6.9f1
@@ -112,7 +112,7 @@ jobs:
         run: echo "key=$(unity cache key --target WebGL)" >> "$GITHUB_OUTPUT"
 
       - name: Restore WebGL Library cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./Library
           key: unity-library-webgl-${{ steps.cache-key.outputs.key }}
@@ -234,7 +234,7 @@ jobs:
           "key=$key" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Restore Win64 Library cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./Library
           key: unity-library-win64-${{ steps.cache-key.outputs.key }}
