@@ -1,0 +1,28 @@
+name: Feature / Task
+description: Đề xuất tính năng mới, hạng mục cải tiến hoặc task kỹ thuật cho sprint
+title: "[Task]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Mục tiêu & Mô tả đầu ra (Deliverable)
+      placeholder: Mô tả rõ đầu ra cụ thể cần đạt được...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Tiêu chí nghiệm thu (Acceptance Criteria)
+      value: |
+        - [ ] 
+        - [ ] Có EditMode / PlayMode test kiểm chứng (nếu thay đổi logic)
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Ngữ cảnh kỹ thuật / File liên quan
+      placeholder: Nêu rõ các script, prefab, scene hoặc tài liệu liên quan đã đối chiếu...
