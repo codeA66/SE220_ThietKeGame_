@@ -165,7 +165,7 @@ jobs:
           touch Build/WebGL/.nojekyll
 
       - name: Upload WebGL build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: DeadCells-WebGL-${{ needs.preflight.outputs.version }}
           path: Build/WebGL
@@ -277,7 +277,7 @@ jobs:
           Compress-Archive -Path Build/Windows/* -DestinationPath "DeadCells-Win64-v${{ needs.preflight.outputs.version }}.zip" -Force
 
       - name: Upload Windows x64 archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: DeadCells-Win64-${{ needs.preflight.outputs.version }}
           path: DeadCells-Win64-v${{ needs.preflight.outputs.version }}.zip
