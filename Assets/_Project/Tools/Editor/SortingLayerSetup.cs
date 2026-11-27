@@ -231,7 +231,7 @@ namespace DeadCells.Tools.Editor
             "Assets/_Project/Art/Shaders/MobFleshSwap2D.shader",
             "Assets/_Project/Art/Shaders/PaletteSwap2D.shader",
             "Assets/_Project/Data",
-            "Assets/_Project/UI/Scripts",
+            "Assets/_Project/UI",
         };
 
         // Verified 0-dependency direct entries in Packages/manifest.json (zero script/scene/prefab/asmdef/package dependents).
