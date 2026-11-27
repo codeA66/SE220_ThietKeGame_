@@ -1,16 +1,16 @@
-# Unity generated
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-[Uu]ser[Ss]ettings/
-[Mm]emoryCaptures/
-[Rr]ecordings/
-[Cc]rash[Rr]eports/
-[Cc]ode[Cc]overage/
-[Tt]est[Rr]esults/
+# Unity generated (anchored at repo root so Assets/**/Build/ etc. are never swallowed)
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Cc]rash[Rr]eports/
+/[Cc]ode[Cc]overage/
+/[Tt]est[Rr]esults/
 /.utmp/
 /.gradle/
 /[Ee]xported[Oo]bj/
