@@ -44,9 +44,17 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
       build_webgl: ${{ steps.meta.outputs.build_webgl }}
       build_win64: ${{ steps.meta.outputs.build_win64 }}
+      deploy_pages: ${{ steps.meta.outputs.deploy_pages }}
+      deploy_itch: ${{ steps.meta.outputs.deploy_itch }}
     steps:
       - name: Compute version and target flags
         id: meta
+        env:
+          INPUT_TARGET: ${{ inputs.target }}
+          INPUT_PAGES: ${{ inputs.deploy_pages }}
+          INPUT_ITCH: ${{ inputs.deploy_itch }}
+          HAS_BUTLER_KEY: ${{ secrets.BUTLER_API_KEY != '' }}
+          ITCH_TARGET_VAR: ${{ vars.ITCH_TARGET }}
         run: |
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             VER="${GITHUB_REF_NAME#v}"
@@ -55,16 +63,30 @@ jobs:
           fi
           echo "version=$VER" >> "$GITHUB_OUTPUT"
 
-          TARGET="${{ inputs.target || 'all' }}"
+          TARGET="${INPUT_TARGET:-all}"
           if [ "$TARGET" = "all" ] || [ "$TARGET" = "WebGL" ]; then
-            echo "build_webgl=true" >> "$GITHUB_OUTPUT"
+            BUILD_WEBGL="true"
           else
-            echo "build_webgl=false" >> "$GITHUB_OUTPUT"
+            BUILD_WEBGL="false"
           fi
+          echo "build_webgl=$BUILD_WEBGL" >> "$GITHUB_OUTPUT"
+
           if [ "$TARGET" = "all" ] || [ "$TARGET" = "Win64" ]; then
             echo "build_win64=true" >> "$GITHUB_OUTPUT"
           else
             echo "build_win64=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$BUILD_WEBGL" = "true" ] && { [ "${{ github.ref_type }}" = "tag" ] || [ "$INPUT_PAGES" = "true" ]; }; then
+            echo "deploy_pages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy_pages=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if { [ "${{ github.ref_type }}" = "tag" ] || [ "$INPUT_ITCH" = "true" ]; } && [ "$HAS_BUTLER_KEY" = "true" ] && [ -n "$ITCH_TARGET_VAR" ]; then
+            echo "deploy_itch=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy_itch=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check Unity credentials
@@ -171,13 +193,13 @@ jobs:
           path: Build/WebGL
 
       - name: Upload GitHub Pages artifact
-        if: github.ref_type == 'tag' || inputs.deploy_pages == true
+        if: needs.preflight.outputs.deploy_pages == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: Build/WebGL
 
       - name: Push WebGL channel to itch.io (butler)
-        if: (github.ref_type == 'tag' || inputs.deploy_itch == true) && secrets.BUTLER_API_KEY != '' && vars.ITCH_TARGET != ''
+        if: needs.preflight.outputs.deploy_itch == 'true'
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
@@ -196,7 +218,7 @@ jobs:
   deploy-pages:
     name: Deploy WebGL to GitHub Pages
     needs: [preflight, build-webgl]
-    if: github.ref_type == 'tag' || inputs.deploy_pages == true
+    if: needs.preflight.outputs.deploy_pages == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -290,7 +312,7 @@ jobs:
           files: DeadCells-Win64-v${{ needs.preflight.outputs.version }}.zip
 
       - name: Push Windows channel to itch.io (butler)
-        if: (github.ref_type == 'tag' || inputs.deploy_itch == true) && secrets.BUTLER_API_KEY != '' && vars.ITCH_TARGET != ''
+        if: needs.preflight.outputs.deploy_itch == 'true'
         shell: pwsh
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
