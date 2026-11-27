@@ -1,0 +1,308 @@
+name: Build & Release (Windows + WebGL)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Platform(s) to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - WebGL
+          - Win64
+      deploy_pages:
+        description: 'Deploy WebGL build to GitHub Pages'
+        required: false
+        default: true
+        type: boolean
+      deploy_itch:
+        description: 'Push builds to itch.io via butler (requires BUTLER_API_KEY & ITCH_TARGET)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: cd-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  preflight:
+    name: Resolve Release Matrix & Credentials
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+      version: ${{ steps.meta.outputs.version }}
+      build_webgl: ${{ steps.meta.outputs.build_webgl }}
+      build_win64: ${{ steps.meta.outputs.build_win64 }}
+    steps:
+      - name: Compute version and target flags
+        id: meta
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VER="${GITHUB_REF_NAME#v}"
+          else
+            VER="0.1.0-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+          TARGET="${{ inputs.target || 'all' }}"
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "WebGL" ]; then
+            echo "build_webgl=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_webgl=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "$TARGET" = "all" ] || [ "$TARGET" = "Win64" ]; then
+            echo "build_win64=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_win64=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check Unity credentials
+        id: check
+        env:
+          HAS_SA_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID != '' }}
+          HAS_SA_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET != '' }}
+          HAS_SERIAL: ${{ secrets.UNITY_LICENSE_SERIAL != '' }}
+          HAS_ULF: ${{ secrets.UNITY_LICENSE_FILE_BASE64 != '' }}
+        run: |
+          if [ "$HAS_SA_ID" = "true" ] && [ "$HAS_SA_SECRET" = "true" ] && { [ "$HAS_SERIAL" = "true" ] || [ "$HAS_ULF" = "true" ]; }; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "### Release Build Skipped: Configure UNITY_SERVICE_ACCOUNT_ID, UNITY_SERVICE_ACCOUNT_SECRET, and UNITY_LICENSE_SERIAL (or UNITY_LICENSE_FILE_BASE64)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  build-webgl:
+    name: Build WebGL
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'true' && needs.preflight.outputs.build_webgl == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      UNITY_FORMAT: github
+      UNITY_NON_INTERACTIVE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install Unity CLI
+        run: |
+          curl -fsSL https://unity.com/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Restore Unity Editor installer cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.config/unityhub/downloads
+          key: unity-downloads-webgl-6000.6.9f1
+
+      - name: Compute WebGL Library cache key
+        id: cache-key
+        run: echo "key=$(unity cache key --target WebGL)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore WebGL Library cache
+        uses: actions/cache@v4
+        with:
+          path: ./Library
+          key: unity-library-webgl-${{ steps.cache-key.outputs.key }}
+
+      - name: Install Ubuntu runtime dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libgl1 libglu1-mesa libgtk-3-0t64 libnss3 \
+            libasound2t64 libgbm1 libdrm2 libxtst6 \
+            libxrandr2 libxcursor1 libxcomposite1 libxdamage1 \
+            libxfixes3 libxi6 libxrender1 libxext6 \
+            libsm6 libice6 libxkbcommon0 libpango-1.0-0 \
+            libpangocairo-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 libatk1.0-0t64 \
+            libatk-bridge2.0-0t64 libcups2t64 libdbus-1-3 libnotify4 \
+            libsecret-1-0
+
+      - name: Install Unity 6000.6.9f1 + WebGL module
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+        run: unity install 6000.6.9f1 --yes --accept-eula --module webgl
+
+      - name: Activate Unity license
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+          UNITY_LICENSE_SERIAL: ${{ secrets.UNITY_LICENSE_SERIAL }}
+          UNITY_LICENSE_FILE_BASE64: ${{ secrets.UNITY_LICENSE_FILE_BASE64 }}
+        run: |
+          if [ -n "$UNITY_LICENSE_FILE_BASE64" ]; then
+            printf '%s' "$UNITY_LICENSE_FILE_BASE64" | base64 -d > /tmp/unity.ulf
+            unity license activate --file /tmp/unity.ulf
+            rm -f /tmp/unity.ulf
+          else
+            unity license activate
+          fi
+
+      - name: Build WebGL player
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+        run: |
+          unity build . \
+            --target WebGL \
+            --execute-method DeadCells.Build.Editor.BuildPipelineCli.BuildFromCommandLine \
+            --output-path Build/WebGL \
+            --allow-dirty-build \
+            --args "-buildTarget WebGL -buildVersion ${{ needs.preflight.outputs.version }}"
+          touch Build/WebGL/.nojekyll
+
+      - name: Upload WebGL build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeadCells-WebGL-${{ needs.preflight.outputs.version }}
+          path: Build/WebGL
+
+      - name: Upload GitHub Pages artifact
+        if: github.ref_type == 'tag' || inputs.deploy_pages == true
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: Build/WebGL
+
+      - name: Push WebGL channel to itch.io (butler)
+        if: (github.ref_type == 'tag' || inputs.deploy_itch == true) && secrets.BUTLER_API_KEY != '' && vars.ITCH_TARGET != ''
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d "$HOME/.local/bin"
+          chmod +x "$HOME/.local/bin/butler"
+          "$HOME/.local/bin/butler" push Build/WebGL "${{ vars.ITCH_TARGET }}:html" --userversion "${{ needs.preflight.outputs.version }}"
+
+      - name: Return Unity license
+        if: always()
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+        run: unity license return --yes || true
+
+  deploy-pages:
+    name: Deploy WebGL to GitHub Pages
+    needs: [preflight, build-webgl]
+    if: github.ref_type == 'tag' || inputs.deploy_pages == true
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  build-win64:
+    name: Build Windows x64
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'true' && needs.preflight.outputs.build_win64 == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      UNITY_FORMAT: github
+      UNITY_NON_INTERACTIVE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install Unity CLI (Windows)
+        shell: pwsh
+        run: |
+          irm https://unity.com/install.ps1 | iex
+          "$env:LOCALAPPDATA\Unity\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Compute Win64 Library cache key
+        id: cache-key
+        shell: pwsh
+        run: |
+          $key = unity cache key --target StandaloneWindows64
+          "key=$key" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Restore Win64 Library cache
+        uses: actions/cache@v4
+        with:
+          path: ./Library
+          key: unity-library-win64-${{ steps.cache-key.outputs.key }}
+
+      - name: Install Unity 6000.6.9f1 (Windows)
+        shell: pwsh
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+        run: unity install 6000.6.9f1 --yes --accept-eula
+
+      - name: Activate Unity license
+        shell: pwsh
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+          UNITY_LICENSE_SERIAL: ${{ secrets.UNITY_LICENSE_SERIAL }}
+          UNITY_LICENSE_FILE_BASE64: ${{ secrets.UNITY_LICENSE_FILE_BASE64 }}
+        run: |
+          if ($env:UNITY_LICENSE_FILE_BASE64) {
+            [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\unity.ulf", [Convert]::FromBase64String($env:UNITY_LICENSE_FILE_BASE64))
+            unity license activate --file "$env:RUNNER_TEMP\unity.ulf"
+            Remove-Item "$env:RUNNER_TEMP\unity.ulf" -Force -ErrorAction SilentlyContinue
+          } else {
+            unity license activate
+          }
+
+      - name: Build Windows x64 player
+        shell: pwsh
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+        run: |
+          unity build . `
+            --target StandaloneWindows64 `
+            --execute-method DeadCells.Build.Editor.BuildPipelineCli.BuildFromCommandLine `
+            --output-path Build/Windows/DeadCells.exe `
+            --allow-dirty-build `
+            --args "-buildTarget Win64 -buildVersion ${{ needs.preflight.outputs.version }}"
+          Compress-Archive -Path Build/Windows/* -DestinationPath "DeadCells-Win64-v${{ needs.preflight.outputs.version }}.zip" -Force
+
+      - name: Upload Windows x64 archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeadCells-Win64-${{ needs.preflight.outputs.version }}
+          path: DeadCells-Win64-v${{ needs.preflight.outputs.version }}.zip
+
+      - name: Publish GitHub Release on version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: DeadCells-Win64-v${{ needs.preflight.outputs.version }}.zip
+
+      - name: Push Windows channel to itch.io (butler)
+        if: (github.ref_type == 'tag' || inputs.deploy_itch == true) && secrets.BUTLER_API_KEY != '' && vars.ITCH_TARGET != ''
+        shell: pwsh
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          Invoke-WebRequest -Uri "https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default" -OutFile butler.zip
+          Expand-Archive -Path butler.zip -DestinationPath butler-bin -Force
+          .\butler-bin\butler.exe push Build/Windows "${{ vars.ITCH_TARGET }}:windows" --userversion "${{ needs.preflight.outputs.version }}" --ignore "*.pdb"
+
+      - name: Return Unity license
+        if: always()
+        shell: pwsh
+        env:
+          UNITY_SERVICE_ACCOUNT_ID: ${{ secrets.UNITY_SERVICE_ACCOUNT_ID }}
+          UNITY_SERVICE_ACCOUNT_SECRET: ${{ secrets.UNITY_SERVICE_ACCOUNT_SECRET }}
+        run: unity license return --yes
