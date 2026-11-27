@@ -76,7 +76,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Restore Unity Editor installer cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.config/unityhub/downloads
           key: unity-downloads-6000.6.9f1
@@ -86,7 +86,7 @@ jobs:
         run: echo "key=$(unity cache key)" >> "$GITHUB_OUTPUT"
 
       - name: Restore Unity Library cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ./Library
           key: unity-library-tests-${{ steps.cache-key.outputs.key }}
