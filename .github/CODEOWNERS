@@ -1,0 +1,6 @@
+# Critical shared Unity configurations, build pipeline, and CI/CD workflows
+/ProjectSettings/                       @codeA66 @BoyinGlasses
+/Packages/                              @codeA66 @BoyinGlasses
+/.github/                               @codeA66 @BoyinGlasses
+/Assets/_Project/Editor/Build/          @codeA66 @BoyinGlasses
+/Assets/_Project/Scenes/                @codeA66 @BoyinGlasses @vanhscallion @ppkhang

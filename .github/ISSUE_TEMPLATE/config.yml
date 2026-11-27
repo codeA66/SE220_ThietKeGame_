@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Tài liệu Thiết kế & Quy chuẩn Dự án (docs/)
+    url: https://github.com/codeA66/SE220_ThietKeGame_/tree/main/docs
+    about: Xem CODING_STANDARDS.md, GIT_CONVENTIONS.md và NhaGiamGiengChuong.md trước khi mở task.

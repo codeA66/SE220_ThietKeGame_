@@ -1,0 +1,57 @@
+#!/usr/bin/env sh
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# 1. Block accidental staging of non-LFS files > 25 MB
+MAX_BYTES=26214400
+git diff --cached --name-only --diff-filter=ACM -z | while IFS= read -r -d '' file; do
+    full="$REPO_ROOT/$file"
+    if [ -f "$full" ]; then
+        attr="$(git check-attr filter -- "$file" 2>/dev/null || true)"
+        case "$attr" in
+            *"filter: lfs"*) ;;
+            *)
+                size="$(wc -c < "$full" | tr -d ' ')"
+                if [ "$size" -gt "$MAX_BYTES" ]; then
+                    echo "ERROR [LARGE-FILE]: '$file' is ${size} bytes (>25 MB) and not tracked by Git LFS." >&2
+                    exit 1
+                fi
+                ;;
+        esac
+    fi
+done
+
+# 2. Resolve Python 3 across Linux, macOS, Git Bash, Windows py launcher, or AppData install
+if command -v python3 >/dev/null 2>&1; then
+    exec python3 "$REPO_ROOT/tools/ci/verify_guardrails.py" --staged --repo "$REPO_ROOT"
+elif command -v python >/dev/null 2>&1; then
+    exec python "$REPO_ROOT/tools/ci/verify_guardrails.py" --staged --repo "$REPO_ROOT"
+elif command -v py >/dev/null 2>&1 && py -3 --version >/dev/null 2>&1; then
+    exec py -3 "$REPO_ROOT/tools/ci/verify_guardrails.py" --staged --repo "$REPO_ROOT"
+fi
+
+if [ -n "${LOCALAPPDATA:-}" ]; then
+    for candidate in "$LOCALAPPDATA"/Programs/Python/Python3*/python.exe; do
+        if [ -x "$candidate" ]; then
+            exec "$candidate" "$REPO_ROOT/tools/ci/verify_guardrails.py" --staged --repo "$REPO_ROOT"
+        fi
+    done
+fi
+
+# 3. Pure POSIX fallback if Python is unavailable on a developer workstation
+git diff --cached --name-only --diff-filter=ACM | while IFS= read -r file; do
+    case "$file" in
+        .superpowers/*|.fortress-workspaces/*|.codegraph/*|graphify-out/*|.ags/*|Assets/_Recovery/*)
+            echo "ERROR [AGENT-SCRATCH]: Forbidden generated path staged: $file" >&2
+            exit 1
+            ;;
+        Assets/*.meta) ;;
+        Assets/*)
+            if ! git ls-files --error-unmatch "${file}.meta" >/dev/null 2>&1; then
+                echo "ERROR [MISSING-META]: Tracked asset under Assets/ missing .meta file: $file" >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
