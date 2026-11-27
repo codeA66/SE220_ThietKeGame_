@@ -1,0 +1,51 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{cs,shader,hlsl,cginc,compute}]
+indent_size = 4
+end_of_line = lf
+
+[*.{asmdef,asmref,json,inputactions,yml,yaml,uxml,uss}]
+indent_size = 2
+end_of_line = lf
+
+[*.md]
+indent_size = 2
+end_of_line = lf
+trim_trailing_whitespace = false
+
+[*.{ps1,bat,cmd,sln,slnx,csproj,vsconfig}]
+end_of_line = crlf
+
+[*.{unity,prefab,asset,mat,anim,controller,overrideController,meta}]
+end_of_line = lf
+trim_trailing_whitespace = false
+
+# C# formatting & naming rules (docs/CODING_STANDARDS.md & docs/NAMING_CONVENTIONS.md)
+[*.cs]
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_style_namespace_declarations = block_scoped:suggestion
+dotnet_sort_system_directives_first = true
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers =
+
+dotnet_naming_style.camel_case_underscore.capitalization = camel_case
+dotnet_naming_style.camel_case_underscore.required_prefix = _
+
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = camel_case_underscore
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
