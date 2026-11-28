@@ -23,11 +23,12 @@ git diff --cached --name-only --diff-filter=ACM -z | while IFS= read -r -d '' fi
 done
 
 # 2. Resolve Python 3 across Linux, macOS, Git Bash, Windows py launcher, or AppData install
-if command -v python3 >/dev/null 2>&1; then
+# Verify interpreter execution so WindowsApps Store stubs (exit 9009) are skipped cleanly.
+if command -v python3 >/dev/null 2>&1 && python3 -c "import sys" >/dev/null 2>&1; then
     exec python3 "$REPO_ROOT/tools/ci/verify_guardrails.py" --staged --repo "$REPO_ROOT"
-elif command -v python >/dev/null 2>&1; then
+elif command -v python >/dev/null 2>&1 && python -c "import sys; sys.exit(0 if sys.version_info[0] >= 3 else 1)" >/dev/null 2>&1; then
     exec python "$REPO_ROOT/tools/ci/verify_guardrails.py" --staged --repo "$REPO_ROOT"
-elif command -v py >/dev/null 2>&1 && py -3 --version >/dev/null 2>&1; then
+elif command -v py >/dev/null 2>&1 && py -3 -c "import sys" >/dev/null 2>&1; then
     exec py -3 "$REPO_ROOT/tools/ci/verify_guardrails.py" --staged --repo "$REPO_ROOT"
 fi
 
